@@ -2,7 +2,7 @@
 
 `ProjecTILs` is a computational method to project new data sets into a reference map of T cells, enabling their direct comparison in a stable, annotated system of coordinates. Because new cells are embedded in the same space of the reference, ProjecTILs enables the classification of new cells into annotated, discrete states, but also over a continuous space of intermediate states. By comparing multiple samples over the same map, and across alternative embeddings, the method allows exploring the effect of genetic perturbations (e.g. as the result of therapy) and identifying genetic programs significantly altered in the query compared to a control set or to the reference map.
 
-### Installation
+### Package Installation
 
 To install `ProjecTILs` directly from its Git repository, run the following code from within R or RStudio:
 ```
