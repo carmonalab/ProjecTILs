@@ -1,7 +1,7 @@
-# ProjecTILs - Projecting scRNA-seq data onto a reference map of T cell transcriptomic states
+# Projecting scRNA-seq data onto a reference map of T cell transcriptomic states
 
 <p align="center">
-  <img height="80" src="docs/projectils_logo_W_square.png">
+  <img height="100" src="docs/projectils_logo_W_square.png">
 </p>
 
 `ProjecTILs` is a computational method to project new data sets into a reference map of T cells, enabling their direct comparison in a stable, annotated system of coordinates. Because new cells are embedded in the same space of the reference, ProjecTILs enables the classification of new cells into annotated, discrete states, but also over a continuous space of intermediate states. By comparing multiple samples over the same map, and across alternative embeddings, the method allows exploring the effect of genetic perturbations (e.g. as the result of therapy) and identifying genetic programs significantly altered in the query compared to a control set or to the reference map.
@@ -60,6 +60,6 @@ Pre-computed atlases are available at:
 * LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
 
 <p align="center">
-  <img height="60" src="docs/projectils_logo_W_square.png">
+  <img height="80" src="docs/projectils_logo_W_square.png">
 </p>
 
