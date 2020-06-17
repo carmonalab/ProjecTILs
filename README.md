@@ -4,6 +4,8 @@
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs/tutorial.html) and [Tutorial (repository)](https://gitlab.unil.ch/carmona/ProjecTILs.demo)
 
+A Docker image for ProjecTILs is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo)
+
 ### Package Installation
 
 To install `ProjecTILs` directly from its Git repository, run the following code from within R or RStudio:
@@ -39,7 +41,7 @@ On your first run, the `make.projection` call will download the reference TIL at
 
 Find a step-by-step tutorial for `ProjecTILs` at: [ProjecTILs tutorial](https://carmonalab.github.io/ProjecTILs/tutorial.html)
 
-To run the code of the tutorial on your machine, download the demo repository: [ProjecTILs tutorial repo](https://gitlab.unil.ch/carmona/ProjecTILs.demo) or obtain a Docker image (TODO) with all dependencies pre-installed.
+To run the code of the tutorial on your machine, download the demo repository: [ProjecTILs tutorial repo](https://gitlab.unil.ch/carmona/ProjecTILs.demo) or obtain a [Docker image](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) with all dependencies pre-installed.
 
 ### Documentation
 
