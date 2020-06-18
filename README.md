@@ -1,9 +1,10 @@
 # Projecting single-cell transcriptomics data onto a reference T cell atlas to interpret immune responses
 
-
+<span title="Shuttling T cells into a reference transcriptomic space. A high-dimensional odyssey to interpret  immune responses" >
 <p align="center">
   <img height="100" src="docs/projectils_logo_W_square.png">
 </p>
+</span>
 
 `ProjecTILs` is a computational method to project scRNA-seq data into a reference map of T cells, enabling their direct comparison in a stable, annotated system of coordinates. Because new cells are embedded in the same space of the reference, ProjecTILs enables the classification of new cells into annotated, discrete states, but also over a continuous space of intermediate states. 
 By comparing multiple samples over the same reference map, and across alternative embeddings, our method allows exploring the effect of cellular perturbations (e.g. as the result of therapy or genetic engineering) in terms of transcriptional states and altered genetic programs.
