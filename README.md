@@ -8,7 +8,7 @@
 `ProjecTILs` is a computational method to project scRNA-seq data into a reference map of T cells, enabling their direct comparison in a stable, annotated system of coordinates. Because new cells are embedded in the same space of the reference, ProjecTILs enables the classification of new cells into annotated, discrete states, but also over a continuous space of intermediate states. 
 By comparing multiple samples over the same reference map, and across alternative embeddings, our method allows exploring the effect of cellular perturbations (e.g. as the result of therapy or genetic engineering) in terms of transcriptional states and altered genetic programs.
 
-We have constructed two cross-study murine T cell reference atlases: the first describing tumor-infiltrating T lymphocytes (TILs), the second characterizing virus-specific CD8 T cells in acute and chronic infection. 
+We have constructed two cross-study murine T cell reference atlases for ProjecTILs: the first describing tumor-infiltrating T lymphocytes (TILs), the second characterizing virus-specific CD8 T cells in acute and chronic infection. 
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs/tutorial.html) and [Tutorial (repository)](https://gitlab.unil.ch/carmona/ProjecTILs.demo)
 
