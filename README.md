@@ -60,11 +60,14 @@ See a description of the functions implemented in ProjecTILs at: [ProjecTILs fun
 
 Pre-computed atlases are available at:
 
-* TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571)
+* TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571) and interactive iSEE web app [http://TILatlas.unil.ch](http://TILatlas.unil.ch)
 
 * LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
+
+### Citation
+
+Projecting single-cell transcriptomics data onto a reference T cell atlas to interpret immune responses. Massimo Andreatta, Jesus Corria Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. 2020 https://doi.org/10.1101/2020.06.23.166546
 
 <p align="center">
   <img height="80" src="docs/projectils_logo_W_square.png">
 </p>
-
