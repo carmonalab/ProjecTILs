@@ -32,6 +32,9 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
 
 remotes::install_github("carmonalab/TILPRED")
 remotes::install_github("carmonalab/ProjecTILs")
+
+#If a warning message prevented *remotes* from installing the package, try:
+#Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
 ```
 
 ### Test the package
