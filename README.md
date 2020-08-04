@@ -33,8 +33,7 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
 remotes::install_github("carmonalab/TILPRED")
 remotes::install_github("carmonalab/ProjecTILs")
 
-#If a warning message prevented *remotes* from installing the package, try:
-#Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
+
 ```
 
 ### Test the package
@@ -66,6 +65,12 @@ Pre-computed atlases are available at:
 * TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571) and interactive iSEE web app [http://TILatlas.unil.ch](http://TILatlas.unil.ch)
 
 * LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
+
+### Troubleshooting 
+
+* If a warning message prevented *remotes* from installing the package, try:
+```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
+* For new features including R version 4 compatibility, please use our development branch at https://gitlab.unil.ch/carmona/ProjecTILs
 
 ### Citation
 
