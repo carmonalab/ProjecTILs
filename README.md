@@ -13,6 +13,8 @@ We have constructed two cross-study murine T cell reference atlases for ProjecTI
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs/tutorial.html) and [Tutorial (repository)](https://gitlab.unil.ch/carmona/ProjecTILs.demo)
 
+For real-life applications, check out our Bulletin of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
+
 If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo)
 
 ### Package Installation
