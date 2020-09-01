@@ -56,6 +56,7 @@ Find a step-by-step tutorial for `ProjecTILs` at: [ProjecTILs tutorial](https://
 
 To run the code of the tutorial on your machine, download the demo repository: [ProjecTILs tutorial repo](https://gitlab.unil.ch/carmona/ProjecTILs.demo) or obtain a [Docker image](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) with all dependencies pre-installed.
 
+
 ### Documentation
 
 See a description of the functions implemented in ProjecTILs at: [ProjecTILs functions](docs/functions.md)
@@ -73,6 +74,13 @@ Pre-computed atlases are available at:
 * If a warning message prevented *remotes* from installing the package, try:
 ```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
 * For new features including R version 4 compatibility, please use our development branch at https://gitlab.unil.ch/carmona/ProjecTILs
+* For analyzing datasets composed of multiple batches (e.g. different subjects, technologies), we recommend projecting each batch separately, by providing ProjecTILs a list of Seurat objects as input, e.g.:
+```
+data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
+query.projected.list <- make.projection(data.seurat.list)
+```
+
+
 
 ### Citation
 
