@@ -4,11 +4,10 @@
 \alias{plot.discriminant.3d}
 \title{3D plot of reference map with extra discriminant dimension}
 \usage{
-plot.discriminant.3d(
+\method{plot}{discriminant.3d}(
   ref,
   query,
   query.control = NULL,
-  reduction = "ICA",
   query.assay = "RNA",
   labels.col = "functional.cluster",
   extra.dim = "ICA_1",
@@ -22,8 +21,6 @@ plot.discriminant.3d(
 
 \item{query.control}{Optionally, you can compare your query with a control sample, instead of the reference}
 
-\item{reduction}{Which dimensionality reduction to use (either ICA or PCA)}
-
 \item{query.assay}{The data slot to be used for enrichment analysis}
 
 \item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
@@ -31,7 +28,7 @@ plot.discriminant.3d(
 \item{extra.dim}{The additional dimension to be added on the z-axis of the plot. Can be either:
 \itemize{
   \item{An ICA or PCA dimension (e.g. ICA_10). See `find.discriminant.dimensions`}
-  \item{"cycling.score" - The enrichment score for the cycling signature calculated by TILPRED}
+  \item{Any numeric metadata field associated to the cells (e.g. 'cycling.score')}
 }}
 
 \item{query.state}{Only plot the query cells from this specific state}

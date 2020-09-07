@@ -4,7 +4,7 @@
 \alias{plot.statepred.composition}
 \title{Summarize the predicted cell states of an object}
 \usage{
-plot.statepred.composition(
+\method{plot}{statepred.composition}(
   ref,
   query,
   labels.col = "functional.cluster",

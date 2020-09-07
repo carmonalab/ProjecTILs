@@ -4,11 +4,13 @@
 \alias{plot.projection}
 \title{Show UMAP projection of query on reference map}
 \usage{
-plot.projection(
+\method{plot}{projection}(
   ref,
   query = NULL,
   labels.col = "functional.cluster",
-  cols = NULL
+  cols = NULL,
+  linesize = 1,
+  pointsize = 1
 )
 }
 \arguments{
@@ -19,6 +21,10 @@ plot.projection(
 \item{labels.col}{The metadata field to annotate the clusters (default: functional.cluster)}
 
 \item{cols}{Custom color palette for clusters}
+
+\item{linesize}{Contour line thickness for projected query}
+
+\item{pointsize}{Point size for cells in projected query}
 }
 \value{
 UMAP plot of reference map with projected query set in the same space

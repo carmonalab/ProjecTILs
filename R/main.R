@@ -1,18 +1,21 @@
 
 
-filterCells <- function(query.object, filter=TRUE){
+filterCells <- function(query.object, human=FALSE){
   sce <- as.SingleCellExperiment(query.object)
-  sce.pred <- predictTilState(sce)
+  sce.pred <- predictTilState(sce, human=human)
   query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
-  query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score")
-
-  if (filter) {
-     cellRemove <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
-     print(paste(ncol(query.object)-length(cellRemove), "out of", ncol(query.object),
-                 "(",round((ncol(query.object)-length(cellRemove))/ncol(query.object)*100),"% )",
-                 "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
-     query.object <- subset(query.object, cells = cellRemove)
+  
+  if (human) {
+     cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
+  } else {  
+     cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
+     query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
   }
+  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
+              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
+              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
+  query.object <- subset(query.object, cells = cells_keep)
+  
   return(query.object)
 }
 
@@ -29,6 +32,18 @@ randomSplit <- function(obj, n=2, seed=44, verbose=F) {
      seurat.list[[h]] <- subset(obj, cells= cell.list[[h]])
   }
   return(seurat.list)
+}
+
+convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
+
+  exp.mat <- slot(obj@assays[[query.assay]], name=slot)
+  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
+  
+  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
+  
+  row.names(exp.mat) <- mouse.genes
+  slot(obj@assays[[query.assay]], name=slot) <- exp.mat
+  return(obj)
 }
 
 #' Load Reference Atlas
@@ -63,6 +78,60 @@ load.reference.map <- function(ref="referenceTIL") {
   return(ref)
 }
 
+#' Read to memory a query expression matrix
+#'
+#' Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts, etc.) 
+#' are supported - see \code{type} parameter for details
+#'
+#' @param filename Path to expression matrix file or folder
+#' @param type Expression matrix format (10x, hdf5, raw, raw.log2, alevin, alevin.csv)
+#' @param project.name Title for the project
+#' @param min.cells Only keep genes represented in at least min.cells number of cells
+#' @param min.features Only keep cells expressing at least min.features genes
+#' @param gene.column.10x For 10x format - which column of genes.tsv or features.tsv to use for gene names
+#' @param raw.rawnames For raw format - A vector of row names, or a single number giving the column of the table which contains the row names
+#' @param raw.sep For raw format - Separator in raw expression matrix
+#' @param raw.header For raw format - Use headers in expression matrix
+#' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
+#' @examples
+#' fname <- "./sample_data"
+#' querydata <- read.sc.query(fname, type="10x")
+#' @export
+
+read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin","alevin.csv"), 
+                          project.name="Query", min.cells = 3, min.features = 50,
+                          gene.column.10x=2, raw.rownames=1, raw.sep=" ", raw.header=T) {
+  
+  if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
+  type = tolower(type[1])
+  
+  if (type == "10x") {
+    query.exp <- Read10X(filename, gene.column = gene.column.10x)
+  } else if (type == "hdf5") {
+    query.exp <- Read10X_h5(filename)
+  } else if (type == "alevin") {
+    query.exp <- ReadAlevin(filename)
+  } else if (type == "alevin.csv") {
+    query.exp <- ReadAlevinCsv(filename)
+  } else if (type == "raw" | type == "raw.log2") {
+    p <- regexpr("\\.([[:alnum:]]+)$", filename)
+    extension <- ifelse(p > -1L, substring(filename, p + 1L), "")
+    if (extension == "gz") {
+      query.exp <- read.csv(gzfile(filename),row.names=raw.rownames, sep=raw.sep, header=raw.header)
+    } else {
+      query.exp <- read.csv(filename,row.names=raw.rownames, sep=raw.sep, header=raw.header)
+    }
+    if (type == "raw.log2") {
+      query.exp <- 2^(query.exp)-1
+    }
+  } else {
+     stop("Please provide a query dataset in one of the supported formats")
+  } 
+  query.seurat <- CreateSeuratObject(counts=query.exp, project=project.name, min.cells=min.cells, min.features=min.features)
+  query.seurat<- NormalizeData(query.seurat)
+  return(query.seurat)
+}
+
 #' Project a query scRNA-seq dataset onto a reference atlas
 #'
 #' This function allows projecting a single-cell RNA-seq dataset onto a reference map of cellular states.
@@ -71,18 +140,19 @@ load.reference.map <- function(ref="referenceTIL") {
 #'
 #' @param query Seurat object with query data
 #' @param ref Reference Atlas Seurat object - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Logical value indicating if T cells should be pre-filtered using TILPRED. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.
+#' @param filter.cells Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.
 #' @param query.assay Which assay slot to use for the query
-#' @param direct.projection Logical. If true, apply PCA transformation directly without alignment
+#' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
-#' @param skip.normalize Logical. By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
+#' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
+#' @param human.ortho Project human data on murine reference atlas, using mouse orthologs
 #' @return An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
 #' @examples
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto", 
-                            direct.projection=FALSE, seurat.k.filter=200, skip.normalize=FALSE) {
+                            direct.projection=FALSE, seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE) {
 
   if(is.null(ref)){
     print("Loading Default Reference Atlas...")
@@ -115,7 +185,18 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
     query.list <- query
   }
   rm(query)
-
+  
+  if (human.ortho) {
+    data(Hs2Mm.convert.table)
+    #automatically determine gene ID column
+    g1 <- length(intersect(row.names(query.list[[1]]), Hs2Mm.convert.table$Gene.stable.ID.HS))
+    g2 <- length(intersect(row.names(query.list[[1]]), Hs2Mm.convert.table$Gene.HS))
+    hs.id.col <- ifelse(g1>g2, "Gene.stable.ID.HS", "Gene.HS")
+    if (max(g1,g2)<100) {
+       message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
+    }
+  }  
+  
   for (queryName in names(query.list)){
 
     #Query
@@ -137,26 +218,36 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
     
     if(filter.cells){
       message("Pre-filtering of T cells (TILPRED classifier)...")
-      query <- filterCells(query, filter=T)
-    } else {
-      query <- filterCells(query, filter=F)
+      query <- filterCells(query, human=human.ortho)
     }
-
-    #DefaultAssay(query) <- query.assay
-    query <- RenameCells(query, add.cell.id = "Q")
     
-    
-    #Check if slots are there, and normalize data
-    if (!skip.normalize) {
-      if (dim(query@assays[[query.assay]]@counts)[1]==0) {
-         stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
+    #Check if slots are populated, and normalize data.
+    if (skip.normalize) {
+       slot <- "data"
+       exp.mat <-  slot(query@assays[[query.assay]], name=slot)
+       if (dim(exp.mat)[1]==0) {
+          stop("Data slot not found in your Seurat object. Please normalize the data")
+       }
+       if (human.ortho) {
+           print("Transforming expression matrix into space of mouse orthologs") 
+           query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+       }        
+    } else {
+      slot <- "counts"
+      exp.mat <-  slot(query@assays[[query.assay]], name=slot)
+      if (dim(exp.mat)[1]==0) {
+        stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
       }
-      query <- NormalizeData(query)  
-    } else {
-      if (dim(query@assays[[query.assay]]@data)[1]==0) {
-        stop("Data slot not found in your Seurat object. Please normalize the data")
-      }  
+      if (human.ortho) {
+        print("Transforming expression matrix into space of mouse orthologs") 
+        query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+      }
+      query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
+      query <- NormalizeData(query) 
     }
+    rm(exp.mat)
+    
+    query <- RenameCells(query, add.cell.id = "Q")
     
     genes4integration <- intersect(ref.var.features, row.names(query))
 
@@ -309,16 +400,19 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param query Seurat object with query data
 #' @param labels.col The metadata field to annotate the clusters (default: functional.cluster)
 #' @param cols Custom color palette for clusters
+#' @param linesize Contour line thickness for projected query
+#' @param pointsize Point size for cells in projected query
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
-#' @export
-plot.projection = function(ref, query=NULL, labels.col="functional.cluster", cols=NULL) {
+#' @export plot.projection
+
+plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols=NULL, linesize=1, pointsize=1) {
   require(Seurat)
   require(ggplot2)
-
+  
   labels <- ref[[labels.col]][,1]
-
+  
   states_all <- levels(factor(labels))
   nstates <- length(states_all)
   
@@ -340,14 +434,14 @@ plot.projection = function(ref, query=NULL, labels.col="functional.cluster", col
   }
   names(stateColors_func) <- states_all
   cols_use <- stateColors_func[states_all]
-
+  
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
-      geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=1,shape=17, color="gray10") +
-      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2) +
+      geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
+      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
   return(p)
@@ -365,7 +459,7 @@ plot.projection = function(ref, query=NULL, labels.col="functional.cluster", col
 #' @return Barplot of predicted state composition
 #' @examples
 #' plot.statepred.composition(query_example.seurat)
-#' @export
+#' @export plot.statepred.composition
 plot.statepred.composition = function(ref, query, labels.col="functional.cluster",cols=NULL, metric=c("Count","Percent")) {
   require(reshape2)
   require(ggplot2)
@@ -433,48 +527,49 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
-#' @export
+#' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
                              genes4radar=NULL, min.cells=10, cols=NULL, return=F) {
   require(ggplot2)
   require(gridExtra)
-
+  
   if (is.null(genes4radar)) {
-     genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
+    genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
   }
+  genes4radar <- intersect(genes4radar, row.names(ref@assays$RNA@data))
   genes4radar <- sort(genes4radar)
   order <- match(genes4radar, row.names(ref@assays$RNA@data))
   rr <- ref@assays$RNA@data[order,]
-
+  
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
   nstates <- length(states_all)
-
+  
   if (!is.null(query)) {
     if (!is.list(query)) {
-       query <- list("Query" = query)
+      query <- list("Query" = query)
     }
     if (is.null(names(query))) {
       for (i in 1:length(query)) {
-         names(query)[[i]] <- paste0("Query",i)
+        names(query)[[i]] <- paste0("Query",i)
       }
     }
     labels.q <- list()
     qq <- list()
-
+    
     for (i in 1:length(query)) {
-       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-       order <- match(genes4radar, row.names(query[[i]]@assays$RNA@data))
-       qq[[i]] <- query[[i]]@assays$RNA@data[order,]
+      labels.q[[i]] <- query[[i]][[labels.col]][,1]
+      order <- match(genes4radar, row.names(query[[i]]@assays$RNA@data))
+      qq[[i]] <- query[[i]]@assays$RNA@data[order,]
     }
   }
-
+  
   if (!is.null(cols)) {  #custom palette
     if (nstates<=length(cols)) {
       stateColors_func <- cols[1:nstates]
     } else {  
-       warning("Not enough colors provided. Making an automatic palette")
-       stateColors_func <- rainbow(n=nstates)
+      warning("Not enough colors provided. Making an automatic palette")
+      stateColors_func <- rainbow(n=nstates)
     }  
   } else {   #default palette
     stateColors_func <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
@@ -486,7 +581,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   }
   names(stateColors_func) <- states_all
   cols_use <- stateColors_func[states_all]
-
+  
   #Get raw expression means, to normalize by gene
   m <- matrix(, nrow = length(states_all), ncol = length(genes4radar))
   rownames(m) <- states_all
@@ -496,24 +591,24 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
     m[i,] <- apply(rr[, labels == s], MARGIN=1, mean)
   }
   normfacs <- apply(m, MARGIN=2, function(x) {max(c(1,x))})
-
+  
   pll <- list()
   for (j in 1:length(states_all)) {
     s <- states_all[j]
     fill_use <- c(rep(cols_use[j], length(query)+1))
     names(fill_use) <- c("Reference",names(query))
-
+    
     col_use <- c("black","orange")
     if (length(query)>1) { col_use <- c(col_use, rainbow(length(query)-1)) }
     names(col_use) <-  c("Reference",names(query))
-
+    
     this.mean <- apply(rr[, labels == s], MARGIN=1, mean)
     this.mean <- this.mean/normfacs
-
+    
     this.df <- data.frame(t(rbind(names(this.mean), this.mean, "Reference")))
     colnames(this.df) <- c("Gene","Expression","Dataset")
     this.df$Expression <- as.numeric(as.character(this.df$Expression))
-
+    
     i <- 1
     while (i <= length(query)) {
       m <- as.matrix(qq[[i]][, labels.q[[i]] == s])
@@ -527,30 +622,33 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
       }
       i=i+1
     }
-
+    
     ymin <- min(c(-0.1, min(this.df$Expression)))
     ymax <- max(c(1, max(this.df$Expression)))
-
-
+    
+    levs <- unique(this.df$Dataset)
+    this.df$Dataset <- factor(this.df$Dataset, levels=levs)
+    
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
       geom_point(size=2) +
-      geom_polygon(size = 1, alpha= 0.2) +
+      geom_polygon(size = 0.75, alpha= 0.2) +
       ylim(ymin, ymax) + ggtitle(s)  +
       scale_x_discrete() +
       scale_fill_manual(values= fill_use) +
       scale_colour_manual(values= col_use) +
-      theme_light()+
+      theme_light() +
+      theme(axis.text.x=element_blank()) +
+      annotate(geom="text", x=seq(1,length(genes4radar)), y=ymax-0.05*ymax, label=genes4radar, size=3) +
       coord_polar()
-
+    
   }
   g <- do.call("arrangeGrob", c(pll, ncol=3, top=paste0("Radar plots for ", labels.col)))
-
+  
   if(return){
     return(g)
   } else{
     return(plot(g))
   }
-
 }
 
 # Function find.discriminant.dimensions
@@ -573,15 +671,16 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
 #' @param reduction Which dimensionality reduction to use (either ICA or PCA)
 #' @param test Which test to perform between the dataset distributions in each ICA/PCA dimension. One of `ks` (Kolmogorov-Smirnov) or `t.test` (T-test)
 #' @param ndim How many dimensions to consider in the reduced ICA/PCA space
-#' @param print.n The nunmber of top dimensions to return to STDOUT
-#' @return A list of PCA or ICA dimensions, ranked by the enrichment of the query vs. control state (if provided), otherwise of the query vs. the reference map
+#' @param print.n The number of top dimensions to return to STDOUT (default: 3)
+#' @param verbose Print results to STDOUT (default: TRUE)
+#' @return A dataframe, where rows are ICA/PCA dimensions. ICA/PCAs are ranked by statistical significance when comparing their distribution between query and control (or query vs. reference map)
 #' @examples
 #' find.discriminant.dimensions(ref, query=query.set)
 #' find.discriminant.dimensions(ref, query=query.set, query.control=control.set)
-#' @export
+#' @export find.discriminant.dimensions
 find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.assay="RNA",
                                          state="largest", labels.col="functional.cluster",
-                                         reduction="ICA", test=c("ks","t.test"), ndim=50, print.n=3) {
+                                         reduction="ICA", test=c("ks","t.test"), ndim=50, print.n=3, verbose=T) {
 
   reduction=tolower(reduction)
   test=test[1]
@@ -644,13 +743,11 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
   }
 
   ndim <- min(ndim, length(colnames(perturb_dimRed)))
-  w <- rep(1,ndim)
-  names(w) <- colnames(perturb_dimRed)[1:ndim]
-  stat <- rep(1,ndim)
-  names(stat) <- colnames(perturb_dimRed)[1:ndim]
-  pval <- rep(1,ndim)
-  names(pval) <- colnames(perturb_dimRed)[1:ndim]
-
+  
+  df <- data.frame(matrix(ncol = 3, nrow = ndim))
+  colnames(df) <- c("stat","stat_abs","p_val")
+  rownames(df) <- colnames(perturb_dimRed)[1:ndim]
+  
   if (!is.null(query.control)) {
      message("Query and control datasets was provided. Determining discriminant components of Query vs. Control...")
   } else {
@@ -670,19 +767,20 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
       this.test <- t.test(d1, d2)
     }
 
-    w[pc] <- mean(d1) - mean(d2)
-    stat[pc] <- this.test$statistic
-    pval[pc] <- this.test$p.value * ndim   #multiple testing
+    df[pc, "stat"] <- this.test$statistic
+    df[pc, "stat_abs"] <- abs(this.test$statistic)
+    df[pc, "p_val"] <- this.test$p.value * ndim   #multiple testing
   }
-  w.sorted <- sort(abs(stat), decreasing = T)
-
+  df <- df[with(df, order(stat_abs, decreasing=T)), ]
+  
+  buffer <- ""
   for (i in 1:print.n) {
-    topPC <- names(w.sorted)[i]
-    pc.index <- match(topPC, names(stat))
+    topPC <- rownames(df)[i]
+    pc.index <- match(topPC, colnames(perturb_dimRed))
     feats <- ref@reductions[[reduction]]@feature.loadings[,pc.index]
     topgenes <- names(head(sort(abs(feats), decreasing = T), 10))
     topgenes.sign <- feats[topgenes]
-    if (w[pc.index]>0) {
+    if (df[i, "stat"]>0) {
        topgenes.p <- topgenes.sign[topgenes.sign>=0]
        topgenes.n <- topgenes.sign[topgenes.sign<0]
     } else {
@@ -690,15 +788,20 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
       topgenes.n <- topgenes.sign[topgenes.sign>=0]
     }
 
-    pval2print <- ifelse(pval[pc.index]<0.001, sprintf("%.1e",pval[pc.index]), sprintf("%.4f",pval[pc.index]))
-    message(sprintf("-----------------------\nTop %s component %i: %s Stat %.3f p.val %s",
-                    reduction, i, topPC, stat[pc.index], pval2print))
-    message("Driver genes for this component:")
-    message(paste(c("Higher in query +++ ", names(topgenes.p)), collapse = " "))
-    message(paste(c("Lower in query  --- ", names(topgenes.n)), collapse = " "))
+    pval2print <- ifelse(df[i, "p_val"]<0.001, sprintf("%.1e",df[i, "p_val"]), sprintf("%.4f",df[i, "p_val"]))
+    buffer <- paste0(buffer, sprintf("-----------------------\nTop %s component %i: %s Stat %.3f p.val %s\n",
+                    reduction, i, topPC, df[i, "stat"], pval2print))
+    
+    buffer <- paste0(buffer, "Driver genes for this component:\n")
+    buffer <- paste0(buffer, paste(c("Higher in query +++ ", names(topgenes.p)), collapse = " "), "\n")
+    buffer <- paste0(buffer, paste(c("Lower in query  --- ", names(topgenes.n)), collapse = " "), "\n")
   }
 
-  return(w.sorted)
+  if (verbose) {
+     message(buffer)
+  }
+  
+  return(df)
 }
 
 
@@ -713,29 +816,33 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 #' @param query.control Optionally, you can compare your query with a control sample, instead of the reference
 #' @param query.assay The data slot to be used for enrichment analysis
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
-#' @param reduction Which dimensionality reduction to use (either ICA or PCA)
 #' @param query.state Only plot the query cells from this specific state
 #' @param extra.dim The additional dimension to be added on the z-axis of the plot. Can be either:
 #' \itemize{
 #'   \item{An ICA or PCA dimension (e.g. ICA_10). See `find.discriminant.dimensions`}
-#'   \item{"cycling.score" - The enrichment score for the cycling signature calculated by TILPRED}
+#'   \item{Any numeric metadata field associated to the cells (e.g. 'cycling.score')}
 #' }
 #' @return A three dimensional plot with UMAP_1 and UMAP_2 on the x and y axis respectively, and the specified `extra.dim` on the z-axis.
 #' @examples
 #' plot.discriminant.3d(ref, query=query, extra.dim="ICA_19")
 #' plot.discriminant.3d(ref, query=treated.set, query.control=control.set, extra.dim="ICA_2")
-#' @export
+#' @export plot.discriminant.3d
 
-plot.discriminant.3d <- function(ref, query, query.control=NULL, reduction="ICA", query.assay="RNA",
-                             labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
+plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RNA",
+                                 labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
   require(plotly)
-
-  reduction=tolower(reduction)
+  
+  reduction=NULL
   message(paste0("Generating UMAP with 3rd dimension on ",extra.dim))
-
+  if (grepl("^ica_\\d+", tolower(extra.dim), perl=T)) {
+    reduction="ica"
+  } else if (grepl("^pca_\\d+", tolower(extra.dim), perl=T)) {
+    reduction="pca"
+  }
+  
   ref.3d <- ref
   ref.3d$queryGroup <- "Reference"
-
+  
   #Only show cells of a specific state for the query
   if(!is.null(query.state)) {
     query.cells=colnames(query)[which(query[[labels.col]]==query.state)]
@@ -745,7 +852,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, reduction="ICA"
       query.control <- subset(query.control, cells=query.c.cells)
     }
   }
-
+  
   #Prepare embeddings
   if (!is.null(query.control)) {
     q.labs <- c(rep("Control", dim(query.control)[2]), rep("Query", dim(query)[2]))
@@ -754,70 +861,72 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, reduction="ICA"
     query$queryGroup <- q.labs
     query[["umap"]] <- CreateDimReducObject(embeddings = q.umaps, key = "UMAP_", assay = query.assay)
   } else {
-     query$queryGroup <- "Query"
+    query$queryGroup <- "Query"
   }
   query@meta.data[,labels.col] <- "Query"
-
-  ref.3d@meta.data <- rbind(ref.3d@meta.data[,c(labels.col,"queryGroup","cycling.score")],
-                            query@meta.data[,c(labels.col,"queryGroup","cycling.score")])
-
-  ref.3d@reductions$umap@cell.embeddings <- rbind(ref.3d@reductions$umap@cell.embeddings,
-                                                            query@reductions$umap@cell.embeddings)
-
-  if (reduction=="ica"){
-    projected <- apply.ica.obj(query=query, query.assay=query.assay, ica.obj=ref.3d@misc$ica)
-  } else if (reduction=="pca") {
-    projected <- apply.pca.obj.2(query=query, query.assay=query.assay, pca.obj=ref.3d@misc$pca_object)
-  } else {
-    stop(paste0("Unrecognized reduction slot: ", reduction))
-  }
-  ref.3d@reductions[[reduction]]@cell.embeddings <- rbind(ref.3d@reductions[[reduction]]@cell.embeddings, projected)
-
+  
+  
+  metacols <- intersect(names(ref.3d@meta.data),names(query@meta.data))
+  ref.3d@meta.data <- rbind(ref.3d@meta.data[,metacols], query@meta.data[,metacols])
+  
+  ref.3d@reductions$umap@cell.embeddings <- rbind(ref.3d@reductions$umap@cell.embeddings, 
+                                                  query@reductions$umap@cell.embeddings)
+  
+  
   ref.3d@meta.data <- cbind(ref.3d@meta.data, ref.3d@reductions$umap@cell.embeddings)
-
-  if (extra.dim=="cycling" | extra.dim=="cycling.score") {
-    ref.3d@meta.data <- cbind(ref.3d@meta.data,Discriminant=ref.3d$cycling.score)
-  } else {
-     ref.3d@meta.data <- cbind(ref.3d@meta.data,Discriminant=ref.3d@reductions[[reduction]]@cell.embeddings[,extra.dim])
+  
+  
+  #Calculate ICA or PCA embeddings for query
+  if (!is.null(reduction)) {
+    if (reduction=="ica"){
+      projected <- apply.ica.obj(query=query, query.assay=query.assay, ica.obj=ref.3d@misc$ica)
+      ref.3d@reductions[[reduction]]@cell.embeddings <- rbind(ref.3d@reductions[[reduction]]@cell.embeddings, projected)
+    } else if (reduction=="pca") {
+      projected <- apply.pca.obj.2(query=query, query.assay=query.assay, pca.obj=ref.3d@misc$pca_object)
+      ref.3d@reductions[[reduction]]@cell.embeddings <- rbind(ref.3d@reductions[[reduction]]@cell.embeddings, projected)
+    }
   }
-
-  ref.3d@meta.data$Group <- factor(ifelse(ref.3d@meta.data$queryGroup=="Reference",
-                                          as.character(ref.3d@meta.data[labels.col]),
-                                          ref.3d@meta.data$queryGroup))
-
+  
+  # Add metadata column 
+  if (is.null(reduction)) {
+    if (extra.dim %in% colnames(ref.3d@meta.data)){
+      ref.3d@meta.data <- cbind(ref.3d@meta.data, Discriminant = ref.3d@meta.data[,extra.dim])
+    } else {
+      stop(sprintf("extra.dim %s not present in meta.data", extra.dim))
+    }
+  } else {
+    ref.3d@meta.data <- cbind(ref.3d@meta.data,Discriminant=ref.3d@reductions[[reduction]]@cell.embeddings[,extra.dim])
+  }
+  
   if (is.null(query.control)) {
     cols <- c(Reference="gray50",Query="red")
   } else {
     cols <- c(Reference="gray50",Control="green",Query="red")
   }
-
-  plotting.data <- ref.3d@meta.data[,c("UMAP_1", "UMAP_2","Discriminant", labels.col,"queryGroup","Group")]
+  
+  plotting.data <- ref.3d@meta.data[,c("UMAP_1", "UMAP_2","Discriminant", labels.col,"queryGroup")]
+  
   plotting.data$size <- ifelse(plotting.data$queryGroup == "Reference",0.3,6)
-
+  
   g <- plot_ly(data = plotting.data,
-          x = ~UMAP_1, y = ~UMAP_2, z = ~Discriminant,
-          color = ~queryGroup,
-          type = "scatter3d",
-          mode = "markers",
-          text=~queryGroup,
-          hoverinfo="text",
-          alpha=0.6,
-          alpha_stroke=0.6,
-          size=~size,
-          colors=cols
-  )
-
-  g <- g %>% layout(
-    title = paste0("Projection of query on reference map + dimension ",extra.dim),
-    scene = list(
-      xaxis = list(title = "UMAP_1"),
-      yaxis = list(title = "UMAP_2"),
-      zaxis = list(title = extra.dim)
+               x = ~UMAP_1, y = ~UMAP_2, z = ~Discriminant,
+               color = ~queryGroup,
+               type = "scatter3d",
+               mode = "markers",
+               text=~queryGroup,
+               hoverinfo="text",
+               alpha=0.6,
+               alpha_stroke=0.6,
+               size=~size,
+               colors=cols ) %>%
+    layout(title = sprintf("Projection of query on reference map + dimension %s", extra.dim),
+        scene = list(
+          xaxis = list(title = "UMAP_1"),
+          yaxis = list(title = "UMAP_2"),
+          zaxis = list(title = extra.dim)
     ))
   print(g)
   return(g)
 }
-
-# Function convert count matrix to Seurat object
 
 

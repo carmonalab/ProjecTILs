@@ -4,7 +4,7 @@
 \alias{plot.states.radar}
 \title{Show expression level of key genes}
 \usage{
-plot.states.radar(
+\method{plot}{states.radar}(
   ref,
   query = NULL,
   labels.col = "functional.cluster",

@@ -11,7 +11,8 @@ make.projection(
   query.assay = "auto",
   direct.projection = FALSE,
   seurat.k.filter = 200,
-  skip.normalize = FALSE
+  skip.normalize = FALSE,
+  human.ortho = FALSE
 )
 }
 \arguments{
@@ -19,15 +20,17 @@ make.projection(
 
 \item{ref}{Reference Atlas Seurat object - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Logical value indicating if T cells should be pre-filtered using TILPRED. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.}
+\item{filter.cells}{Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.}
 
 \item{query.assay}{Which assay slot to use for the query}
 
-\item{direct.projection}{Logical. If true, apply PCA transformation directly without alignment}
+\item{direct.projection}{If true, apply PCA transformation directly without alignment}
 
 \item{seurat.k.filter}{Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure}
 
-\item{skip.normalize}{Logical. By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
+\item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
+
+\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs}
 }
 \value{
 An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications

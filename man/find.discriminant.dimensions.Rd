@@ -14,7 +14,8 @@ find.discriminant.dimensions(
   reduction = "ICA",
   test = c("ks", "t.test"),
   ndim = 50,
-  print.n = 3
+  print.n = 3,
+  verbose = T
 )
 }
 \arguments{
@@ -41,10 +42,12 @@ find.discriminant.dimensions(
 
 \item{ndim}{How many dimensions to consider in the reduced ICA/PCA space}
 
-\item{print.n}{The nunmber of top dimensions to return to STDOUT}
+\item{print.n}{The number of top dimensions to return to STDOUT (default: 3)}
+
+\item{verbose}{Print results to STDOUT (default: TRUE)}
 }
 \value{
-A list of PCA or ICA dimensions, ranked by the enrichment of the query vs. control state (if provided), otherwise of the query vs. the reference map
+A dataframe, where rows are ICA/PCA dimensions. ICA/PCAs are ranked by statistical significance when comparing their distribution between query and control (or query vs. reference map)
 }
 \description{
 Searches PCA or ICA dimensions where the query set deviates the most from a control set or from the reference map. It can
