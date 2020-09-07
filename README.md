@@ -13,7 +13,7 @@ We have constructed two cross-study murine T cell reference atlases for ProjecTI
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs/tutorial.html) and [Tutorial (repository)](https://gitlab.unil.ch/carmona/ProjecTILs.demo)
 
-For real-life applications, check out our Bulletin of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
+For real-life applications, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
 
 If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo)
 
@@ -56,6 +56,7 @@ Find a step-by-step tutorial for `ProjecTILs` at: [ProjecTILs tutorial](https://
 
 To run the code of the tutorial on your machine, download the demo repository: [ProjecTILs tutorial repo](https://gitlab.unil.ch/carmona/ProjecTILs.demo) or obtain a [Docker image](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) with all dependencies pre-installed.
 
+For real-life applications, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
 
 ### Documentation
 
@@ -73,7 +74,6 @@ Pre-computed atlases are available at:
 
 * If a warning message prevented *remotes* from installing the package, try:
 ```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
-* For new features including R version 4 compatibility, please use our development branch at https://gitlab.unil.ch/carmona/ProjecTILs
 * For analyzing datasets composed of multiple batches (e.g. different subjects, technologies), we recommend projecting each batch separately, by providing ProjecTILs a list of Seurat objects as input, e.g.:
 ```
 data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
