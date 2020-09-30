@@ -42,7 +42,7 @@ remotes::install_github("carmonalab/ProjecTILs")
 
 Load sample data and test your installation:
 ```
-library(projecTILs)
+library(ProjecTILs)
 data(query_example_seurat)
 make.projection(query_example_seurat, skip.normalize=T)
 ```
