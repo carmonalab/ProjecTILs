@@ -372,8 +372,8 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
   nn.method="rann"
   nn.ranked <- Seurat:::NNHelper(data=ref.space, query=query.space, k = k, method = nn.method)
 
-  for (r in 1:dim(nn.ranked$nn.idx)[1]) {
-    top.k <- nn.ranked$nn.idx[r,]
+  for (r in 1:dim(nn.ranked@nn.idx)[1]) {
+    top.k <- nn.ranked@nn.idx[r,]
     scores <- sort(table(labels[top.k]), decreasing = T)/k
     pred.type[r] <- names(scores)[1]
     pred.conf[r] <- scores[1]
