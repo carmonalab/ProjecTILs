@@ -62,9 +62,9 @@ For real-life applications, check out our list of [ProjecTILs Case Studies](http
 
 See a description of the functions implemented in ProjecTILs at: [ProjecTILs functions](docs/functions.md)
 
-### Atlases
+### Reference Atlases
 
-Pre-computed atlases are available at:
+Pre-computed reference atlases are available at:
 
 * TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571) and interactive iSEE web app [http://TILatlas.unil.ch](http://TILatlas.unil.ch)
 
