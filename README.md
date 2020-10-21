@@ -68,7 +68,8 @@ Pre-computed atlases are available at:
 
 * TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571) and interactive iSEE web app [http://TILatlas.unil.ch](http://TILatlas.unil.ch)
 
-* LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
+* viral infection CD8 T cell atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518) and web app 
+http://virustcellatlas.unil.ch/
 
 ### Troubleshooting 
 
