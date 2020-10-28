@@ -32,7 +32,12 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
    install.packages("Seurat")
 }
 
-remotes::install_github("carmonalab/TILPRED")
+if (!requireNamespace("TILPRED", quietly = TRUE)) {
+  install.packages(c("doParallel","doRNG"))
+  BiocManager::install(c("AUCell","SingleCellExperiment"))
+  remotes::install_github("carmonalab/TILPRED")
+}
+
 remotes::install_github("carmonalab/ProjecTILs")
 
 
