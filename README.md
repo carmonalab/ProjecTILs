@@ -70,10 +70,13 @@ Pre-computed atlases are available at:
 
 * LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
 
+If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](docs/build_ref_atlas.html)
+
 ### Troubleshooting 
 
 * If a warning message prevented *remotes* from installing the package, try:
 ```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
+
 * For analyzing datasets composed of multiple batches (e.g. different subjects, technologies), we recommend projecting each batch separately, by providing ProjecTILs a list of Seurat objects as input, e.g.:
 ```
 data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
