@@ -76,7 +76,7 @@ Pre-computed reference atlases are available at:
 * viral infection CD8 T cell atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518) and web app 
 http://virustcellatlas.unil.ch/
 
-If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](docs/build_ref_atlas.html)
+If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs/build_ref_atlas.html)
 
 ### Troubleshooting 
 
