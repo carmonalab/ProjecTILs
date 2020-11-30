@@ -32,7 +32,12 @@ if (!requireNamespace("Seurat", quietly = TRUE)) {
    install.packages("Seurat")
 }
 
-remotes::install_github("carmonalab/TILPRED")
+if (!requireNamespace("TILPRED", quietly = TRUE)) {
+  install.packages(c("doParallel","doRNG"))
+  BiocManager::install(c("AUCell","SingleCellExperiment"))
+  remotes::install_github("carmonalab/TILPRED")
+}
+
 remotes::install_github("carmonalab/ProjecTILs")
 
 
@@ -62,13 +67,14 @@ For real-life applications, check out our list of [ProjecTILs Case Studies](http
 
 See a description of the functions implemented in ProjecTILs at: [ProjecTILs functions](docs/functions.md)
 
-### Atlases
+### Reference Atlases
 
-Pre-computed atlases are available at:
+Pre-computed reference atlases are available at:
 
 * TIL atlas: [https://doi.org/10.6084/m9.figshare.12478571](https://doi.org/10.6084/m9.figshare.12478571) and interactive iSEE web app [http://TILatlas.unil.ch](http://TILatlas.unil.ch)
 
-* LCMV atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518)
+* viral infection CD8 T cell atlas: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518) and web app 
+http://virustcellatlas.unil.ch/
 
 If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](docs/build_ref_atlas.html)
 
