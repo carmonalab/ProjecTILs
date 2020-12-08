@@ -2,6 +2,7 @@
 
 export(cellstate.predict)
 export(find.discriminant.dimensions)
+export(find.discriminant.genes)
 export(load.reference.map)
 export(make.projection)
 export(plot.discriminant.3d)
