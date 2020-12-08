@@ -1,51 +1,3 @@
-
-
-filterCells <- function(query.object, human=FALSE){
-  sce <- as.SingleCellExperiment(query.object)
-  sce.pred <- predictTilState(sce, human=human)
-  query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
-  
-  if (human) {
-     cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
-  } else {  
-     cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
-     query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
-  }
-  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
-              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
-              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
-  query.object <- subset(query.object, cells = cells_keep)
-  
-  return(query.object)
-}
-
-randomSplit <- function(obj, n=2, seed=44, verbose=F) {
-  set.seed(seed)
-  lgt <- dim(obj)[2]
-  ind <- sample.int(n, lgt, replace = T)
-  cell.list <- split(colnames(obj), ind)
-  seurat.list <- list()
-  if (verbose==TRUE) {
-     message(sprintf("Splitting object into %i random subsets", n))
-  }
-  for (h in 1:n) {
-     seurat.list[[h]] <- subset(obj, cells= cell.list[[h]])
-  }
-  return(seurat.list)
-}
-
-convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
-
-  exp.mat <- slot(obj@assays[[query.assay]], name=slot)
-  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
-  
-  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
-  
-  row.names(exp.mat) <- mouse.genes
-  slot(obj@assays[[query.assay]], name=slot) <- exp.mat
-  return(obj)
-}
-
 #' Load Reference Atlas
 #'
 #' Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).
@@ -220,6 +172,11 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
       message("Pre-filtering of T cells (TILPRED classifier)...")
       query <- filterCells(query, human=human.ortho)
     }
+    if (is.null(query)) {
+      message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", queryName))
+      projected.list[[queryName]] <- NULL
+      next
+    }
     
     #Check if slots are populated, and normalize data.
     if (skip.normalize) {
@@ -255,7 +212,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
     #TODO implement ID mapping? e.g. from ENSEMBLID to symbol?
 
     if (length(genes4integration)/length(ref.var.features)<0.8) {
-      print("Warning! more than 20% of variable genes not found in the query")
+       print("Warning! more than 20% of variable genes not found in the query")
     }
 
     if (direct.projection) {
@@ -761,14 +718,18 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
     } else {
        d2 <- ref@reductions[[reduction]]@cell.embeddings[ref.cells, pc]
     }
+    
+    ttest <- t.test(d1, d2)
     if (test=="ks") {
        this.test <- ks.test(d1, d2, alternative="two.sided")
+       this.test.signed <- this.test$statistic * sign(ttest$statistic)  #KS test statistic has no sign
     } else {
-      this.test <- t.test(d1, d2)
+       this.test <- ttest
+       this.test.signed <- this.test$statistic
     }
 
-    df[pc, "stat"] <- this.test$statistic
-    df[pc, "stat_abs"] <- abs(this.test$statistic)
+    df[pc, "stat"] <- this.test.signed
+    df[pc, "stat_abs"] <- abs(this.test.signed)
     df[pc, "p_val"] <- this.test$p.value * ndim   #multiple testing
   }
   df <- df[with(df, order(stat_abs, decreasing=T)), ]
@@ -929,4 +890,205 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
   return(g)
 }
 
+# Function find.discriminant.genes
+#' Find discriminant genes
+#'
+#' Based on `FindMarkers`. It performs differential expression analysis between a projected query and a control (either the reference map or a control sample), for
+#' a given cell type. Useful to detect whether specific cell states over/under-express genes between conditions or with respect to the reference.
+#'
+#' @param ref Seurat object with reference atlas
+#' @param query Seurat object with query data
+#' @param query.control Optionally, you can compare your query with a control sample, instead of the reference
+#' @param query.assay The data slot to be used for enrichment analysis
+#' @param state Perform discriminant analysis on this cell state. Can be either:
+#' \itemize{
+#'   \item{"largest" - Performs analysis on the cell state most represented in the query set(s)}
+#'   \item{"all" - Performs analysis on the complete dataset, using all cells}
+#'   \item{A specific cell state, one of the states in metadata field labels.col}
+#' }
+#' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
+#' @param test Type of test for DE analysis. See help for `FindMarkers` for implemented tests.
+#' @param min.cells Minimum number of cells in the cell type to proceed with analysis.
+#' @param all.genes Whether to consider all genes for DE analysis (default is variable genes of the reference)
+#' @param ... Adding parameters for `FindMarkers`
+#' @return A dataframe with a ranked list of genes as rows, and statistics as columns (e.g. log fold-change, p-values). See help for `FindMarkers` for more details.
+#' @examples
+#' # Discriminant genes between query and reference in cell type "Tex"
+#' markers <- find.discriminant.genes(ref, query=query.set, state="Tex")
+#' 
+#' # Discriminant genes between query and control sample in most represented cell type
+#' markers <- find.discriminant.genes(ref, query=query.set, query.control=control.set)
+#' 
+#' # Pass results to EnhancedVolcano for visual results
+#' library(EnhancedVolcano)
+#' EnhancedVolcano(markers, lab = rownames(markers), x = 'avg_logFC', y = 'p_val')
+#' 
+#' @export find.discriminant.genes
+#' 
+find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay="RNA",
+                                    state="largest", labels.col="functional.cluster",
+                                    test="wilcox", min.cells=10, all.genes=F, ...)  ##use ellipsis to pass parameters to FindMarkers
+  
+{  
+  require(Seurat)
+  
+  if (is.null(ref)) {stop("Please provide the reference object (ref")}
+  if (is.null(query)) {stop("Please provide a query object (query)")}
+  #Determine cell state for analysis
+  if (is.null(state) | state=="largest") {
+    if (!is.null(query.control)) {
+      ss <- table(rbind(query[[labels.col]], query.control[[labels.col]]))
+    } else {
+      ss <- table(query[[labels.col]])
+    }
+    state <- names(sort(ss, decreasing = T))[1]
+    message(paste0("Performing differential expression analysis using the most abundant cell state in the query - ", state))
+  } else if (state=="all") {
+    message("Performing differential expression analysis using all cells")
+  } else {
+    if (!state %in% query[[labels.col]][,1]) {
+      stop(sprintf("State %s not found in query metadata colum %s", state, labels.col))
+    }
+    if (!is.null(query.control) & !state %in% query.control[[labels.col]][,1]) {
+      stop(sprintf("State %s not found in query.control metadata colum %s", state, labels.col))
+    }
+    message(paste0("Performing differential expression analysis with user-specified state - ", state))
+  }
+  #Subset query data on specific state
+  if (state=="all") {
+    s1.cells <- colnames(query)
+    if (!is.null(query.control)) {
+      s2.cells  <- colnames(query.control)
+    } else {
+      s2.cells <- colnames(ref)
+    }
+  } else {
+    s1.cells <- colnames(query)[which(query[[labels.col]]==state)]
+    
+    if (!is.null(query.control)) {
+      s2.cells <- colnames(query.control)[which(query.control[[labels.col]]==state)]
+    } else {
+      s2.cells <- colnames(ref)[which(ref[[labels.col]]==state)]
+    }
+  }
+  
+  #check we have enough cells
+  if (length(s1.cells)<min.cells) {
+    stop(sprintf("Too few cells for state %s in query. Exit.", state))
+  }
+  if (!is.null(query.control) & length(s2.cells)<min.cells ) {
+    stop(sprintf("Too few cells for state %s in query control. Exit.", state))
+  }
+  
+  #Subset on subtype 
+  s1 <- subset(query, cells=s1.cells)
+  s1$Group <- "Query"
+  
+  if (!is.null(query.control)) {
+    s2 <- subset(query.control, cells=s2.cells)
+  } else {
+    s2 <- subset(ref, cells=s2.cells)
+  }
+  s2$Group <- "Control"
+  
+  s.m <- merge(s1, s2)
+  Idents(s.m) <- "Group"
+  
+  #use all genes or only variable genes from the reference
+  if (all.genes) {
+    which.genes <- NULL
+  } else {
+    which.genes <- intersect(ref@assays$integrated@var.features, rownames(s.m))
+  } 
+  
+  markers <- FindMarkers(s.m, slot="data", ident.1="Query", ident.2="Control", only.pos = F, test.use=test, assay=query.assay,
+                         features = which.genes, ...)
+  
+  
+  return(markers)
+}
 
+
+
+#========== INTERNALS =================#
+
+#Internal function to filter functions using TILPRED
+filterCells <- function(query.object, human=FALSE){
+  sce <- as.SingleCellExperiment(query.object)
+  sce.pred <- predictTilState(sce, human=human)
+  query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
+  
+  if (human) {
+    cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
+  } else {  
+    cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
+    query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
+  }
+  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
+              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
+              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
+  
+  if (length(cells_keep)>0) {
+     query.object <- subset(query.object, cells = cells_keep)
+  } else {
+    query.object <- NULL
+  }
+  return(query.object)
+}
+
+#Internal function to randomly split an object into subsets
+randomSplit <- function(obj, n=2, seed=44, verbose=F) {
+  set.seed(seed)
+  lgt <- dim(obj)[2]
+  ind <- sample.int(n, lgt, replace = T)
+  cell.list <- split(colnames(obj), ind)
+  seurat.list <- list()
+  if (verbose==TRUE) {
+    message(sprintf("Splitting object into %i random subsets", n))
+  }
+  for (h in 1:n) {
+    seurat.list[[h]] <- subset(obj, cells= cell.list[[h]])
+  }
+  return(seurat.list)
+}
+
+#Internal function for mouse-human ortholog conversion
+convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
+  
+  exp.mat <- slot(obj@assays[[query.assay]], name=slot)
+  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
+  
+  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
+  
+  row.names(exp.mat) <- mouse.genes
+  slot(obj@assays[[query.assay]], name=slot) <- exp.mat
+  return(obj)
+}
+
+#Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
+merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
+{  
+  require(Seurat)
+  
+  #first regular Seurat merge, inheriting parameters
+  m <- merge(x, y, ...)
+  #preserve reductions (PCA, UMAP, ...)
+  
+  reds <- intersect(names(x@reductions), names(y@reductions))
+  for (r in reds) {
+    message(sprintf("Merging %s embeddings...", r))
+    
+    m@reductions[[r]] <- x@reductions[[r]]
+    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
+      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
+      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
+      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
+    }
+  }
+  return(m)
+  
+}
