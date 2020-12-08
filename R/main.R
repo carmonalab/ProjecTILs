@@ -288,14 +288,15 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
           error = function(e) {
             message(paste("Direct projection failed due to:", e, "\n"))
             message(sprintf("Warning: failed to project dataset %s...", queryName))
-            projected[["pca"]] <- NULL
-            projected[["umap"]] <- NULL
+            projected <- NULL
           }
         )
       }
     }
-
-    projected@assays[[query.assay]]@var.features <- ref.var.features
+    
+    if (!is.null(projected)) {
+       projected@assays[[query.assay]]@var.features <- ref.var.features
+    }
     projected.list[[queryName]] <- projected
   }
   if(length(projected.list)==1)
