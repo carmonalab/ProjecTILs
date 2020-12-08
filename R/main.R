@@ -271,17 +271,27 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
         }
       )
       if (retry.direct) {
-        projected <- query
-
-        print("DIRECTLY projecting query onto Reference PCA space")
-        query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
-        projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
-
-        print("DIRECTLY projecting query onto Reference UMAP space")
-        query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
-        projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
-
-        DefaultAssay(projected) <- query.assay
+        tryCatch(    #Try Direct projection
+          expr = {
+            projected <- query
+            
+            print("DIRECTLY projecting query onto Reference PCA space")
+            query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
+            projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
+            
+            print("DIRECTLY projecting query onto Reference UMAP space")
+            query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
+            projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
+            
+            DefaultAssay(projected) <- query.assay
+          },
+          error = function(e) {
+            message(paste("Direct projection failed due to:", e, "\n"))
+            message(sprintf("Warning: failed to project dataset %s...", queryName))
+            projected[["pca"]] <- NULL
+            projected[["umap"]] <- NULL
+          }
+        )
       }
     }
 
