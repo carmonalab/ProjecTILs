@@ -491,13 +491,14 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
 #' @param min.cells Only display cell states with a minimum number of cells
 #' @param cols Custom color palette for clusters
-#' @param return Return the ggplot object instead of printing it to the default device
+#' @param return Return the combined grobs instead of printing it to the default device
+#' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
-                             genes4radar=NULL, min.cells=10, cols=NULL, return=F) {
+                             genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
   require(ggplot2)
   require(gridExtra)
   
@@ -610,12 +611,16 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
       coord_polar()
     
   }
-  g <- do.call("arrangeGrob", c(pll, ncol=3, top=paste0("Radar plots for ", labels.col)))
-  
-  if(return){
-    return(g)
-  } else{
-    return(plot(g))
+  #Return plots
+  if (return.as.list) {
+    return(pll)
+  } else {
+    g <- do.call("arrangeGrob", c(pll, ncol=3, top=paste0("Radar plots for ", labels.col)))
+    if(return){
+      return(g)
+    } else{
+      return(plot(g))
+    }
   }
 }
 
