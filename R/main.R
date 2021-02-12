@@ -498,13 +498,35 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' plot.states.radar(ref)
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
-                             genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
+                                  genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
   require(ggplot2)
+  require(scales)
   require(gridExtra)
   
+  #Set genes
   if (is.null(genes4radar)) {
     genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
   }
+  
+  #Set colors
+  ncolors <- 1+length(query)
+  if (ncolors==1) {
+    radar.colors <- "black"
+  } else {
+    if (is.null(cols)) {
+      radar.colors <- c("black", hue_pal()(ncolors-1))
+    } else {
+      cols <- c("black", cols)
+      if (ncolors <= length(cols)) {
+        radar.colors <- cols[1:ncolors]
+      } else {  
+        warning("Not enough colors provided. Making an automatic palette")
+        radar.colors <- c("black", hue_pal()(ncolors-1))
+      }
+    }
+  }  
+  names(radar.colors) <- c("Reference", names(query))
+  
   genes4radar <- intersect(genes4radar, row.names(ref@assays$RNA@data))
   genes4radar <- sort(genes4radar)
   order <- match(genes4radar, row.names(ref@assays$RNA@data))
@@ -529,27 +551,9 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
     for (i in 1:length(query)) {
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
       order <- match(genes4radar, row.names(query[[i]]@assays$RNA@data))
-      qq[[i]] <- query[[i]]@assays$RNA@data[order,]
+      qq[[i]] <- as.matrix(query[[i]]@assays$RNA@data[order,])
     }
   }
-  
-  if (!is.null(cols)) {  #custom palette
-    if (nstates<=length(cols)) {
-      stateColors_func <- cols[1:nstates]
-    } else {  
-      warning("Not enough colors provided. Making an automatic palette")
-      stateColors_func <- rainbow(n=nstates)
-    }  
-  } else {   #default palette
-    stateColors_func <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-    if (nstates<=length(stateColors_func)) {
-      stateColors_func <- stateColors_func[1:nstates]
-    } else {   #make a new palette
-      stateColors_func <- rainbow(n=nstates)
-    }
-  }
-  names(stateColors_func) <- states_all
-  cols_use <- stateColors_func[states_all]
   
   #Get raw expression means, to normalize by gene
   m <- matrix(, nrow = length(states_all), ncol = length(genes4radar))
@@ -564,12 +568,6 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   pll <- list()
   for (j in 1:length(states_all)) {
     s <- states_all[j]
-    fill_use <- c(rep(cols_use[j], length(query)+1))
-    names(fill_use) <- c("Reference",names(query))
-    
-    col_use <- c("black","orange")
-    if (length(query)>1) { col_use <- c(col_use, rainbow(length(query)-1)) }
-    names(col_use) <-  c("Reference",names(query))
     
     this.mean <- apply(rr[, labels == s], MARGIN=1, mean)
     this.mean <- this.mean/normfacs
@@ -600,11 +598,11 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
     
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
       geom_point(size=2) +
-      geom_polygon(size = 0.75, alpha= 0.2) +
+      geom_polygon(size = 0.75, alpha= 0.1) +
       ylim(ymin, ymax) + ggtitle(s)  +
       scale_x_discrete() +
-      scale_fill_manual(values= fill_use) +
-      scale_colour_manual(values= col_use) +
+      scale_fill_manual(values= radar.colors) +
+      scale_colour_manual(values= radar.colors) +
       theme_light() +
       theme(axis.text.x=element_blank()) +
       annotate(geom="text", x=seq(1,length(genes4radar)), y=ymax-0.05*ymax, label=genes4radar, size=3) +
