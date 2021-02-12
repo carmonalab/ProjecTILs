@@ -503,6 +503,11 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   require(scales)
   require(gridExtra)
   
+  #Make sure query is a list
+  if(!is.list(query)) {
+    query <- list(query=query)
+  }
+  
   #Set genes
   if (is.null(genes4radar)) {
     genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
