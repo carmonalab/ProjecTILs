@@ -10,7 +10,7 @@
 
 In contrast to other methods, ProjecTILs allows not only accurately embedding new scRNA-seq data into a reference without altering its structure, but also characterizing previously unknown cell states that “deviate” from the reference. ProjecTILs accurately predicts the effects of cell perturbations and identifies gene programs that are altered in different conditions and tissues.
 
-`ProjecTILs` comes with ready-to-use reference T cell atlases for cancer and viral infection (see [Reference Atlases](#reference-atlases)), and can be also used with custom, user-generated references [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs/build_ref_atlas.html)
+`ProjecTILs` comes with ready-to-use reference T cell atlases for cancer and viral infection (see [Reference Atlases](#reference-atlases)), and can be also used with custom, user-generated references (see [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs/build_ref_atlas.html))
 
 For real-life applications, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
 
