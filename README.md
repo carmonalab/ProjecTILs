@@ -8,7 +8,7 @@
 
 `ProjecTILs` is a computational method to project scRNA-seq data into reference single-cell atlases, enabling their direct comparison in a stable, annotated system of coordinates.
 
-![ProjecTILs_pipeline](https://github.com/carmonalab/ProjecTILs/blob/dev/Pipeline_projecTILs.png?raw=true)
+![ProjecTILs_pipeline](https://github.com/carmonalab/ProjecTILs/blob/dev/docs/Pipeline_projecTILs.png?raw=true)
 
 
 In contrast to other methods, ProjecTILs allows not only accurately embedding new scRNA-seq data into a reference without altering its structure, but also characterizing previously unknown cell states that “deviate” from the reference. ProjecTILs accurately predicts the effects of cell perturbations and identifies gene programs that are altered in different conditions and tissues.
