@@ -18,5 +18,9 @@
 
 * `plot.discriminant.3d`   Add an extra dimension to the reference map  to explore additional axes of variability in a query dataset compared to the reference map.
 
+* `find.discriminant.genes` Performs differential expression analysis between a projected query and a control (either the reference map or a control sample), for
+a selected reference subtype. Useful to detect whether specific cell states over/under-express genes between conditions or with respect to the reference.
+
+
 Find more information, syntax and examples using the R help function e.g. `?make.projection`
 
