@@ -81,7 +81,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                              seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, hs.id.col="Gene.HS", id="query1") {
+                              seurat.k.filter=200, skip.normalize=FALSE, id="query1") {
   
   retry.direct <- FALSE
   
@@ -102,6 +102,22 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
      pca.dim=dim(ref@misc$umap_object$data)[2] #use the number of PCs used to build the reference
   } else {
      pca.dim=10
+  }
+  
+  #automatically determine gene ID column
+  g.mm <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.MM))
+  g.hs1 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.stable.ID.HS))
+  g.hs2 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.HS))
+  gg <- c(g.mm, g.hs1, g.hs2)
+  
+  if (max(gg)==g.mm) {
+    human.ortho=FALSE
+  } else {
+    hs.id.col <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
+    if (max(g.hs1, g.hs2)<100) {
+      message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
+    }
+    human.ortho=TRUE
   }
   
   if(filter.cells){

@@ -97,7 +97,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
-#' @param human.ortho Project human data on murine reference atlas, using mouse orthologs
+#' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @return An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
 #' @examples
@@ -106,7 +106,8 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
                              seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, ncores=1) {
-
+   
+  
   if(is.null(ref)){
     print("Loading Default Reference Atlas...")
     refFileName <- paste0(getwd(),"/ref_TILAtlas_mouse_v1.rds")
@@ -124,7 +125,8 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
 
   }
   projected.list <- list()
-
+  data(Hs2Mm.convert.table)
+  
   if(!is.list(query)) {
      query.list <- list(query=query)
   } else {
@@ -135,18 +137,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
   }
   rm(query)
   
-  if (human.ortho) {
-    data(Hs2Mm.convert.table)
-    #automatically determine gene ID column
-    g1 <- length(intersect(row.names(query.list[[1]]), Hs2Mm.convert.table$Gene.stable.ID.HS))
-    g2 <- length(intersect(row.names(query.list[[1]]), Hs2Mm.convert.table$Gene.HS))
-    hs.id.col <- ifelse(g1>g2, "Gene.stable.ID.HS", "Gene.HS")
-    if (max(g1,g2)<100) {
-       message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
-    }
-  }  
-  
-  #Parallelize?
+  #Parallel or sequential
   if (ncores>1) {
     require(future.apply)
     future_ncores <<- ncores
@@ -158,8 +149,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
       FUN = function(i) {
          res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                         direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
-                                        skip.normalize=skip.normalize, human.ortho=human.ortho, 
-                                        hs.id.col=hs.id.col, id=names(query.list)[i])
+                                        skip.normalize=skip.normalize, id=names(query.list)[i])
          return(res)
       }, future.seed = 1
     )
@@ -171,8 +161,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
       FUN = function(i) {
         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                  direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
-                                 skip.normalize=skip.normalize, human.ortho=human.ortho, 
-                                 hs.id.col=hs.id.col, id=names(query.list)[i])
+                                 skip.normalize=skip.normalize, id=names(query.list)[i])
         return(res)
       }
     )
@@ -380,7 +369,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
 #' @param min.cells Only display cell states with a minimum number of cells
-#' @param cols Custom color palette for clusters
+#' @param cols Custom color palette for samples in radar plot
 #' @param return Return the combined grobs instead of printing it to the default device
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
@@ -788,13 +777,13 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
                alpha=0.6,
                alpha_stroke=0.6,
                size=~size,
-               colors=cols ) %>%
-    layout(title = sprintf("Projection of query on reference map + dimension %s", extra.dim),
-        scene = list(
-          xaxis = list(title = "UMAP_1"),
-          yaxis = list(title = "UMAP_2"),
-          zaxis = list(title = extra.dim)
-    ))
+               colors=cols ) %>% plotly::layout(
+                                  title = sprintf("Projection of query on reference map + dimension %s", extra.dim),
+                                  scene = list(
+                                     xaxis = list(title = "UMAP_1"),
+                                     yaxis = list(title = "UMAP_2"),
+                                     zaxis = list(title = extra.dim)
+                                  ))
   print(g)
   return(g)
 }
