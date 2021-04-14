@@ -11,7 +11,8 @@
   genes4radar = NULL,
   min.cells = 10,
   cols = NULL,
-  return = F
+  return = F,
+  return.as.list = F
 )
 }
 \arguments{
@@ -27,7 +28,9 @@
 
 \item{cols}{Custom color palette for clusters}
 
-\item{return}{Return the ggplot object instead of printing it to the default device}
+\item{return}{Return the combined grobs instead of printing it to the default device}
+
+\item{return.as.list}{Return plots in a list, instead of combining them in a single plot}
 }
 \value{
 Radar plot of gene expression of key genes by cell subtype

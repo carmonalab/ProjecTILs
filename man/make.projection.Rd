@@ -8,11 +8,12 @@ make.projection(
   query,
   ref = NULL,
   filter.cells = T,
-  query.assay = "auto",
+  query.assay = NULL,
   direct.projection = FALSE,
   seurat.k.filter = 200,
   skip.normalize = FALSE,
-  human.ortho = FALSE
+  human.ortho = FALSE,
+  ncores = 1
 )
 }
 \arguments{
@@ -22,7 +23,7 @@ make.projection(
 
 \item{filter.cells}{Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.}
 
-\item{query.assay}{Which assay slot to use for the query}
+\item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
 
 \item{direct.projection}{If true, apply PCA transformation directly without alignment}
 
@@ -31,6 +32,8 @@ make.projection(
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
 \item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs}
+
+\item{ncores}{Number of cores for parallel execution (requires \code{future.apply})}
 }
 \value{
 An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications

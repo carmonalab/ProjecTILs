@@ -93,18 +93,19 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 #' @param query Seurat object with query data
 #' @param ref Reference Atlas Seurat object - if NULL, downloads the default TIL reference atlas
 #' @param filter.cells Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.
-#' @param query.assay Which assay slot to use for the query
+#' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param human.ortho Project human data on murine reference atlas, using mouse orthologs
+#' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @return An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
 #' @examples
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto", 
-                            direct.projection=FALSE, seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE) {
+make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
+                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, ncores=1) {
 
   if(is.null(ref)){
     print("Loading Default Reference Atlas...")
@@ -122,19 +123,15 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
     tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")}   )
 
   }
-
-  pca.dim=dim(ref@misc$umap_object$data)[2]  #use the number of PCs used to build the reference
   projected.list <- list()
-
-  #Reference
-  DefaultAssay(ref) <- "integrated"
-
-  ref.var.features <- ref@assays$integrated@var.features
 
   if(!is.list(query)) {
      query.list <- list(query=query)
   } else {
     query.list <- query
+    if (is.null(names(query.list))) {
+       names(query.list) <- paste0("query",c(1:length(query.list)))
+    }
   }
   rm(query)
   
@@ -149,158 +146,42 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay="auto",
     }
   }  
   
-  for (queryName in names(query.list)){
-
-    #Query
-    query <- query.list[[queryName]]
+  #Parallelize?
+  if (ncores>1) {
+    require(future.apply)
+    future_ncores <<- ncores
     
-    retry.direct <- FALSE
-
-    #Query dataset might be pre-integrated for batch effect correction. If 'integrated' assay exists, use it. Otherwise, use 'RNA'.
-    if (!query.assay %in% c("RNA","integrated")){
-      if ("integrated" %in% names(query@assays)) {
-        query.assay = "integrated"
-      } else {
-        query.assay = "RNA"
+    future::plan(future::multisession(workers=future_ncores))
+    
+    projected.list <- future_lapply(
+      X = 1:length(query.list),
+      FUN = function(i) {
+         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
+                                        direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
+                                        skip.normalize=skip.normalize, human.ortho=human.ortho, 
+                                        hs.id.col=hs.id.col, id=names(query.list)[i])
+         return(res)
+      }, future.seed = 1
+    )
+    plan(strategy = "sequential")
+      
+  } else {
+    projected.list <- lapply(
+      X = 1:length(query.list),
+      FUN = function(i) {
+        res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
+                                 direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
+                                 skip.normalize=skip.normalize, human.ortho=human.ortho, 
+                                 hs.id.col=hs.id.col, id=names(query.list)[i])
+        return(res)
       }
-    }
-    print(paste0("Using assay ",query.assay," for ",queryName))
+    )
+  }    
+  names(projected.list) <- names(query.list)
 
-    DefaultAssay(query) <- query.assay
-    
-    if(filter.cells){
-      message("Pre-filtering of T cells (TILPRED classifier)...")
-      query <- filterCells(query, human=human.ortho)
-    }
-    if (is.null(query)) {
-      message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", queryName))
-      projected.list[[queryName]] <- NULL
-      next
-    }
-    
-    #Check if slots are populated, and normalize data.
-    if (skip.normalize) {
-       slot <- "data"
-       exp.mat <-  slot(query@assays[[query.assay]], name=slot)
-       if (dim(exp.mat)[1]==0) {
-          stop("Data slot not found in your Seurat object. Please normalize the data")
-       }
-       if (human.ortho) {
-           print("Transforming expression matrix into space of mouse orthologs") 
-           query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
-       }        
-    } else {
-      slot <- "counts"
-      exp.mat <-  slot(query@assays[[query.assay]], name=slot)
-      if (dim(exp.mat)[1]==0) {
-        stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
-      }
-      if (human.ortho) {
-        print("Transforming expression matrix into space of mouse orthologs") 
-        query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
-      }
-      query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
-      query <- NormalizeData(query) 
-    }
-    rm(exp.mat)
-    
-    query <- RenameCells(query, add.cell.id = "Q")
-    
-    genes4integration <- intersect(ref.var.features, row.names(query))
-
-    if(length(genes4integration)/length(ref.var.features)<0.5){ stop("Too many genes missing. Check input object format") }
-    #TODO implement ID mapping? e.g. from ENSEMBLID to symbol?
-
-    if (length(genes4integration)/length(ref.var.features)<0.8) {
-       print("Warning! more than 20% of variable genes not found in the query")
-    }
-
-    if (direct.projection) {
-      projected <- query
-
-      print("DIRECTLY projecting query onto Reference PCA space")
-      query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
-      projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
-
-      print("DIRECTLY projecting query onto Reference UMAP space")
-      query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
-      projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
-
-      DefaultAssay(projected) <- query.assay
-    } else {
-      tryCatch(    #Try to do alignment, if it fails (too few cells?) do direct projection
-        expr = {
-
-          print(paste0("Aligning ", queryName, " to reference map for batch-correction..."))
-          
-          if (dim(ref@assays$integrated@scale.data)[2]==0) {
-              ref <- ScaleData(ref, do.center=FALSE, do.scale=FALSE, features = genes4integration)
-          }
-          query <- ScaleData(query, do.center=FALSE, do.scale=FALSE, features = genes4integration)
-          
-          ref <- RunPCA(ref, features = genes4integration,verbose = F)
-          query <- RunPCA(query, features = genes4integration,verbose = F)
-
-          #TODO optimize aligmment for speed? e.g. filter number of anchors STACAS
-          proj.anchors <- FindIntegrationAnchors(object.list = c(ref, query), anchor.features = genes4integration,
-                                                 dims = 1:pca.dim, k.filter = seurat.k.filter, scale = FALSE, assay=c("integrated",query.assay), reduction = "rpca")
-          #Do integration
-          all.genes <- intersect(row.names(ref), row.names(query))
-          proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)
-
-          #Subset query data from integrated space
-          cells_query<- colnames(query)
-          projected <- subset(proj.integrated, cells = cells_query)
-
-
-          #Make PCA and UMAP projections
-          cat("\nProjecting corrected query onto Reference PCA space\n")
-          query.pca.proj <-apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
-          projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = "integrated")
-
-          print("Projecting corrected query onto Reference UMAP space")
-          query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj)
-          projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
-
-          DefaultAssay(projected) <- "integrated"
-        },
-        error = function(e) {
-          message(paste("Alignment failed due to:", e, "\n"))
-          message("Warning: alignment of query dataset failed - Trying direct projection...")
-          retry.direct <<- TRUE
-        }
-      )
-      if (retry.direct) {
-        tryCatch(    #Try Direct projection
-          expr = {
-            projected <- query
-            
-            print("DIRECTLY projecting query onto Reference PCA space")
-            query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
-            projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
-            
-            print("DIRECTLY projecting query onto Reference UMAP space")
-            query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
-            projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
-            
-            DefaultAssay(projected) <- query.assay
-          },
-          error = function(e) {
-            message(paste("Direct projection failed due to:", e, "\n"))
-            message(sprintf("Warning: failed to project dataset %s...", queryName))
-            projected <- NULL
-          }
-        )
-      }
-    }
-    
-    if (!is.null(projected)) {
-       projected@assays[[query.assay]]@var.features <- ref.var.features
-    }
-    projected.list[[queryName]] <- projected
-  }
+  #De-list if single object was submitted
   if(length(projected.list)==1)
-     projected.list<-projected.list[[1]]
+     projected.list <- projected.list[[1]]
 
   return(projected.list)
 }
@@ -386,22 +267,26 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols
   
   if (!is.null(cols)) {  #custom palette
     if (nstates<=length(cols)) {
-      stateColors_func <- cols[1:nstates]
+      palette <- cols[1:nstates]
     } else {  
       warning("Not enough colors provided. Making an automatic palette")
-      stateColors_func <- rainbow(n=nstates)
+      palette <- rainbow(n=nstates)
     }  
   } else {   #default palette
-    stateColors_func <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
     
-    if (nstates<=length(stateColors_func)) {
-      stateColors_func <- stateColors_func[1:nstates]
-    } else {   #make a new palette
-      stateColors_func <- rainbow(n=nstates)
-    }
+    if (!is.null(ref@misc$atlas.palette)) {  #read directly from atlas, if stored
+      palette <- ref@misc$atlas.palette
+    } else {
+      palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+      if (nstates<=length(palette)) {
+        palette <- palette[1:nstates]
+      } else {   #make a new palette
+        palette <- rainbow(n=nstates)
+      }
+    }  
   }
-  names(stateColors_func) <- states_all
-  cols_use <- stateColors_func[states_all]
+  names(palette) <- states_all
+  cols_use <- palette[states_all]
   
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
@@ -441,21 +326,26 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
   
   if (!is.null(cols)) {  #custom palette
     if (nstates<=length(cols)) {
-      stateColors_func <- cols[1:nstates]
+      palette <- cols[1:nstates]
     } else {  
       warning("Not enough colors provided. Making an automatic palette")
-      stateColors_func <- rainbow(n=nstates)
+      palette <- rainbow(n=nstates)
     }  
   } else {   #default palette
-    stateColors_func <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-    if (nstates<=length(stateColors_func)) {
-      stateColors_func <- stateColors_func[1:nstates]
-    } else {   #make a new palette
-      stateColors_func <- rainbow(n=nstates)
+    
+    if (!is.null(ref@misc$atlas.palette)) {  #read directly from atlas, if stored
+      palette <- ref@misc$atlas.palette
+    } else {
+      palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+      if (nstates<=length(palette)) {
+        palette <- palette[1:nstates]
+      } else {   #make a new palette
+        palette <- rainbow(n=nstates)
+      }
     }
   }
-  names(stateColors_func) <- states_all
-  cols_use <- stateColors_func[states_all]
+  names(palette) <- states_all
+  cols_use <- palette[states_all]
 
   tb <- table(factor(query[[labels.col]][,1], levels=states_all))
   
@@ -505,7 +395,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   
   #Make sure query is a list
   if(!is.list(query)) {
-    query <- list(query=query)
+    query <- list(Query=query)
   }
   
   #Set genes
@@ -1025,89 +915,4 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
   
   
   return(markers)
-}
-
-
-
-#========== INTERNALS =================#
-
-#Internal function to filter functions using TILPRED
-filterCells <- function(query.object, human=FALSE){
-  sce <- as.SingleCellExperiment(query.object)
-  sce.pred <- predictTilState(sce, human=human)
-  query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
-  
-  if (human) {
-    cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
-  } else {  
-    cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
-    query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
-  }
-  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
-              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
-              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
-  
-  if (length(cells_keep)>0) {
-     query.object <- subset(query.object, cells = cells_keep)
-  } else {
-    query.object <- NULL
-  }
-  return(query.object)
-}
-
-#Internal function to randomly split an object into subsets
-randomSplit <- function(obj, n=2, seed=44, verbose=F) {
-  set.seed(seed)
-  lgt <- dim(obj)[2]
-  ind <- sample.int(n, lgt, replace = T)
-  cell.list <- split(colnames(obj), ind)
-  seurat.list <- list()
-  if (verbose==TRUE) {
-    message(sprintf("Splitting object into %i random subsets", n))
-  }
-  for (h in 1:n) {
-    seurat.list[[h]] <- subset(obj, cells= cell.list[[h]])
-  }
-  return(seurat.list)
-}
-
-#Internal function for mouse-human ortholog conversion
-convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
-  
-  exp.mat <- slot(obj@assays[[query.assay]], name=slot)
-  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
-  
-  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
-  
-  row.names(exp.mat) <- mouse.genes
-  slot(obj@assays[[query.assay]], name=slot) <- exp.mat
-  return(obj)
-}
-
-#Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
-merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
-{  
-  require(Seurat)
-  
-  #first regular Seurat merge, inheriting parameters
-  m <- merge(x, y, ...)
-  #preserve reductions (PCA, UMAP, ...)
-  
-  reds <- intersect(names(x@reductions), names(y@reductions))
-  for (r in reds) {
-    message(sprintf("Merging %s embeddings...", r))
-    
-    m@reductions[[r]] <- x@reductions[[r]]
-    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
-      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
-      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
-      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
-    }
-  }
-  return(m)
-  
 }
