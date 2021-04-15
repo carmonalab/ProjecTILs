@@ -26,7 +26,7 @@
 
 \item{min.cells}{Only display cell states with a minimum number of cells}
 
-\item{cols}{Custom color palette for clusters}
+\item{cols}{Custom color palette for samples in radar plot}
 
 \item{return}{Return the combined grobs instead of printing it to the default device}
 

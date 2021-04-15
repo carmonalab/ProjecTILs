@@ -13,7 +13,8 @@ make.projection(
   seurat.k.filter = 200,
   skip.normalize = FALSE,
   human.ortho = FALSE,
-  ncores = 1
+  ncores = 1,
+  future.maxSize = 3000
 )
 }
 \arguments{
@@ -31,9 +32,11 @@ make.projection(
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
-\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs}
+\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{future.apply})}
+
+\item{future.maxSize}{For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}}
 }
 \value{
 An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
