@@ -99,13 +99,14 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
+#' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
 #' @return An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
 #' @examples
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, ncores=1) {
+                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, ncores=1, future.maxSize=3000) {
    
   
   if(is.null(ref)){
@@ -140,6 +141,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
   #Parallel or sequential
   if (ncores>1) {
     require(future.apply)
+    options(future.globals.maxSize= future.maxSize*1024^2)
     future_ncores <<- ncores
     
     future::plan(future::multisession(workers=future_ncores))
