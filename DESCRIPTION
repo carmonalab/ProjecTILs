@@ -12,5 +12,5 @@ Suggests: fastICA,EnhancedVolcano,future.apply
 Imports: 
 License: GPL-3
 Encoding: UTF-8
-LazyData: false
+LazyData: true
 RoxygenNote: 7.1.1

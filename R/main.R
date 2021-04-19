@@ -84,6 +84,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
     }
     
     #Also try to determine whether genes are on rows or columns
+    data(Hs2Mm.convert.table)
     gnames <- c(Hs2Mm.convert.table$Gene.MM, Hs2Mm.convert.table$Gene.stable.ID.HS, Hs2Mm.convert.table$Gene.HS)
     gr <- length(intersect(rownames(query.exp), gnames))
     gc <- length(intersect(colnames(query.exp), gnames))
@@ -146,6 +147,7 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
 
   }
   projected.list <- list()
+  data(Hs2Mm.convert.table)
   
   if(!is.list(query)) {
      query.list <- list(query=query)
