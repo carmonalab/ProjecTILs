@@ -23,7 +23,7 @@
 
 \item{query.assay}{The data slot to be used for enrichment analysis}
 
-\item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
+\item{labels.col}{The metadata field used to annotate the clusters}
 
 \item{extra.dim}{The additional dimension to be added on the z-axis of the plot. Can be either:
 \itemize{

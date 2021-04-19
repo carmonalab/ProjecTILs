@@ -6,20 +6,20 @@
 \usage{
 read.sc.query(
   filename,
-  type = c("10x", "hdf5", "raw", "raw.log2", "alevin", "alevin.csv"),
+  type = c("10x", "hdf5", "raw", "raw.log2"),
   project.name = "Query",
   min.cells = 3,
   min.features = 50,
   gene.column.10x = 2,
   raw.rownames = 1,
-  raw.sep = " ",
+  raw.sep = c(" ", "\\t", ",", "auto"),
   raw.header = T
 )
 }
 \arguments{
 \item{filename}{Path to expression matrix file or folder}
 
-\item{type}{Expression matrix format (10x, hdf5, raw, raw.log2, alevin, alevin.csv)}
+\item{type}{Expression matrix format (10x, hdf5, raw, raw.log2)}
 
 \item{project.name}{Title for the project}
 
@@ -29,17 +29,17 @@ read.sc.query(
 
 \item{gene.column.10x}{For 10x format - which column of genes.tsv or features.tsv to use for gene names}
 
-\item{raw.sep}{For raw format - Separator in raw expression matrix}
+\item{raw.sep}{For raw matrix format - Separator for raw expression matrix (set to "auto" to guess it)}
 
-\item{raw.header}{For raw format - Use headers in expression matrix}
+\item{raw.header}{For raw matrix format - Use headers in expression matrix}
 
-\item{raw.rawnames}{For raw format - A vector of row names, or a single number giving the column of the table which contains the row names}
+\item{raw.rawnames}{For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names}
 }
 \value{
 A Seurat object populated with raw counts and normalized counts for single-cell expression
 }
 \description{
-Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts, etc.) 
+Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts) 
 are supported - see \code{type} parameter for details
 }
 \examples{

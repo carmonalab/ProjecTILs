@@ -32,27 +32,27 @@ load.reference.map <- function(ref="referenceTIL") {
 
 #' Read to memory a query expression matrix
 #'
-#' Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts, etc.) 
+#' Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts) 
 #' are supported - see \code{type} parameter for details
 #'
 #' @param filename Path to expression matrix file or folder
-#' @param type Expression matrix format (10x, hdf5, raw, raw.log2, alevin, alevin.csv)
+#' @param type Expression matrix format (10x, hdf5, raw, raw.log2)
 #' @param project.name Title for the project
 #' @param min.cells Only keep genes represented in at least min.cells number of cells
 #' @param min.features Only keep cells expressing at least min.features genes
 #' @param gene.column.10x For 10x format - which column of genes.tsv or features.tsv to use for gene names
-#' @param raw.rawnames For raw format - A vector of row names, or a single number giving the column of the table which contains the row names
-#' @param raw.sep For raw format - Separator in raw expression matrix
-#' @param raw.header For raw format - Use headers in expression matrix
+#' @param raw.rawnames For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names
+#' @param raw.sep For raw matrix format - Separator for raw expression matrix (set to "auto" to guess it)
+#' @param raw.header For raw matrix format - Use headers in expression matrix
 #' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
 #' @examples
 #' fname <- "./sample_data"
 #' querydata <- read.sc.query(fname, type="10x")
 #' @export
 
-read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin","alevin.csv"), 
-                          project.name="Query", min.cells = 3, min.features = 50,
-                          gene.column.10x=2, raw.rownames=1, raw.sep=" ", raw.header=T) {
+read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), project.name="Query",
+                          min.cells = 3, min.features = 50, gene.column.10x=2,
+                          raw.rownames=1, raw.sep=c(" ","\t",",","auto"), raw.header=T) {
   
   if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
   type = tolower(type[1])
@@ -61,13 +61,16 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
     query.exp <- Read10X(filename, gene.column = gene.column.10x)
   } else if (type == "hdf5") {
     query.exp <- Read10X_h5(filename)
-  } else if (type == "alevin") {
-    query.exp <- ReadAlevin(filename)
-  } else if (type == "alevin.csv") {
-    query.exp <- ReadAlevinCsv(filename)
   } else if (type == "raw" | type == "raw.log2") {
     p <- regexpr("\\.([[:alnum:]]+)$", filename)
     extension <- ifelse(p > -1L, substring(filename, p + 1L), "")
+    raw.sep <- raw.sep[1]
+    if (raw.sep == "auto") {
+      raw.sep <- guess_raw_separator(f=filename)
+      if (is.null(raw.sep)) {
+        stop("Could not guess separator for raw matrix format. Try specifying manually with raw.sep parameter")
+      }
+    }
     if (extension == "gz") {
       query.exp <- read.csv(gzfile(filename),row.names=raw.rownames, sep=raw.sep, header=raw.header)
     } else {
@@ -86,13 +89,14 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 
 #' Project a query scRNA-seq dataset onto a reference atlas
 #'
-#' This function allows projecting a single-cell RNA-seq dataset onto a reference map of cellular states.
-#' It can be useful to interpret a new dataset in the context of an annotated Atlas of known cell types. See `load.reference.map` to load
-#' or download a reference atlas.
+#' This function allows projecting single-cell RNA-seq datasets onto a reference map of cellular states. To project multiple dataset, submit a list of
+#' Seurat objects with the query parameter.
+#' 
+#' See `load.reference.map()` to load or download a reference atlas.
 #'
-#' @param query Seurat object with query data
-#' @param ref Reference Atlas Seurat object - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.
+#' @param query Query data, either as single Seurat object or as a list of Seurat object
+#' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
+#' @param filter.cells Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously subset to T cells only.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
@@ -100,7 +104,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2","alevin
 #' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
-#' @return An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
+#' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 #' @examples
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
@@ -183,9 +187,9 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
 #' cells in the reference map and cells in the query are calculated in a reduced space (PCA or UMAP) and the feature is assigned to
 #' query cells based on a consensus of its nearest neighbors in the reference object.
 #'
-#' @param ref Reference Atlas Seurat object
+#' @param ref Reference Atlas
 #' @param query Seurat object with query data
-#' @param reduction The reduced space used to calculate pairwise distances. One of "pca" or "umap"
+#' @param reduction The dimensionality reduction used to calculate pairwise distances. One of "pca" or "umap"
 #' @param ndim How many dimensions in the reduced space to be used for distance calculations
 #' @param k Number of neighbors to assign the cell type
 #' @param labels.col The metadata field of the reference to annotate the clusters (default: functional.cluster)
@@ -236,7 +240,7 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #'
 #' Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
 #'
-#' @param ref Reference Atlas Seurat object
+#' @param ref Reference Atlas
 #' @param query Seurat object with query data
 #' @param labels.col The metadata field to annotate the clusters (default: functional.cluster)
 #' @param cols Custom color palette for clusters
@@ -366,7 +370,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' Makes a radar plot of the expression level of a set of genes. It can be useful to compare the gene expression profile of different cell
 #' states in the reference atlas vs. a projected set.
 #'
-#' @param ref Seurat object with reference atlas
+#' @param ref Reference Atlas
 #' @param query Query data, either as a Seurat object or as a list of Seurat objects
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
@@ -528,8 +532,8 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
 #' @param reduction Which dimensionality reduction to use (either ICA or PCA)
 #' @param test Which test to perform between the dataset distributions in each ICA/PCA dimension. One of `ks` (Kolmogorov-Smirnov) or `t.test` (T-test)
 #' @param ndim How many dimensions to consider in the reduced ICA/PCA space
-#' @param print.n The number of top dimensions to return to STDOUT (default: 3)
-#' @param verbose Print results to STDOUT (default: TRUE)
+#' @param print.n The number of top dimensions to return to STDOUT
+#' @param verbose Print results to STDOUT
 #' @return A dataframe, where rows are ICA/PCA dimensions. ICA/PCAs are ranked by statistical significance when comparing their distribution between query and control (or query vs. reference map)
 #' @examples
 #' find.discriminant.dimensions(ref, query=query.set)
@@ -676,7 +680,7 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 #' @param query Seurat object with query data
 #' @param query.control Optionally, you can compare your query with a control sample, instead of the reference
 #' @param query.assay The data slot to be used for enrichment analysis
-#' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
+#' @param labels.col The metadata field used to annotate the clusters
 #' @param query.state Only plot the query cells from this specific state
 #' @param extra.dim The additional dimension to be added on the z-axis of the plot. Can be either:
 #' \itemize{

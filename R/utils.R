@@ -38,6 +38,22 @@ randomSplit <- function(obj, n=2, seed=44, verbose=F) {
   return(seurat.list)
 }
 
+guess_raw_separator <- function(f, sep=c(" ","\t",",")) {
+  
+  lines <- readLines(f, n=10)
+  if (length(lines) == 0) {
+     return(NULL)
+  }
+  spl <- lapply(sep, grep, x=lines)
+  counts <- unlist(lapply(spl, length))
+  if (max(counts)==0) {
+    return(NULL)
+  }
+  sep.index <- which(counts==max(counts))[1]
+  return(sep[sep.index])
+  
+}
+
 #Internal function for mouse-human ortholog conversion
 convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
   

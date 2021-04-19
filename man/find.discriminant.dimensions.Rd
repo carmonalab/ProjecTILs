@@ -42,9 +42,9 @@ find.discriminant.dimensions(
 
 \item{ndim}{How many dimensions to consider in the reduced ICA/PCA space}
 
-\item{print.n}{The number of top dimensions to return to STDOUT (default: 3)}
+\item{print.n}{The number of top dimensions to return to STDOUT}
 
-\item{verbose}{Print results to STDOUT (default: TRUE)}
+\item{verbose}{Print results to STDOUT}
 }
 \value{
 A dataframe, where rows are ICA/PCA dimensions. ICA/PCAs are ranked by statistical significance when comparing their distribution between query and control (or query vs. reference map)

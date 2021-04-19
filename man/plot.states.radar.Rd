@@ -16,7 +16,7 @@
 )
 }
 \arguments{
-\item{ref}{Seurat object with reference atlas}
+\item{ref}{Reference Atlas}
 
 \item{query}{Query data, either as a Seurat object or as a list of Seurat objects}
 
@@ -26,7 +26,7 @@
 
 \item{min.cells}{Only display cell states with a minimum number of cells}
 
-\item{cols}{Custom color palette for clusters}
+\item{cols}{Custom color palette for samples in radar plot}
 
 \item{return}{Return the combined grobs instead of printing it to the default device}
 

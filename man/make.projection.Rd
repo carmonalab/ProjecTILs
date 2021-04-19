@@ -13,15 +13,16 @@ make.projection(
   seurat.k.filter = 200,
   skip.normalize = FALSE,
   human.ortho = FALSE,
-  ncores = 1
+  ncores = 1,
+  future.maxSize = 3000
 )
 }
 \arguments{
-\item{query}{Seurat object with query data}
+\item{query}{Query data, either as single Seurat object or as a list of Seurat object}
 
-\item{ref}{Reference Atlas Seurat object - if NULL, downloads the default TIL reference atlas}
+\item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously checked for non-T cell contaminations.}
+\item{filter.cells}{Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously subset to T cells only.}
 
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
 
@@ -31,17 +32,21 @@ make.projection(
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
-\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs}
+\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{future.apply})}
+
+\item{future.maxSize}{For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}}
 }
 \value{
-An augmented object \code{query} with projected UMAP coordinates on the reference map and cells classifications
+An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 }
 \description{
-This function allows projecting a single-cell RNA-seq dataset onto a reference map of cellular states.
-It can be useful to interpret a new dataset in the context of an annotated Atlas of known cell types. See `load.reference.map` to load
-or download a reference atlas.
+This function allows projecting single-cell RNA-seq datasets onto a reference map of cellular states. To project multiple dataset, submit a list of
+Seurat objects with the query parameter.
+}
+\details{
+See `load.reference.map()` to load or download a reference atlas.
 }
 \examples{
 data(query_example_seurat)

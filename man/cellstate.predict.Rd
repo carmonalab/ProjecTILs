@@ -14,11 +14,11 @@ cellstate.predict(
 )
 }
 \arguments{
-\item{ref}{Reference Atlas Seurat object}
+\item{ref}{Reference Atlas}
 
 \item{query}{Seurat object with query data}
 
-\item{reduction}{The reduced space used to calculate pairwise distances. One of "pca" or "umap"}
+\item{reduction}{The dimensionality reduction used to calculate pairwise distances. One of "pca" or "umap"}
 
 \item{ndim}{How many dimensions in the reduced space to be used for distance calculations}
 
