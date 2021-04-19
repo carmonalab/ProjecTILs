@@ -42,7 +42,7 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @param min.features Only keep cells expressing at least min.features genes
 #' @param gene.column.10x For 10x format - which column of genes.tsv or features.tsv to use for gene names
 #' @param raw.rawnames For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names
-#' @param raw.sep For raw matrix format - Separator for raw expression matrix (set to "auto" to guess it)
+#' @param raw.sep For raw matrix format - Separator for raw expression matrix
 #' @param raw.header For raw matrix format - Use headers in expression matrix
 #' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
 #' @examples
@@ -52,7 +52,7 @@ load.reference.map <- function(ref="referenceTIL") {
 
 read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), project.name="Query",
                           min.cells = 3, min.features = 50, gene.column.10x=2,
-                          raw.rownames=1, raw.sep=c(" ","\t",",","auto"), raw.header=T) {
+                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T) {
   
   if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
   type = tolower(type[1])
@@ -62,8 +62,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
   } else if (type == "hdf5") {
     query.exp <- Read10X_h5(filename)
   } else if (type == "raw" | type == "raw.log2") {
-    p <- regexpr("\\.([[:alnum:]]+)$", filename)
-    extension <- ifelse(p > -1L, substring(filename, p + 1L), "")
+    
     raw.sep <- raw.sep[1]
     if (raw.sep == "auto") {
       raw.sep <- guess_raw_separator(f=filename)
@@ -71,14 +70,31 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
         stop("Could not guess separator for raw matrix format. Try specifying manually with raw.sep parameter")
       }
     }
+    
+    p <- regexpr("\\.([[:alnum:]]+)$", filename)
+    extension <- ifelse(p > -1L, substring(filename, p + 1L), "")
     if (extension == "gz") {
-      query.exp <- read.csv(gzfile(filename),row.names=raw.rownames, sep=raw.sep, header=raw.header)
+      query.exp <- read.table(gzfile(filename),row.names=raw.rownames, sep=raw.sep, header=raw.header)
     } else {
-      query.exp <- read.csv(filename,row.names=raw.rownames, sep=raw.sep, header=raw.header)
+      query.exp <- read.table(filename,row.names=raw.rownames, sep=raw.sep, header=raw.header)
     }
+    query.exp[is.na(query.exp)] <- 0
     if (type == "raw.log2") {
       query.exp <- 2^(query.exp)-1
     }
+    
+    #Also try to determine whether genes are on rows or columns
+    gnames <- c(Hs2Mm.convert.table$Gene.MM, Hs2Mm.convert.table$Gene.stable.ID.HS, Hs2Mm.convert.table$Gene.HS)
+    gr <- length(intersect(rownames(query.exp), gnames))
+    gc <- length(intersect(colnames(query.exp), gnames))
+    gmax <- max(gr, gc)
+    if (gmax==0) {
+      stop("Could not find gene names in matrix. Check matrix format")
+    }
+    if (gc>gr) {  #flip rows and columns
+      query.exp <- t(query.exp)
+    }
+    
   } else {
      stop("Please provide a query dataset in one of the supported formats")
   } 
@@ -130,7 +146,6 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
 
   }
   projected.list <- list()
-  data(Hs2Mm.convert.table)
   
   if(!is.list(query)) {
      query.list <- list(query=query)
