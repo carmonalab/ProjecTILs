@@ -93,10 +93,9 @@ data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
 query.projected.list <- make.projection(data.seurat.list)
 ```
 
-* When using multi-core projection (`ncores>1`), you may have to increase the maximum object size allowed in `future`, e.g. for 2GB run:
+* When using multi-core projection (`ncores>1`), you may have to increase the maximum allowed object size by setting the parameter `future.maxSize`, e.g. to allocate 5GB: 
 ```
-mem_in_mb <- 2000
-options(future.globals.maxSize= mem_in_mb*1024^2)
+make.projection(query, ref, ncores=4, future.maxSize=5000)
 ```
 
 
