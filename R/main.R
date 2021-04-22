@@ -363,13 +363,13 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
   
   if (metric=="percent") {  #normalize
     tb <- tb*100/sum(tb)
-    tb.m <- melt(tb)
+    tb.m <- reshape2::melt(tb)
     colnames(tb.m) <- c("Cell_state","Perc_cells")
     p <- ggplot(tb.m, aes(x=Cell_state, y=Perc_cells, fill=Cell_state)) + geom_bar(stat="identity") +
       scale_fill_manual(values=cols_use) +
       theme(axis.text.x=element_blank(), legend.position="left")
   } else if (metric=="count") {
-    tb.m <- melt(tb)
+    tb.m <- reshape2::melt(tb)
     colnames(tb.m) <- c("Cell_state","Ncells")
     p <- ggplot(tb.m, aes(x=Cell_state, y=Ncells, fill=Cell_state)) + geom_bar(stat="identity") +
       scale_fill_manual(values=cols_use) +
