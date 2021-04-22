@@ -12,7 +12,7 @@ read.sc.query(
   min.features = 50,
   gene.column.10x = 2,
   raw.rownames = 1,
-  raw.sep = c(" ", "\\t", ",", "auto"),
+  raw.sep = c("auto", " ", "\\t", ","),
   raw.header = T
 )
 }
@@ -29,7 +29,7 @@ read.sc.query(
 
 \item{gene.column.10x}{For 10x format - which column of genes.tsv or features.tsv to use for gene names}
 
-\item{raw.sep}{For raw matrix format - Separator for raw expression matrix (set to "auto" to guess it)}
+\item{raw.sep}{For raw matrix format - Separator for raw expression matrix}
 
 \item{raw.header}{For raw matrix format - Use headers in expression matrix}
 
