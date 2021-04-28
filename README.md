@@ -31,7 +31,6 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
 if (!requireNamespace("Seurat", quietly = TRUE)) {
-   BiocManager::install('multtest')
    install.packages("Seurat")
 }
 
@@ -52,7 +51,8 @@ Load sample data and test your installation:
 ```
 library(ProjecTILs)
 data(query_example_seurat)
-make.projection(query_example_seurat, skip.normalize=T)
+
+make.projection(query_example_seurat)
 ```
 
 On your first run, the `make.projection` call will download the reference TIL atlas used as default map. This may take some time depending on your connection, but it is only necessary on the first run.
