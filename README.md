@@ -102,7 +102,7 @@ make.projection(query, ref, ncores=4, future.maxSize=5000)
 
 ### Citation
 
-Projecting single-cell transcriptomics data onto a reference T cell atlas to interpret immune responses. Massimo Andreatta, Jesus Corria Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. 2020 https://doi.org/10.1101/2020.06.23.166546
+**Interpretation of T cell states from single-cell transcriptomics data using reference atlases** Massimo Andreatta, Jesus Corria Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. *Nature Communications* **(2021)** In press - https://doi.org/10.1101/2020.06.23.166546
 
 <p align="center">
   <img height="80" src="docs/projectils_logo_W_square.png">
