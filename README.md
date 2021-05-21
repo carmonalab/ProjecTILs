@@ -102,7 +102,7 @@ make.projection(query, ref, ncores=4, future.maxSize=5000)
 
 ### Citation
 
-**Interpretation of T cell states from single-cell transcriptomics data using reference atlases** Massimo Andreatta, Jesus Corria Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. *Nature Communications* **(2021)** In press - https://doi.org/10.1101/2020.06.23.166546
+**Interpretation of T cell states from single-cell transcriptomics data using reference atlases** Massimo Andreatta, Jesus Corria-Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. *Nature Communications* **12** Article number: 2965 (2021) - https://www.nature.com/articles/s41467-021-23324-4
 
 <p align="center">
   <img height="80" src="docs/projectils_logo_W_square.png">
