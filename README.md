@@ -31,7 +31,6 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
   install.packages("BiocManager")
 
 if (!requireNamespace("Seurat", quietly = TRUE)) {
-   BiocManager::install('multtest')
    install.packages("Seurat")
 }
 
@@ -52,7 +51,8 @@ Load sample data and test your installation:
 ```
 library(ProjecTILs)
 data(query_example_seurat)
-make.projection(query_example_seurat, skip.normalize=T)
+
+make.projection(query_example_seurat)
 ```
 
 On your first run, the `make.projection` call will download the reference TIL atlas used as default map. This may take some time depending on your connection, but it is only necessary on the first run.
@@ -102,7 +102,7 @@ make.projection(query, ref, ncores=4, future.maxSize=5000)
 
 ### Citation
 
-Projecting single-cell transcriptomics data onto a reference T cell atlas to interpret immune responses. Massimo Andreatta, Jesus Corria Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. 2020 https://doi.org/10.1101/2020.06.23.166546
+**Interpretation of T cell states from single-cell transcriptomics data using reference atlases** Massimo Andreatta, Jesus Corria-Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. *Nature Communications* **12** Article number: 2965 (2021) - https://www.nature.com/articles/s41467-021-23324-4
 
 <p align="center">
   <img height="80" src="docs/projectils_logo_W_square.png">
