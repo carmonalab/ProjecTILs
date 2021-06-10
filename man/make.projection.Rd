@@ -12,6 +12,7 @@ make.projection(
   direct.projection = FALSE,
   seurat.k.filter = 200,
   skip.normalize = FALSE,
+  scGate_model = NULL,
   human.ortho = FALSE,
   ncores = 1,
   future.maxSize = 3000
@@ -22,7 +23,7 @@ make.projection(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously subset to T cells only.}
+\item{filter.cells}{Pre-filter T cells using `scGate`. Only set to FALSE if the dataset has been previously subset to T cells only.}
 
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
 
@@ -32,7 +33,9 @@ make.projection(
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
-\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)}
+\item{scGate_model}{scGate model to filter T cells from datasets (if NULL use `scGate::scGate_DB[[species]]$Tcell`)}
+
+\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (deprecated from v.0.9.9)}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{future.apply})}
 

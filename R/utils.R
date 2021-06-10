@@ -1,24 +1,25 @@
-#Internal function to filter functions using TILPRED
-filterCells <- function(query.object, human=FALSE){
-  sce <- as.SingleCellExperiment(query.object)
-  sce.pred <- predictTilState(sce, human=human)
-  query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
+#Internal function to filter T cells using scGate
+filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
   
-  if (human) {
-    cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
-  } else {  
-    cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
-    query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
+  if (is.null(gating.model)) {
+     gating.model = scGate::scGate_DB[[species]]$Tcell   
   }
-  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
-              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
-              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
+  #Note 1: possibly read relevant model from atlas
+  #Note 2: add cycling score
   
-  if (length(cells_keep)>0) {
-    query.object <- subset(query.object, cells = cells_keep)
+  query.object <- scGate(query.object, gating.model = gating.model, ncores=ncores, quiet = TRUE)
+  ncells <- ncol(query.object)
+  
+  ncells.keep <- sum(query.object$is.pure == 'Pure')
+  if (ncells.keep > 0) {
+     query.object <- subset(query.object, subset=is.pure=='Pure') 
   } else {
-    query.object <- NULL
+     query.object <- NULL
   }
+  message <- sprintf("%i out of %i ( %i%% ) non-pure T cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
+                     ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
+  print(message)
+
   return(query.object)
 }
 
@@ -97,7 +98,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                              seurat.k.filter=200, skip.normalize=FALSE, id="query1") {
+                              seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
   
@@ -128,17 +129,19 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   
   if (max(gg)==g.mm) {
     human.ortho=FALSE
+    species='mouse'
   } else {
     hs.id.col <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
     if (max(g.hs1, g.hs2)<100) {
       message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
     }
     human.ortho=TRUE
+    species='human'
   }
   
   if(filter.cells){
-    message("Pre-filtering of T cells (TILPRED classifier)...")
-    query <- filterCells(query, human=human.ortho)
+    message("Pre-filtering of T cells with scGate...")
+    query <- filterCells(query, species=species, gating.model=scGate_model, ncores=ncores)
   }
   if (is.null(query)) {
     message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", id))
@@ -221,10 +224,10 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")
-        query.pca.proj <-apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
+        query.pca.proj <- apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
         projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = "integrated")
         
-        print("Projecting corrected query onto Reference UMAP space")
+        cat("\nProjecting corrected query onto Reference UMAP space\n")
         query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj)
         projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
         
