@@ -5,9 +5,10 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores
      gating.model = scGate::scGate_DB[[species]]$Tcell   
   }
   #Note 1: possibly read relevant model from atlas
-  #Note 2: add cycling score
   
-  query.object <- scGate(query.object, gating.model = gating.model, ncores=ncores, quiet = TRUE)
+  data(cell.cycle.obj)
+  query.object <- scGate(query.object, gating.model = gating.model, ncores=ncores, quiet = TRUE,
+                         additional.signatures = cell.cycle.obj[[species]])
   ncells <- ncol(query.object)
   
   ncells.keep <- sum(query.object$is.pure == 'Pure')
@@ -19,7 +20,17 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores
   message <- sprintf("%i out of %i ( %i%% ) non-pure T cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
                      ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
   print(message)
-
+  
+  #Parse metadata columns
+  query.object$cycling.score <- query.object$cycling_scGate
+  query.object$cycling.score.G1_S <- query.object$cycling_G1.S_scGate
+  query.object$cycling.score.G2_M <- query.object$cycling_G2.M_scGate
+  
+  to_remove <- grep("_Zscore$", colnames(query.object@meta.data), perl=T)
+  to_remove <- c(to_remove, grep("_scGate$", colnames(query.object@meta.data), perl=T))
+  to_remove <- c(to_remove, which(colnames(query.object@meta.data) %in% c("is.pure","scGate.annotation")))
+  
+  query.object@meta.data <- query.object@meta.data[,-to_remove]
   return(query.object)
 }
 
