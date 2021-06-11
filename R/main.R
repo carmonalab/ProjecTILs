@@ -118,7 +118,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
-#' @param scGate_model scGate model to filter T cells from datasets (if NULL use `scGate::scGate_DB[[species]]$Tcell`)
+#' @param scGate_model scGate model used to filter target cell type (T cells by default) from query data (if NULL use scGate's T cell model `scGate::scGate_DB[[species]]$Tcell`). 
 #' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (deprecated from v.0.9.9)
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}

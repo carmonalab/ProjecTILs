@@ -33,7 +33,7 @@ make.projection(
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
-\item{scGate_model}{scGate model to filter T cells from datasets (if NULL use `scGate::scGate_DB[[species]]$Tcell`)}
+\item{scGate_model}{scGate model used to filter target cell type (T cells by default) from query data (if NULL use scGate's T cell model `scGate::scGate_DB[[species]]$Tcell`).}
 
 \item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (deprecated from v.0.9.9)}
 
