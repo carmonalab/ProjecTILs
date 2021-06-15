@@ -28,7 +28,7 @@ if (!requireNamespace("remotes")) install.packages("remotes")
 library(remotes)
 
 if (!requireNamespace("UCell", quietly = TRUE)) {
-  remotes::install_git("https://gitlab.unil.ch/carmona/UCell.git")
+  remotes::install_github("carmonalab/UCell")
 }
 
 if (!requireNamespace("scGate", quietly = TRUE)) {
