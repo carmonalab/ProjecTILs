@@ -1,11 +1,6 @@
 #Internal function to filter T cells using scGate
 filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
   
-  if (is.null(gating.model)) {
-     gating.model = scGate::scGate_DB[[species]]$Tcell   
-  }
-  #Note 1: possibly read relevant model from atlas
-  
   data(cell.cycle.obj)
   query.object <- scGate(query.object, gating.model = gating.model, ncores=ncores, quiet = TRUE,
                          additional.signatures = cell.cycle.obj[[species]])
@@ -152,6 +147,15 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   
   if(filter.cells){
     message("Pre-filtering of T cells with scGate...")
+    
+    if (is.null(gating.model)) {  #read filter model from atlas
+      if (!is.null(ref@misc$scGate[[species]])) {
+        gating.model <- ref@misc$scGate[[species]]
+      } else {   #if no model was stored in atlas, use a default T cell filter
+        gating.model <- scGate::scGate_DB[[species]]$Tcell
+      }
+    }
+    #Note 1: possibly read relevant model from atlas
     query <- filterCells(query, species=species, gating.model=scGate_model, ncores=ncores)
   }
   if (is.null(query)) {
