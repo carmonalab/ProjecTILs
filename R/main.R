@@ -58,7 +58,21 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
   type = tolower(type[1])
   
   if (type == "10x") {
-    query.exp <- Read10X(filename, gene.column = gene.column.10x)
+    fl <- list.files(filename)
+    matrix.file <- grep("matrix.mtx", fl, value=T)[1]
+    feature.file <- grep("features.tsv|genes.tsv", fl, value=T)[1]
+    barcode.file <- grep("barcodes.tsv", fl, value=T)[1]
+    
+    if (is.na(matrix.file)) stop("Cannot find matrix file")
+    if (is.na(feature.file)) stop("Cannot find genes file")
+    if (is.na(barcode.file)) stop("Cannot find barcode file")
+    
+    matrix.file <- sprintf("%s/%s", filename, matrix.file)
+    feature.file <- sprintf("%s/%s", filename, feature.file)
+    barcode.file <- sprintf("%s/%s", filename, barcode.file)
+    #query.exp <- Read10X(filename, gene.column = gene.column.10x)
+    query.exp <- ReadMtx(mtx=matrix.file, cells=barcode.file, features=feature.file, feature.column=gene.column.10x)
+    
   } else if (type == "hdf5") {
     query.exp <- Read10X_h5(filename)
   } else if (type == "raw" | type == "raw.log2") {
