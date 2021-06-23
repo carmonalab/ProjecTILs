@@ -27,21 +27,15 @@ To install `ProjecTILs` directly from its Git repository, run the following code
 if (!requireNamespace("remotes")) install.packages("remotes")
 library(remotes)
 
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-
-if (!requireNamespace("Seurat", quietly = TRUE)) {
-   install.packages("Seurat")
+if (!requireNamespace("UCell", quietly = TRUE)) {
+  remotes::install_github("carmonalab/UCell")
 }
 
-if (!requireNamespace("TILPRED", quietly = TRUE)) {
-  install.packages(c("doParallel","doRNG"))
-  BiocManager::install(c("AUCell","SingleCellExperiment"))
-  remotes::install_github("carmonalab/TILPRED")
+if (!requireNamespace("scGate", quietly = TRUE)) {
+  remotes::install_git("https://gitlab.unil.ch/carmona/scGate.git")
 }
 
-remotes::install_github("carmonalab/ProjecTILs")
-
+remotes::install_github("carmonalab/ProjecTILs",ref="dev")
 
 ```
 
