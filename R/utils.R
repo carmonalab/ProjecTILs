@@ -148,11 +148,11 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   if(filter.cells){
     message("Pre-filtering of T cells with scGate...")
     
-    if (is.null(gating.model)) {  #read filter model from atlas
+    if (is.null(scGate_model)) {  #read filter model from atlas
       if (!is.null(ref@misc$scGate[[species]])) {
-        gating.model <- ref@misc$scGate[[species]]
+        scGate_model <- ref@misc$scGate[[species]]
       } else {   #if no model was stored in atlas, use a default T cell filter
-        gating.model <- scGate::scGate_DB[[species]]$Tcell
+        scGate_model <- scGate::scGate_DB[[species]]$Tcell
       }
     }
     #Note 1: possibly read relevant model from atlas
