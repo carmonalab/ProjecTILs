@@ -225,9 +225,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
         ref <- RunPCA(ref, features = genes4integration,verbose = F)
         query <- RunPCA(query, features = genes4integration,verbose = F)
         
-        #TODO optimize aligmment for speed? e.g. filter number of anchors STACAS
-        proj.anchors <- FindIntegrationAnchors(object.list = c(ref, query), anchor.features = genes4integration,
-                                               dims = 1:pca.dim, k.filter = seurat.k.filter, scale = FALSE, assay=c("integrated",query.assay), reduction = "rpca")
+        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query), anchor.features = genes4integration,
+                                               dims = 1:pca.dim, k.filter = seurat.k.filter, assay=c("integrated",query.assay))
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
         proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)
