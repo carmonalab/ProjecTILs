@@ -52,7 +52,7 @@ load.reference.map <- function(ref="referenceTIL") {
 
 read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), project.name="Query",
                           min.cells = 3, min.features = 50, gene.column.10x=2,
-                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T) {
+                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T, use.readmtx=T) {
   
   if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
   type = tolower(type[1])
@@ -70,9 +70,12 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
     matrix.file <- sprintf("%s/%s", filename, matrix.file)
     feature.file <- sprintf("%s/%s", filename, feature.file)
     barcode.file <- sprintf("%s/%s", filename, barcode.file)
-    #query.exp <- Read10X(filename, gene.column = gene.column.10x)
-    query.exp <- ReadMtx(mtx=matrix.file, cells=barcode.file, features=feature.file, feature.column=gene.column.10x)
-    
+
+    if (use.readmtx) {
+      query.exp <- ReadMtx.fix(mtx=matrix.file, cells=barcode.file, features=feature.file, feature.column=gene.column.10x)
+    } else {
+      query.exp <- Read10X(filename, gene.column = gene.column.10x)
+    }
   } else if (type == "hdf5") {
     query.exp <- Read10X_h5(filename)
   } else if (type == "raw" | type == "raw.log2") {
