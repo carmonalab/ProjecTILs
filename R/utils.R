@@ -61,18 +61,51 @@ guess_raw_separator <- function(f, sep=c(" ","\t",",")) {
   
 }
 
+#Automatically determine species and gene ID column
+get.species <- function(genes, table=Hs2Mm.convert.table) {
+ 
+  g.mm <- length(intersect(genes, table$Gene.MM))
+  g.hs1 <- length(intersect(genes, table$Gene.stable.ID.HS))
+  g.hs2 <- length(intersect(genes, table$Gene.HS))
+  gg <- c(g.mm, g.hs1, g.hs2)
+  
+  if (max(gg)==g.mm) {
+    species='mouse'
+    col.id <- "Gene.MM"
+  } else {
+    species='human'
+    col.id <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
+  }
+  res <- list("species"=species, "col.id"=col.id)
+  return(res)
+}
+
+
 #Internal function for mouse-human ortholog conversion
-convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
+convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.assay="RNA", slot="counts") {
   
   exp.mat <- slot(obj@assays[[query.assay]], name=slot)
-  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
+  genes.select <- rownames(exp.mat) %in% table[[from]]
   
-  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
+  if (length(genes.select) < 100) {
+      message("Warning: fewer than 100 genes with orthologs were found. Check your matrix format and gene names")
+  }
   
-  row.names(exp.mat) <- mouse.genes
+  if (length(genes.select) > 0) {
+    exp.mat <- exp.mat[rownames(exp.mat) %in% table[[from]], ]
+  } else {
+    stop(paste0("Error: No genes found in column ", from))
+  }
+  
+  #Convert
+  ortho.genes <- table[[to]][match(row.names(exp.mat), table[[from]])]
+  
+  #Update matrix gene names
+  row.names(exp.mat) <- ortho.genes
   slot(obj@assays[[query.assay]], name=slot) <- exp.mat
   return(obj)
 }
+
 
 #Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
 merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
@@ -107,6 +140,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
                               seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
+  do.orthology <- FALSE
   
   #Reference
   DefaultAssay(ref) <- "integrated"
@@ -127,36 +161,24 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
      pca.dim=10
   }
   
-  #automatically determine gene ID column
-  g.mm <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.MM))
-  g.hs1 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.stable.ID.HS))
-  g.hs2 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.HS))
-  gg <- c(g.mm, g.hs1, g.hs2)
+  species.ref <- get.species(genes=row.names(ref), table=Hs2Mm.convert.table)
+  species.query <- get.species(genes=row.names(query), table=Hs2Mm.convert.table)
   
-  if (max(gg)==g.mm) {
-    human.ortho=FALSE
-    species='mouse'
-  } else {
-    hs.id.col <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
-    if (max(g.hs1, g.hs2)<100) {
-      message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
-    }
-    human.ortho=TRUE
-    species='human'
+  if (species.ref$species != species.query$species) {
+     do.orthology <- TRUE
   }
   
   if(filter.cells){
     message("Pre-filtering of T cells with scGate...")
     
     if (is.null(scGate_model)) {  #read filter model from atlas
-      if (!is.null(ref@misc$scGate[[species]])) {
-        scGate_model <- ref@misc$scGate[[species]]
+      if (!is.null(ref@misc$scGate[[species.query$species]])) {
+        scGate_model <- ref@misc$scGate[[species.query$species]]
       } else {   #if no model was stored in atlas, use a default T cell filter
-        scGate_model <- scGate::scGate_DB[[species]]$Tcell
+        scGate_model <- scGate::scGate_DB[[species.query$species]]$Tcell
       }
     }
-    #Note 1: possibly read relevant model from atlas
-    query <- filterCells(query, species=species, gating.model=scGate_model, ncores=ncores)
+    query <- filterCells(query, species=species.query$species, gating.model=scGate_model, ncores=ncores)
   }
   if (is.null(query)) {
     message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", id))
@@ -170,9 +192,10 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
     if (dim(exp.mat)[1]==0) {
       stop("Data slot not found in your Seurat object. Please normalize the data")
     }
-    if (human.ortho) {
+    if (do.orthology) {
       print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+                                 from=species.query$col.id, to=species.ref$col.id)
     }        
   } else {
     slot <- "counts"
@@ -180,9 +203,10 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
     if (dim(exp.mat)[1]==0) {
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     }
-    if (human.ortho) {
+    if (do.orthology) {
       print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+                                 from=species.query$col.id, to=species.ref$col.id)
     }
     query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
     query <- NormalizeData(query) 
