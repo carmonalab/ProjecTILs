@@ -32,7 +32,7 @@ if (!requireNamespace("UCell", quietly = TRUE)) {
 }
 
 if (!requireNamespace("scGate", quietly = TRUE)) {
-  remotes::install_git("https://gitlab.unil.ch/carmona/scGate.git")
+  remotes::install_github("carmonalab/scGate")
 }
 
 remotes::install_github("carmonalab/ProjecTILs",ref="dev")
