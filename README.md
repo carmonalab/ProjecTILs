@@ -80,6 +80,9 @@ Currently available atlases:
 
 * **acute and chronic viral infection CD8 T cell atlas**: consists of 7,000 virus-specific CD8 T cells from 12 samples (spleen) from different timepoints (day 4.5, day 7/8 and day 30) from mice infected with lymphocytic choriomeningitis virus (LCMV) Arm (acute infection) or cl13 (chronic infection) strains. Available at: [https://doi.org/10.6084/m9.figshare.12489518](https://doi.org/10.6084/m9.figshare.12489518) and interactive web app at the [SPICA portal](https://spica.unil.ch/refs/viral-CD8-T)
 
+* **acute and chronic viral infection CD4 T cell atlas**: consists of over 35,000 high-quality virus-specific (GP66:I-Ab+) CD4 T cells from 11 samples (spleen) from different timepoints following LCMV Armstrong or Clone 13 viral infection (7 or 21 days after Clone 13 infection, and 7, 21 and >60 days after LCMV Armstrong infection). Available at: [https://doi.org/10.6084/m9.figshare.16592693.v1](https://doi.org/10.6084/m9.figshare.16592693.v1) and interactive web app at the [SPICA portal](https://spica.unil.ch/refs/viral-CD4-T)
+
+
 If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs/build_ref_atlas.html)
 
 ### Troubleshooting 
