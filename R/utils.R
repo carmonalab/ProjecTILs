@@ -1,8 +1,8 @@
-#Internal function to filter T cells using scGate
+#Internal function to filter cells using scGate
 filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
   
   data(cell.cycle.obj)
-  query.object <- scGate(query.object, gating.model = gating.model, ncores=ncores, quiet = TRUE,
+  query.object <- scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]])
   ncells <- ncol(query.object)
   
@@ -12,18 +12,21 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores
   } else {
      query.object <- NULL
   }
-  message <- sprintf("%i out of %i ( %i%% ) non-pure T cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
+  message <- sprintf("%i out of %i ( %i%% ) non-pure cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
                      ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
   print(message)
   
-  #Parse metadata columns
-  query.object$cycling.score <- query.object$cycling_scGate
-  query.object$cycling.score.G1_S <- query.object$cycling_G1.S_scGate
-  query.object$cycling.score.G2_M <- query.object$cycling_G2.M_scGate
+  if (ncells.keep == 0) {
+    stop("Stopping. All cells were removed by cell filter!")
+  }
   
-  to_remove <- grep("_Zscore$", colnames(query.object@meta.data), perl=T)
-  to_remove <- c(to_remove, grep("_scGate$", colnames(query.object@meta.data), perl=T))
-  to_remove <- c(to_remove, which(colnames(query.object@meta.data) %in% c("is.pure","scGate.annotation")))
+  #Parse metadata columns
+  query.object$cycling.score <- query.object$cycling_UCell
+  query.object$cycling.score.G1_S <- query.object$cycling_G1.S_UCell
+  query.object$cycling.score.G2_M <- query.object$cycling_G2.M_UCell
+  
+  to_remove <- grep("is.pure", colnames(query.object@meta.data))
+  to_remove <- c(to_remove, grep("_UCell$", colnames(query.object@meta.data), perl=T))
   
   query.object@meta.data <- query.object@meta.data[,-to_remove]
   return(query.object)
@@ -136,7 +139,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 }
 
 #Helper for projecting individual data sets
-projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
+projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
                               seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
@@ -169,19 +172,20 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   }
   
   if(filter.cells){
-    message("Pre-filtering of T cells with scGate...")
+    message("Pre-filtering cells with scGate...")   #Update text
     
     if (is.null(scGate_model)) {  #read filter model from atlas
       if (!is.null(ref@misc$scGate[[species.query$species]])) {
         scGate_model <- ref@misc$scGate[[species.query$species]]
-      } else {   #if no model was stored in atlas, use a default T cell filter
-        scGate_model <- scGate::scGate_DB[[species.query$species]]$Tcell
+      } else {   #if no model was specified, and no model was found in the atlas, use a default filter
+        models <- suppressMessages(scGate::get_scGateDB())
+        scGate_model <- models[[species.query$species]]$generic$Tcell  
       }
     }
     query <- filterCells(query, species=species.query$species, gating.model=scGate_model, ncores=ncores)
   }
   if (is.null(query)) {
-    message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", id))
+    message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))   #Update text
     return(NULL)
   }
   

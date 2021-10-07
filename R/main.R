@@ -130,7 +130,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Pre-filter T cells using `scGate`. Only set to FALSE if the dataset has been previously subset to T cells only.
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
@@ -144,9 +144,9 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                             seurat.k.filter=200, skip.normalize=FALSE, scGate_model=NULL, human.ortho=FALSE, 
-                             ncores=1, future.maxSize=3000) {
+make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
+                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, 
+                            direct.projection=FALSE, ncores=1, future.maxSize=3000) {
    
   
   if(is.null(ref)){
