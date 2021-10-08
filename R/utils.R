@@ -139,7 +139,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 }
 
 #Helper for projecting individual data sets
-projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
+projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE, fast.mode=FALSE,
                               seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
@@ -235,7 +235,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
     
     print("DIRECTLY projecting query onto Reference UMAP space")
-    query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
+    query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj, fast.mode=fast.mode)
     projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
     
     DefaultAssay(projected) <- query.assay
@@ -270,7 +270,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = "integrated")
         
         cat("\nProjecting corrected query onto Reference UMAP space\n")
-        query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj)
+        query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj, fast.mode=fast.mode)
         projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
         
         DefaultAssay(projected) <- "integrated"
@@ -287,11 +287,11 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
           projected <- query
           
           print("DIRECTLY projecting query onto Reference PCA space")
-          query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
+          query.pca.proj <- apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
           projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
           
           print("DIRECTLY projecting query onto Reference UMAP space")
-          query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
+          query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj, fast.mode=fast.mode)
           projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
           
           DefaultAssay(projected) <- query.assay

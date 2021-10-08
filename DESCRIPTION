@@ -7,7 +7,7 @@ Authors@R: c(
   person(given = 'Santiago', family = 'Carmona', email = 'santiago.carmona@unil.ch', role = c('aut'), comment = c(ORCID = '0000-0002-2495-0671'))
   )
 Description: This package implements methods to project single-cell RNA-seq data onto a reference atlas, enabling interpretation of unknown cell transcriptomic states in the the context of known, reference states. 
-Depends: R(>= 3.6.1),Seurat(>= 3.2.1),umap,Matrix,scGate
+Depends: R(>= 3.6.1),Seurat(>= 3.2.1),umap,Matrix,DBI,scGate
 Suggests: fastICA,EnhancedVolcano,future.apply
 Imports: 
 License: GPL-3

@@ -133,10 +133,10 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
+#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
-#' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (deprecated from v.0.9.9)
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -145,7 +145,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat)
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
-                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, 
+                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE,
                             direct.projection=FALSE, ncores=1, future.maxSize=3000) {
    
   
@@ -190,7 +190,8 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       X = 1:length(query.list),
       FUN = function(i) {
          res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                        direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, ncores=ncores, 
+                                        direct.projection=direct.projection, fast.mode=fast.mode,
+                                        seurat.k.filter=seurat.k.filter, ncores=ncores, 
                                         skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
          return(res)
       }, future.seed = 1
@@ -202,7 +203,8 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       X = 1:length(query.list),
       FUN = function(i) {
         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                 direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, ncores=ncores,
+                                 direct.projection=direct.projection, fast.mode=fast.mode,
+                                 seurat.k.filter=seurat.k.filter, ncores=ncores,
                                  skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
         return(res)
       }

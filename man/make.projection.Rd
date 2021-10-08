@@ -12,7 +12,7 @@ make.projection(
   query.assay = NULL,
   seurat.k.filter = 200,
   skip.normalize = FALSE,
-  human.ortho = FALSE,
+  fast.mode = FALSE,
   direct.projection = FALSE,
   ncores = 1,
   future.maxSize = 3000
@@ -23,7 +23,7 @@ make.projection(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to T cells only.}
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.}
 
 \item{scGate_model}{scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@misc$scGate})}
 
@@ -33,7 +33,7 @@ make.projection(
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
-\item{human.ortho}{Project human data on murine reference atlas, using mouse orthologs (deprecated from v.0.9.9)}
+\item{fast.mode}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
 
 \item{direct.projection}{If true, apply PCA transformation directly without alignment}
 
