@@ -218,6 +218,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   rm(exp.mat)
   
   query <- RenameCells(query, add.cell.id = "Q")
+  
   genes4integration <- intersect(ref.var.features, row.names(query))
   
   if(length(genes4integration)/length(ref.var.features)<0.5){ stop("Too many genes missing. Check input object format") }
@@ -306,7 +307,9 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
   
   if (!is.null(projected)) {
-    projected@assays[[query.assay]]@var.features <- ref.var.features
+      projected@assays[[query.assay]]@var.features <- ref.var.features
+      cellnames <- gsub("^Q_","",colnames(projected))  #remove prefix from cell names
+      projected <- RenameCells(projected, new.names=cellnames)
   }
   return(projected)
 }
