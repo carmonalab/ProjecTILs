@@ -2,8 +2,8 @@
 filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
   
   data(cell.cycle.obj)
-  query.object <- scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
-                         additional.signatures = cell.cycle.obj[[species]])
+  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
+                         additional.signatures = cell.cycle.obj[[species]]))
   ncells <- ncol(query.object)
   
   ncells.keep <- sum(query.object$is.pure == 'Pure')

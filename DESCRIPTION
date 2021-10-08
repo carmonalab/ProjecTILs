@@ -1,7 +1,7 @@
 Package: ProjecTILs
 Type: Package
 Title: Projecting Tumor-Infiltrating T Lymphocytes Single-cell RNA-seq data onto a Reference Atlas 
-Version: 1.9.0
+Version: 2.0.0
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta', email = 'massimo.andreatta@unil.ch', role = c('aut','cre'), comment = c(ORCID = '0000-0002-8036-2647')),
   person(given = 'Santiago', family = 'Carmona', email = 'santiago.carmona@unil.ch', role = c('aut'), comment = c(ORCID = '0000-0002-2495-0671'))
