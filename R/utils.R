@@ -218,6 +218,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   rm(exp.mat)
   
   query <- RenameCells(query, add.cell.id = "Q")
+  query.metadata <- query@meta.data   #back-up metadata (and re-add it after projection)
   
   genes4integration <- intersect(ref.var.features, row.names(query))
   
@@ -264,6 +265,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         cells_query<- colnames(query)
         projected <- subset(proj.integrated, cells = cells_query)
         
+        projected@meta.data <- query.metadata
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")
