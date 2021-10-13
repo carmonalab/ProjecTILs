@@ -37,6 +37,11 @@ apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
 
 #dispatch to UMAP prediction method (complete of fast)
 make.umap.predict <- function(ref.umap, fast.mode=FALSE, ...) {
+  
+  if (!class(ref.umap) == "umap") {  #enforce fast.mode
+     fast.mode <- FALSE
+  }
+  
   if (fast.mode) {
     nproj <- make.umap.predict.weighted.mean(ref.umap=ref.umap, ...)
   } else {
@@ -65,9 +70,8 @@ make.umap.predict.weighted.mean <- function(ref.umap, query, query.assay="RNA", 
     pca.query.emb <- apply.pca.obj.2(query=query, query.assay=query.assay, pca.obj=pca.obj)
   }
   
-  pca.dim <- dim(ref.umap$data)[2]
-  
   ref.space <- ref.umap$data
+  pca.dim <- ncol(ref.space)
   query.space <- pca.query.emb[,1:pca.dim]
   
   nn.ranked <- Seurat:::NNHelper(data=ref.space, query=query.space, k = k, method = "rann")
