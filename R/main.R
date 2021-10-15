@@ -52,13 +52,30 @@ load.reference.map <- function(ref="referenceTIL") {
 
 read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), project.name="Query",
                           min.cells = 3, min.features = 50, gene.column.10x=2,
-                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T) {
+                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T, use.readmtx=T) {
   
   if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
   type = tolower(type[1])
   
   if (type == "10x") {
-    query.exp <- Read10X(filename, gene.column = gene.column.10x)
+    fl <- list.files(filename)
+    matrix.file <- grep("matrix.mtx", fl, value=T)[1]
+    feature.file <- grep("features.tsv|genes.tsv", fl, value=T)[1]
+    barcode.file <- grep("barcodes.tsv", fl, value=T)[1]
+    
+    if (is.na(matrix.file)) stop("Cannot find matrix file")
+    if (is.na(feature.file)) stop("Cannot find genes file")
+    if (is.na(barcode.file)) stop("Cannot find barcode file")
+    
+    matrix.file <- sprintf("%s/%s", filename, matrix.file)
+    feature.file <- sprintf("%s/%s", filename, feature.file)
+    barcode.file <- sprintf("%s/%s", filename, barcode.file)
+
+    if (use.readmtx) {
+      query.exp <- ReadMtx.fix(mtx=matrix.file, cells=barcode.file, features=feature.file, feature.column=gene.column.10x)
+    } else {
+      query.exp <- Read10X(filename, gene.column = gene.column.10x)
+    }
   } else if (type == "hdf5") {
     query.exp <- Read10X_h5(filename)
   } else if (type == "raw" | type == "raw.log2") {
@@ -113,12 +130,13 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Pre-filter T cells using the TILPRED classifier. Default is TRUE. Only set to FALSE if the dataset has been previously subset to T cells only.
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
+#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
-#' @param human.ortho Project human data on murine reference atlas, using mouse orthologs (NOTE: automatic detection from v.0.9.9)
+#' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -126,8 +144,9 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' data(query_example_seurat)
 #' make.projection(query_example_seurat)
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                             seurat.k.filter=200, skip.normalize=FALSE, human.ortho=FALSE, ncores=1, future.maxSize=3000) {
+make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
+                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE,
+                            direct.projection=FALSE, ncores=1, future.maxSize=3000) {
    
   
   if(is.null(ref)){
@@ -171,8 +190,9 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
       X = 1:length(query.list),
       FUN = function(i) {
          res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                        direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
-                                        skip.normalize=skip.normalize, id=names(query.list)[i])
+                                        direct.projection=direct.projection, fast.mode=fast.mode,
+                                        seurat.k.filter=seurat.k.filter, ncores=ncores, 
+                                        skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
          return(res)
       }, future.seed = 1
     )
@@ -183,8 +203,9 @@ make.projection <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, d
       X = 1:length(query.list),
       FUN = function(i) {
         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                 direct.projection=direct.projection, seurat.k.filter=seurat.k.filter, 
-                                 skip.normalize=skip.normalize, id=names(query.list)[i])
+                                 direct.projection=direct.projection, fast.mode=fast.mode,
+                                 seurat.k.filter=seurat.k.filter, ncores=ncores,
+                                 skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
         return(res)
       }
     )

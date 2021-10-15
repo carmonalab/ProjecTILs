@@ -1,24 +1,34 @@
-#Internal function to filter functions using TILPRED
-filterCells <- function(query.object, human=FALSE){
-  sce <- as.SingleCellExperiment(query.object)
-  sce.pred <- predictTilState(sce, human=human)
-  query.object <- AddMetaData(query.object, metadata=sce.pred$predictedState, col.name = "TILPRED")
+#Internal function to filter cells using scGate
+filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
   
-  if (human) {
-    cells_keep <- colnames(query.object)[query.object$TILPRED %in% c("pureTcell")]
-  } else {  
-    cells_keep <- colnames(query.object)[!query.object$TILPRED %in% c("Non-Tcell","unknown")]
-    query.object <- AddMetaData(query.object, metadata=sce.pred$cyclingScore, col.name = "cycling.score") #Implement cycling score for human?
-  }
-  print(paste(ncol(query.object)-length(cells_keep), "out of", ncol(query.object),
-              "(",round((ncol(query.object)-length(cells_keep))/ncol(query.object)*100),"% )",
-              "non-pure T cells removed.  Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)"))
+  data(cell.cycle.obj)
+  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
+                         additional.signatures = cell.cycle.obj[[species]]))
+  ncells <- ncol(query.object)
   
-  if (length(cells_keep)>0) {
-    query.object <- subset(query.object, cells = cells_keep)
+  ncells.keep <- sum(query.object$is.pure == 'Pure')
+  if (ncells.keep > 0) {
+     query.object <- subset(query.object, subset=is.pure=='Pure') 
   } else {
-    query.object <- NULL
+     query.object <- NULL
   }
+  message <- sprintf("%i out of %i ( %i%% ) non-pure cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
+                     ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
+  print(message)
+  
+  if (ncells.keep == 0) {
+    stop("Stopping. All cells were removed by cell filter!")
+  }
+  
+  #Parse metadata columns
+  query.object$cycling.score <- query.object$cycling_UCell
+  query.object$cycling.score.G1_S <- query.object$cycling_G1.S_UCell
+  query.object$cycling.score.G2_M <- query.object$cycling_G2.M_UCell
+  
+  to_remove <- grep("is.pure", colnames(query.object@meta.data))
+  to_remove <- c(to_remove, grep("_UCell$", colnames(query.object@meta.data), perl=T))
+  
+  query.object@meta.data <- query.object@meta.data[,-to_remove]
   return(query.object)
 }
 
@@ -54,18 +64,51 @@ guess_raw_separator <- function(f, sep=c(" ","\t",",")) {
   
 }
 
+#Automatically determine species and gene ID column
+get.species <- function(genes, table=Hs2Mm.convert.table) {
+ 
+  g.mm <- length(intersect(genes, table$Gene.MM))
+  g.hs1 <- length(intersect(genes, table$Gene.stable.ID.HS))
+  g.hs2 <- length(intersect(genes, table$Gene.HS))
+  gg <- c(g.mm, g.hs1, g.hs2)
+  
+  if (max(gg)==g.mm) {
+    species='mouse'
+    col.id <- "Gene.MM"
+  } else {
+    species='human'
+    col.id <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
+  }
+  res <- list("species"=species, "col.id"=col.id)
+  return(res)
+}
+
+
 #Internal function for mouse-human ortholog conversion
-convert.orthologs <- function(obj, table, id="Gene.HS", query.assay="RNA", slot="counts") {
+convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.assay="RNA", slot="counts") {
   
   exp.mat <- slot(obj@assays[[query.assay]], name=slot)
-  exp.mat <- exp.mat[rownames(exp.mat) %in% table[[id]], ]
+  genes.select <- rownames(exp.mat) %in% table[[from]]
   
-  mouse.genes <- table$Gene.MM[match(row.names(exp.mat),table[[id]])]
+  if (length(genes.select) < 100) {
+      message("Warning: fewer than 100 genes with orthologs were found. Check your matrix format and gene names")
+  }
   
-  row.names(exp.mat) <- mouse.genes
+  if (length(genes.select) > 0) {
+    exp.mat <- exp.mat[rownames(exp.mat) %in% table[[from]], ]
+  } else {
+    stop(paste0("Error: No genes found in column ", from))
+  }
+  
+  #Convert
+  ortho.genes <- table[[to]][match(row.names(exp.mat), table[[from]])]
+  
+  #Update matrix gene names
+  row.names(exp.mat) <- ortho.genes
   slot(obj@assays[[query.assay]], name=slot) <- exp.mat
   return(obj)
 }
+
 
 #Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
 merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
@@ -96,10 +139,11 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 }
 
 #Helper for projecting individual data sets
-projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL, direct.projection=FALSE,
-                              seurat.k.filter=200, skip.normalize=FALSE, id="query1") {
+projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE, fast.mode=FALSE,
+                              seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
+  do.orthology <- FALSE
   
   #Reference
   DefaultAssay(ref) <- "integrated"
@@ -120,28 +164,28 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
      pca.dim=10
   }
   
-  #automatically determine gene ID column
-  g.mm <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.MM))
-  g.hs1 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.stable.ID.HS))
-  g.hs2 <- length(intersect(row.names(query), Hs2Mm.convert.table$Gene.HS))
-  gg <- c(g.mm, g.hs1, g.hs2)
+  species.ref <- get.species(genes=row.names(ref), table=Hs2Mm.convert.table)
+  species.query <- get.species(genes=row.names(query), table=Hs2Mm.convert.table)
   
-  if (max(gg)==g.mm) {
-    human.ortho=FALSE
-  } else {
-    hs.id.col <- ifelse(g.hs1 > g.hs2, "Gene.stable.ID.HS", "Gene.HS")
-    if (max(g.hs1, g.hs2)<100) {
-      message("Warning: fewer than 100 human genes with orthologs found. Check your matrix format and gene names")
-    }
-    human.ortho=TRUE
+  if (species.ref$species != species.query$species) {
+     do.orthology <- TRUE
   }
   
   if(filter.cells){
-    message("Pre-filtering of T cells (TILPRED classifier)...")
-    query <- filterCells(query, human=human.ortho)
+    message("Pre-filtering cells with scGate...")   #Update text
+    
+    if (is.null(scGate_model)) {  #read filter model from atlas
+      if (!is.null(ref@misc$scGate[[species.query$species]])) {
+        scGate_model <- ref@misc$scGate[[species.query$species]]
+      } else {   #if no model was specified, and no model was found in the atlas, use a default filter
+        models <- suppressMessages(scGate::get_scGateDB())
+        scGate_model <- models[[species.query$species]]$generic$Tcell  
+      }
+    }
+    query <- filterCells(query, species=species.query$species, gating.model=scGate_model, ncores=ncores)
   }
   if (is.null(query)) {
-    message(sprintf("Warning! Skipping %s - all cells were removed by T cell filter", id))
+    message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))   #Update text
     return(NULL)
   }
   
@@ -152,9 +196,10 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
     if (dim(exp.mat)[1]==0) {
       stop("Data slot not found in your Seurat object. Please normalize the data")
     }
-    if (human.ortho) {
+    if (do.orthology) {
       print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+                                 from=species.query$col.id, to=species.ref$col.id)
     }        
   } else {
     slot <- "counts"
@@ -162,9 +207,10 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
     if (dim(exp.mat)[1]==0) {
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     }
-    if (human.ortho) {
+    if (do.orthology) {
       print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, id=hs.id.col, query.assay=query.assay, slot=slot)
+      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+                                 from=species.query$col.id, to=species.ref$col.id)
     }
     query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
     query <- NormalizeData(query) 
@@ -172,6 +218,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   rm(exp.mat)
   
   query <- RenameCells(query, add.cell.id = "Q")
+  query.metadata <- query@meta.data   #back-up metadata (and re-add it after projection)
+  
   genes4integration <- intersect(ref.var.features, row.names(query))
   
   if(length(genes4integration)/length(ref.var.features)<0.5){ stop("Too many genes missing. Check input object format") }
@@ -189,7 +237,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
     projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
     
     print("DIRECTLY projecting query onto Reference UMAP space")
-    query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
+    query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj, fast.mode=fast.mode)
     projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
     
     DefaultAssay(projected) <- query.assay
@@ -207,9 +255,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
         ref <- RunPCA(ref, features = genes4integration,verbose = F)
         query <- RunPCA(query, features = genes4integration,verbose = F)
         
-        #TODO optimize aligmment for speed? e.g. filter number of anchors STACAS
-        proj.anchors <- FindIntegrationAnchors(object.list = c(ref, query), anchor.features = genes4integration,
-                                               dims = 1:pca.dim, k.filter = seurat.k.filter, scale = FALSE, assay=c("integrated",query.assay), reduction = "rpca")
+        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query), anchor.features = genes4integration,
+                                               dims = 1:pca.dim, k.filter = seurat.k.filter, assay=c("integrated",query.assay))
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
         proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)
@@ -218,14 +265,15 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
         cells_query<- colnames(query)
         projected <- subset(proj.integrated, cells = cells_query)
         
+        projected@meta.data <- query.metadata
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")
-        query.pca.proj <-apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
+        query.pca.proj <- apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
         projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = "integrated")
         
-        print("Projecting corrected query onto Reference UMAP space")
-        query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj)
+        cat("\nProjecting corrected query onto Reference UMAP space\n")
+        query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj, fast.mode=fast.mode)
         projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
         
         DefaultAssay(projected) <- "integrated"
@@ -242,11 +290,11 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
           projected <- query
           
           print("DIRECTLY projecting query onto Reference PCA space")
-          query.pca.proj <-apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
+          query.pca.proj <- apply.pca.obj.2(query, pca.obj=ref@misc$pca_object, query.assay=query.assay)
           projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = query.assay)
           
           print("DIRECTLY projecting query onto Reference UMAP space")
-          query.umap.proj <- make.umap.predict.2(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj)
+          query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb = query.pca.proj, fast.mode=fast.mode)
           projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = query.assay)
           
           DefaultAssay(projected) <- query.assay
@@ -261,7 +309,9 @@ projection.helper <- function(query, ref=NULL, filter.cells=T, query.assay=NULL,
   }
   
   if (!is.null(projected)) {
-    projected@assays[[query.assay]]@var.features <- ref.var.features
+      projected@assays[[query.assay]]@var.features <- ref.var.features
+      cellnames <- gsub("^Q_","",colnames(projected))  #remove prefix from cell names
+      projected <- RenameCells(projected, new.names=cellnames)
   }
   return(projected)
 }

@@ -13,7 +13,8 @@ read.sc.query(
   gene.column.10x = 2,
   raw.rownames = 1,
   raw.sep = c("auto", " ", "\\t", ","),
-  raw.header = T
+  raw.header = T,
+  use.readmtx = T
 )
 }
 \arguments{
