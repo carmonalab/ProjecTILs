@@ -30,7 +30,7 @@ library(remotes)
 remotes::install_github("carmonalab/UCell")
 remotes::install_github("carmonalab/scGate")
 
-remotes::install_github("carmonalab/ProjecTILs",ref="dev")
+remotes::install_github("carmonalab/ProjecTILs")
 ```
 
 ### Test the package
