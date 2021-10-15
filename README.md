@@ -12,7 +12,7 @@ In contrast to other methods, ProjecTILs allows not only accurately embedding ne
 
 ![ProjecTILs_pipeline](https://github.com/carmonalab/ProjecTILs/blob/dev/docs/Pipeline_projecTILs.png?raw=true)
 
-`ProjecTILs` comes with ready-to-use reference T cell atlases for cancer and viral infection (see [Reference Atlases](#reference-atlases)), and can be also used with custom, user-generated references (see [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs/build_ref_atlas.html))
+`ProjecTILs` comes with ready-to-use [reference T cell atlases](#reference-atlases) for cancer and viral infection, and can be also used with custom, user-generated references (see [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs.demo/build_ref_atlas.html))
 
 For real-life applications, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
 
