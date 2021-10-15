@@ -12,7 +12,7 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores
   } else {
      query.object <- NULL
   }
-  message <- sprintf("%i out of %i ( %i%% ) non-pure cells removed. Use filter.cells=FALSE to avoid pre-filtering (NOT RECOMMENDED)",
+  message <- sprintf("%i out of %i ( %i%% ) non-pure cells removed. Use filter.cells=FALSE to avoid pre-filtering",
                      ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
   print(message)
   
@@ -178,6 +178,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       if (!is.null(ref@misc$scGate[[species.query$species]])) {
         scGate_model <- ref@misc$scGate[[species.query$species]]
       } else {   #if no model was specified, and no model was found in the atlas, use a default filter
+        message("No scGate model specified: using default filter for T cells")
         models <- suppressMessages(scGate::get_scGateDB())
         scGate_model <- models[[species.query$species]]$generic$Tcell  
       }
