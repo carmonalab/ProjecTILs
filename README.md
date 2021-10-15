@@ -79,6 +79,8 @@ You can now explore our atlases interactively and project your data through the 
 
 ### Troubleshooting 
 
+* If *load.reference.map()* fails with error "Reference object X is invalid" the first time you run it; it is likely that reference atlas download has failed due to Timeout. Try setting ```options(timeout = max(300, getOption("timeout")))``` to increase download Timeout.
+
 * If a warning message prevented *remotes* from installing the package, try:
 ```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
 
