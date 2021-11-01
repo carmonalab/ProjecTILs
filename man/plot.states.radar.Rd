@@ -8,6 +8,7 @@
   ref,
   query = NULL,
   labels.col = "functional.cluster",
+  ref.assay = "RNA",
   query.assay = "RNA",
   genes4radar = NULL,
   min.cells = 10,
@@ -23,7 +24,9 @@
 
 \item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
 
-\item{query.assay}{The assay to pull the expression data}
+\item{ref.assay}{The assay to pull the reference expression data}
+
+\item{query.assay}{The assay to pull the query expression data}
 
 \item{genes4radar}{Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")}
 

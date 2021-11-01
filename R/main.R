@@ -419,14 +419,15 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
 #' @param min.cells Only display cell states with a minimum number of cells
 #' @param cols Custom color palette for samples in radar plot
-#' @param query.assay The assay to pull the expression data
+#' @param ref.assay The assay to pull the reference expression data
+#' @param query.assay The assay to pull the query expression data
 #' @param return Return the combined grobs instead of printing it to the default device
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
 #' @export plot.states.radar
-plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", query.assay='RNA', 
+plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
                                   genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
   require(ggplot2)
   require(scales)
@@ -461,10 +462,10 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", q
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  genes4radar <- intersect(genes4radar, row.names(ref@assays[[query.assay]]@data))
+  genes4radar <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
   genes4radar <- sort(genes4radar)
-  order <- match(genes4radar, row.names(ref@assays[[query.assay]]@data))
-  rr <- ref@assays[[query.assay]]@data[order,]
+  order <- match(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  rr <- ref@assays[[ref.assay]]@data[order,]
   
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
