@@ -8,6 +8,7 @@
   ref,
   query = NULL,
   labels.col = "functional.cluster",
+  query.assay = "RNA",
   genes4radar = NULL,
   min.cells = 10,
   cols = NULL,
@@ -21,6 +22,8 @@
 \item{query}{Query data, either as a Seurat object or as a list of Seurat objects}
 
 \item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
+
+\item{query.assay}{The assay to pull the expression data}
 
 \item{genes4radar}{Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")}
 

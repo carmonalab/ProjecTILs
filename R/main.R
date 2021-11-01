@@ -137,6 +137,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
+#' @param ortholog_table Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -145,7 +146,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat)
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
-                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE,
+                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE, ortholog_table=NULL,
                             direct.projection=FALSE, ncores=1, future.maxSize=3000) {
    
   
@@ -166,7 +167,11 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
 
   }
   projected.list <- list()
-  data(Hs2Mm.convert.table)
+  if (is.null(ortholog_table)) {
+     data(Hs2Mm.convert.table)
+  } else {
+     Hs2Mm.convert.table <- ortholog_table
+  }
   
   if(!is.list(query)) {
      query.list <- list(query=query)
@@ -414,13 +419,14 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
 #' @param min.cells Only display cell states with a minimum number of cells
 #' @param cols Custom color palette for samples in radar plot
+#' @param query.assay The assay to pull the expression data
 #' @param return Return the combined grobs instead of printing it to the default device
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
 #' @export plot.states.radar
-plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
+plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", query.assay='RNA', 
                                   genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
   require(ggplot2)
   require(scales)
@@ -455,10 +461,10 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  genes4radar <- intersect(genes4radar, row.names(ref@assays$RNA@data))
+  genes4radar <- intersect(genes4radar, row.names(ref@assays[[query.assay]]@data))
   genes4radar <- sort(genes4radar)
-  order <- match(genes4radar, row.names(ref@assays$RNA@data))
-  rr <- ref@assays$RNA@data[order,]
+  order <- match(genes4radar, row.names(ref@assays[[query.assay]]@data))
+  rr <- ref@assays[[query.assay]]@data[order,]
   
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
@@ -478,8 +484,8 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
     
     for (i in 1:length(query)) {
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-      order <- match(genes4radar, row.names(query[[i]]@assays$RNA@data))
-      qq[[i]] <- as.matrix(query[[i]]@assays$RNA@data[order,])
+      order <- match(genes4radar, row.names(query[[i]]@assays[[query.assay]]@data))
+      qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
     }
   }
   

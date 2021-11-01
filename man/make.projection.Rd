@@ -13,6 +13,7 @@ make.projection(
   seurat.k.filter = 200,
   skip.normalize = FALSE,
   fast.mode = FALSE,
+  ortholog_table = NULL,
   direct.projection = FALSE,
   ncores = 1,
   future.maxSize = 3000
@@ -34,6 +35,8 @@ make.projection(
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 
 \item{fast.mode}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
+
+\item{ortholog_table}{Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})}
 
 \item{direct.projection}{If true, apply PCA transformation directly without alignment}
 

@@ -198,7 +198,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       stop("Data slot not found in your Seurat object. Please normalize the data")
     }
     if (do.orthology) {
-      print("Transforming expression matrix into space of mouse orthologs") 
+      print("Transforming expression matrix into space of orthologs") 
       query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
                                  from=species.query$col.id, to=species.ref$col.id)
     }        
@@ -209,7 +209,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     }
     if (do.orthology) {
-      print("Transforming expression matrix into space of mouse orthologs") 
+      print("Transforming expression matrix into space of orthologs") 
       query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
                                  from=species.query$col.id, to=species.ref$col.id)
     }
