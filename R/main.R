@@ -169,9 +169,8 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
   projected.list <- list()
   if (is.null(ortholog_table)) {
      data(Hs2Mm.convert.table)
-  } else {
-     Hs2Mm.convert.table <- ortholog_table
-  }
+     ortholog_table <- Hs2Mm.convert.table 
+  } 
   
   if(!is.list(query)) {
      query.list <- list(query=query)
@@ -196,7 +195,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       FUN = function(i) {
          res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                         direct.projection=direct.projection, fast.mode=fast.mode,
-                                        seurat.k.filter=seurat.k.filter, ncores=ncores, 
+                                        seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
                                         skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
          return(res)
       }, future.seed = 1
@@ -209,7 +208,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       FUN = function(i) {
         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                  direct.projection=direct.projection, fast.mode=fast.mode,
-                                 seurat.k.filter=seurat.k.filter, ncores=ncores,
+                                 seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
                                  skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
         return(res)
       }
