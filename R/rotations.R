@@ -39,7 +39,7 @@ apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
 make.umap.predict <- function(ref.umap, fast.mode=FALSE, ...) {
   
   if (!class(ref.umap) == "umap") {  #enforce fast.mode
-     fast.mode <- FALSE
+     fast.mode <- TRUE
   }
   
   if (fast.mode) {
