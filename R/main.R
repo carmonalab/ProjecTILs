@@ -1050,6 +1050,7 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   
   #store in integrated assay, to be understood by ProjecTILs
   names(ref@assays)[names(ref@assays)==assay] = "integrated"
+  DefaultAssay(ref) <- "integrated"
   
   if (!annotation.column == "functional.cluster") {
      ref$functional.cluster <- ref@meta.data[,annotation.column]
