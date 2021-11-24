@@ -955,3 +955,105 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
   
   return(markers)
 }
+
+
+# Function make.reference
+#' Make a ProjecTILs reference
+#'
+#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings (e.g. UMAP) in the reference atlas by
+#' setting `recalculate.umap=FALSE`, or let the method apply the `umap` package. 
+#'
+#' @param ref Seurat object with reference atlas
+#' @param assay The data slot where to pull the expression data
+#' @param state Perform discriminant analysis on this cell state. Can be either:
+#' @param atlas.name An optional name for your reference
+#' @param annotation.column The metadata column with the cluster annotations for this atlas
+#' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.
+#' @param ndim Number of dimensions for PCA to be passed to the `umap` method
+#' @param dimred Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`
+#' @param nfeatures Number of variable features (only calculated if not already present)
+#' @param seed Random seed
+#' @return A reference atlas compatible with ProjecTILs
+#' @examples 
+#' custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
+#' #Add a color palette for your atlas
+#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+#' 
+#' @export make.reference
+#' 
+make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annotation.column="functional.cluster",
+                           recalculate.umap=FALSE, ndim=20, dimred="umap", nfeatures=1000, seed=123) {
+  if (is.null(assay)) {
+    assay=DefaultAssay(ref)
+  }
+  if (is.null(ref@assays[[assay]])) {
+    stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
+  }
+  if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
+    varfeat <- ref@assays[[assay]]@var.features
+  } else {
+    ref <- FindVariableFeatures(ref, assay = assay, nfeatures = nfeatures, verbose=FALSE)
+    varfeat <- ref@assays[[assay]]@var.features
+  } 
+  
+  #Recompute PCA embeddings using prcomp
+  refdata <- data.frame(t(as.matrix(ref@assays[[assay]]@data[varfeat,])))
+  refdata <- refdata[, sort(colnames(refdata))]
+  
+  ref.pca <- prcomp(refdata, rank. = 50, scale. = TRUE, center = TRUE, retx=TRUE)
+  
+  #Save PCA rotation object
+  ref@misc$pca_object <- ref.pca
+  
+  #Recalculate UMAP, or use an already-present dimensionality reduction
+  if (!recalculate.umap) {
+    if (dimred %in% names(ref@reductions)) {
+      cell.order = rownames(ref.pca$x)
+      low.emb <- ref@reductions[[dimred]]@cell.embeddings[cell.order,]
+      colnames(low.emb) <- c("UMAP_1","UMAP_2")
+      #Save these embeddings
+      ref@misc$umap_object <- list()
+      ref@misc$umap_object$data <- ref.pca$x
+      ref@misc$umap_object$layout <- low.emb
+      
+    } else {
+      stop(sprintf("Dimred %s not found in reference object. Select a different dimensionality reduction, or set recalculate.umap=TRUE to compute UMAP coordinates", dimred))
+    }
+  } else {
+    
+    library(umap)   #generate UMAP embeddings
+    n.neighbors=30
+    min.dist=0.3
+    metric="cosine"
+    ndim=ndim
+    
+    umap.config <- umap.defaults
+    umap.config$n_neighbors = n.neighbors
+    umap.config$min_dist = min.dist
+    umap.config$metric = metric
+    umap.config$n_components = 2
+    umap.config$random_state = seed
+    umap.config$transform_state = seed
+    
+    ref.umap <- umap(ref.pca$x[,1:ndim], config=umap.config)
+    colnames(ref.umap$layout) <- c("UMAP_1","UMAP_2")
+    
+    #Save UMAP object
+    ref@misc$umap_object <- ref.umap
+    #Also change slots of the Seurat object with the new embedding
+    ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    ref@reductions$pca@cell.embeddings <- ref.pca$x
+    ref@reductions$pca@feature.loadings <- ref.pca$rotation
+    colnames(ref@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
+    colnames(ref@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
+  }
+  
+  #store in integrated assay, to be understood by ProjecTILs
+  names(ref@assays)[names(ref@assays)==assay] = "integrated"
+  
+  if (!annotation.column == "functional.cluster") {
+     ref$functional.cluster <- ref@meta.data[,annotation.column]
+  }
+  ref@misc$projecTILs=atlas.name
+  return(ref)
+}
