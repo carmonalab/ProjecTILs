@@ -1,8 +1,8 @@
 #Internal function to filter cells using scGate
-filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
+filterCells <- function(query.object, species="mouse", gating.model=NULL){
   
   data(cell.cycle.obj)
-  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
+  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, verbose=FALSE, assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]]))
   ncells <- ncol(query.object)
   
@@ -184,7 +184,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         scGate_model <- models[[species.query$species]]$generic$Tcell  
       }
     }
-    query <- filterCells(query, species=species.query$species, gating.model=scGate_model, ncores=ncores)
+    query <- filterCells(query, species=species.query$species, gating.model=scGate_model)
   }
   if (is.null(query)) {
     message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))   #Update text
