@@ -137,6 +137,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
+#' @param ortholog_table Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})
 #' @param ncores Number of cores for parallel execution (requires \code{future.apply})
 #' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -145,7 +146,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat)
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
-                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE,
+                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE, ortholog_table=NULL,
                             direct.projection=FALSE, ncores=1, future.maxSize=3000) {
    
   
@@ -166,7 +167,10 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
 
   }
   projected.list <- list()
-  data(Hs2Mm.convert.table)
+  if (is.null(ortholog_table)) {
+     data(Hs2Mm.convert.table)
+     ortholog_table <- Hs2Mm.convert.table 
+  } 
   
   if(!is.list(query)) {
      query.list <- list(query=query)
@@ -191,7 +195,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       FUN = function(i) {
          res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                         direct.projection=direct.projection, fast.mode=fast.mode,
-                                        seurat.k.filter=seurat.k.filter, ncores=ncores, 
+                                        seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
                                         skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
          return(res)
       }, future.seed = 1
@@ -204,7 +208,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
       FUN = function(i) {
         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                  direct.projection=direct.projection, fast.mode=fast.mode,
-                                 seurat.k.filter=seurat.k.filter, ncores=ncores,
+                                 seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
                                  skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
         return(res)
       }
@@ -414,13 +418,15 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
 #' @param min.cells Only display cell states with a minimum number of cells
 #' @param cols Custom color palette for samples in radar plot
+#' @param ref.assay The assay to pull the reference expression data
+#' @param query.assay The assay to pull the query expression data
 #' @param return Return the combined grobs instead of printing it to the default device
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
 #' @export plot.states.radar
-plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
+plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
                                   genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
   require(ggplot2)
   require(scales)
@@ -455,10 +461,10 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  genes4radar <- intersect(genes4radar, row.names(ref@assays$RNA@data))
+  genes4radar <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
   genes4radar <- sort(genes4radar)
-  order <- match(genes4radar, row.names(ref@assays$RNA@data))
-  rr <- ref@assays$RNA@data[order,]
+  order <- match(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  rr <- ref@assays[[ref.assay]]@data[order,]
   
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
@@ -478,8 +484,8 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster",
     
     for (i in 1:length(query)) {
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-      order <- match(genes4radar, row.names(query[[i]]@assays$RNA@data))
-      qq[[i]] <- as.matrix(query[[i]]@assays$RNA@data[order,])
+      order <- match(genes4radar, row.names(query[[i]]@assays[[query.assay]]@data))
+      qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
     }
   }
   
@@ -948,4 +954,107 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
   
   
   return(markers)
+}
+
+
+# Function make.reference
+#' Make a ProjecTILs reference
+#'
+#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings (e.g. UMAP) in the reference atlas by
+#' setting `recalculate.umap=FALSE`, or let the method apply the `umap` package. 
+#'
+#' @param ref Seurat object with reference atlas
+#' @param assay The data slot where to pull the expression data
+#' @param state Perform discriminant analysis on this cell state. Can be either:
+#' @param atlas.name An optional name for your reference
+#' @param annotation.column The metadata column with the cluster annotations for this atlas
+#' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.
+#' @param ndim Number of dimensions for PCA to be passed to the `umap` method
+#' @param dimred Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`
+#' @param nfeatures Number of variable features (only calculated if not already present)
+#' @param seed Random seed
+#' @return A reference atlas compatible with ProjecTILs
+#' @examples 
+#' custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
+#' #Add a color palette for your atlas
+#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+#' 
+#' @export make.reference
+#' 
+make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annotation.column="functional.cluster",
+                           recalculate.umap=FALSE, ndim=20, dimred="umap", nfeatures=1000, seed=123) {
+  if (is.null(assay)) {
+    assay=DefaultAssay(ref)
+  }
+  if (is.null(ref@assays[[assay]])) {
+    stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
+  }
+  if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
+    varfeat <- ref@assays[[assay]]@var.features
+  } else {
+    ref <- FindVariableFeatures(ref, assay = assay, nfeatures = nfeatures, verbose=FALSE)
+    varfeat <- ref@assays[[assay]]@var.features
+  } 
+  
+  #Recompute PCA embeddings using prcomp
+  refdata <- data.frame(t(as.matrix(ref@assays[[assay]]@data[varfeat,])))
+  refdata <- refdata[, sort(colnames(refdata))]
+  
+  ref.pca <- prcomp(refdata, rank. = 50, scale. = TRUE, center = TRUE, retx=TRUE)
+  
+  #Save PCA rotation object
+  ref@misc$pca_object <- ref.pca
+  
+  #Recalculate UMAP, or use an already-present dimensionality reduction
+  if (!recalculate.umap) {
+    if (dimred %in% names(ref@reductions)) {
+      cell.order = rownames(ref.pca$x)
+      low.emb <- ref@reductions[[dimred]]@cell.embeddings[cell.order,]
+      colnames(low.emb) <- c("UMAP_1","UMAP_2")
+      #Save these embeddings
+      ref@misc$umap_object <- list()
+      ref@misc$umap_object$data <- ref.pca$x
+      ref@misc$umap_object$layout <- low.emb
+      
+    } else {
+      stop(sprintf("Dimred %s not found in reference object. Select a different dimensionality reduction, or set recalculate.umap=TRUE to compute UMAP coordinates", dimred))
+    }
+  } else {
+    
+    library(umap)   #generate UMAP embeddings
+    n.neighbors=30
+    min.dist=0.3
+    metric="cosine"
+    ndim=ndim
+    
+    umap.config <- umap.defaults
+    umap.config$n_neighbors = n.neighbors
+    umap.config$min_dist = min.dist
+    umap.config$metric = metric
+    umap.config$n_components = 2
+    umap.config$random_state = seed
+    umap.config$transform_state = seed
+    
+    ref.umap <- umap(ref.pca$x[,1:ndim], config=umap.config)
+    colnames(ref.umap$layout) <- c("UMAP_1","UMAP_2")
+    
+    #Save UMAP object
+    ref@misc$umap_object <- ref.umap
+    #Also change slots of the Seurat object with the new embedding
+    ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    ref@reductions$pca@cell.embeddings <- ref.pca$x
+    ref@reductions$pca@feature.loadings <- ref.pca$rotation
+    colnames(ref@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
+    colnames(ref@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
+  }
+  
+  #store in integrated assay, to be understood by ProjecTILs
+  names(ref@assays)[names(ref@assays)==assay] = "integrated"
+  DefaultAssay(ref) <- "integrated"
+  
+  if (!annotation.column == "functional.cluster") {
+     ref$functional.cluster <- ref@meta.data[,annotation.column]
+  }
+  ref@misc$projecTILs=atlas.name
+  return(ref)
 }

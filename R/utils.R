@@ -1,8 +1,8 @@
 #Internal function to filter cells using scGate
-filterCells <- function(query.object, species="mouse", gating.model=NULL, ncores=ncores){
+filterCells <- function(query.object, species="mouse", gating.model=NULL){
   
   data(cell.cycle.obj)
-  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, ncores=ncores, verbose=FALSE, assay=DefaultAssay(query.object),
+  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, verbose=FALSE, assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]]))
   ncells <- ncol(query.object)
   
@@ -139,7 +139,8 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 }
 
 #Helper for projecting individual data sets
-projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE, fast.mode=FALSE,
+projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
+                              direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
                               seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
@@ -164,8 +165,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
      pca.dim=10
   }
   
-  species.ref <- get.species(genes=row.names(ref), table=Hs2Mm.convert.table)
-  species.query <- get.species(genes=row.names(query), table=Hs2Mm.convert.table)
+  species.ref <- get.species(genes=row.names(ref), table=ortholog_table)
+  species.query <- get.species(genes=row.names(query), table=ortholog_table)
   
   if (species.ref$species != species.query$species) {
      do.orthology <- TRUE
@@ -183,7 +184,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         scGate_model <- models[[species.query$species]]$generic$Tcell  
       }
     }
-    query <- filterCells(query, species=species.query$species, gating.model=scGate_model, ncores=ncores)
+    query <- filterCells(query, species=species.query$species, gating.model=scGate_model)
   }
   if (is.null(query)) {
     message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))   #Update text
@@ -198,8 +199,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       stop("Data slot not found in your Seurat object. Please normalize the data")
     }
     if (do.orthology) {
-      print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+      print("Transforming expression matrix into space of orthologs") 
+      query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot=slot,
                                  from=species.query$col.id, to=species.ref$col.id)
     }        
   } else {
@@ -209,8 +210,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     }
     if (do.orthology) {
-      print("Transforming expression matrix into space of mouse orthologs") 
-      query <- convert.orthologs(query, table=Hs2Mm.convert.table, query.assay=query.assay, slot=slot,
+      print("Transforming expression matrix into space of orthologs") 
+      query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot=slot,
                                  from=species.query$col.id, to=species.ref$col.id)
     }
     query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
