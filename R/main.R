@@ -138,16 +138,17 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})
-#' @param ncores Number of cores for parallel execution (requires \code{future.apply})
-#' @param future.maxSize For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}
+#' @param ncores Number of cores for parallel execution (requires \code{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 #' @examples
 #' data(query_example_seurat)
-#' make.projection(query_example_seurat)
+#' ref <- load.reference.map()
+#' make.projection(query_example_seurat, ref=ref)
+#' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
                              seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                            direct.projection=FALSE, ncores=1, future.maxSize=3000) {
+                            direct.projection=FALSE, ncores=1) {
    
   
   if(is.null(ref)){
@@ -182,38 +183,20 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
   }
   rm(query)
   
-  #Parallel or sequential
-  if (ncores>1) {
-    require(future.apply)
-    options(future.globals.maxSize= future.maxSize*1024^2)
-    future_ncores <<- ncores
-    
-    future::plan(future::multisession(workers=future_ncores))
-    
-    projected.list <- future_lapply(
-      X = 1:length(query.list),
-      FUN = function(i) {
-         res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
+  #Parallelize (ncores>1)
+  param <- BiocParallel::MulticoreParam(workers=ncores)
+  
+  meta.list <- BiocParallel::bplapply(
+    X = 1:length(query.list), 
+    BPPARAM =  param,
+    FUN = function(i) {
+         projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
                                         direct.projection=direct.projection, fast.mode=fast.mode,
                                         seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
                                         skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
-         return(res)
-      }, future.seed = 1
-    )
-    plan(strategy = "sequential")
-      
-  } else {
-    projected.list <- lapply(
-      X = 1:length(query.list),
-      FUN = function(i) {
-        res <- projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                 direct.projection=direct.projection, fast.mode=fast.mode,
-                                 seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
-                                 skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
-        return(res)
       }
-    )
-  }    
+  )
+      
   names(projected.list) <- names(query.list)
 
   #De-list if single object was submitted
@@ -349,10 +332,10 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols
 #' @return Barplot of predicted state composition
 #' @examples
 #' plot.statepred.composition(query_example.seurat)
+#' @import reshape2
+#' @import ggplot2
 #' @export plot.statepred.composition
 plot.statepred.composition = function(ref, query, labels.col="functional.cluster",cols=NULL, metric=c("Count","Percent")) {
-  require(reshape2)
-  require(ggplot2)
   
   metric <- tolower(metric[1])
   
@@ -425,12 +408,12 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
+#' @import ggplot2
+#' @import scales
+#' @importFrom gridExtra arrangeGrob
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
                                   genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
-  require(ggplot2)
-  require(scales)
-  require(gridExtra)
   
   #Make sure query is a list
   if(!is.list(query)) {
@@ -871,14 +854,13 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' library(EnhancedVolcano)
 #' EnhancedVolcano(markers, lab = rownames(markers), x = 'avg_logFC', y = 'p_val')
 #' 
+#' @import Seurat
 #' @export find.discriminant.genes
 #' 
 find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay="RNA",
                                     state="largest", labels.col="functional.cluster",
                                     test="wilcox", min.cells=10, all.genes=F, ...)  ##use ellipsis to pass parameters to FindMarkers
-  
 {  
-  require(Seurat)
   
   if (is.null(ref)) {stop("Please provide the reference object (ref")}
   if (is.null(query)) {stop("Please provide a query object (query)")}
