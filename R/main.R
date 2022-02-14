@@ -186,7 +186,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
   #Parallelize (ncores>1)
   param <- BiocParallel::MulticoreParam(workers=ncores)
   
-  meta.list <- BiocParallel::bplapply(
+  projected.list <- BiocParallel::bplapply(
     X = 1:length(query.list), 
     BPPARAM =  param,
     FUN = function(i) {
