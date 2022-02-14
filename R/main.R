@@ -380,7 +380,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
     tb.m <- reshape2::melt(tb)
     colnames(tb.m) <- c("Cell_state","Ncells")
     p <- ggplot(tb.m, aes(x=Cell_state, y=Ncells, fill=Cell_state)) + geom_bar(stat="identity") +
-      scale_fill_manual(values=cols_use) +
+      theme_bw() + scale_fill_manual(values=cols_use) +
       theme(axis.text.x=element_blank(), legend.position="left")
   } else {
     stop("Unknown metric specified (Must be either Count or Percent")
@@ -615,6 +615,10 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
       message("Reduction ICA not found. Calculating ICA for reference object")
       ref <- run.ica(ref, ndim=ndim)
     }
+    if (!requireNamespace("fastICA", quietly = TRUE)) {
+      stop("Please install package 'fastICA' to run this function.", call. = FALSE)
+    }  
+    
     ref_dimRed <- ref@misc$ica
     perturb_dimRed <- apply.ica.obj(query=query, query.assay=query.assay, ica.obj=ref_dimRed)
     if (!is.null(query.control)) {
