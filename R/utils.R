@@ -106,6 +106,11 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
   #Update matrix gene names
   row.names(exp.mat) <- ortho.genes
   slot(obj@assays[[query.assay]], name=slot) <- exp.mat
+  
+  if (slot=="data") {  #keep same size of data matrices
+    slot(obj@assays[[query.assay]], name="counts") <- exp.mat
+  }
+  
   return(obj)
 }
 
