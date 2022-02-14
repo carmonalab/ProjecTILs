@@ -15,8 +15,7 @@ make.projection(
   fast.mode = FALSE,
   ortholog_table = NULL,
   direct.projection = FALSE,
-  ncores = 1,
-  future.maxSize = 3000
+  ncores = 1
 )
 }
 \arguments{
@@ -40,9 +39,7 @@ make.projection(
 
 \item{direct.projection}{If true, apply PCA transformation directly without alignment}
 
-\item{ncores}{Number of cores for parallel execution (requires \code{future.apply})}
-
-\item{future.maxSize}{For multi-core functionality, maximum allowed total size (in Mb) of global variables. To increment if required from \code{future.apply}}
+\item{ncores}{Number of cores for parallel execution (requires \code{BiocParallel})}
 }
 \value{
 An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -56,5 +53,6 @@ See `load.reference.map()` to load or download a reference atlas.
 }
 \examples{
 data(query_example_seurat)
-make.projection(query_example_seurat)
+ref <- load.reference.map()
+make.projection(query_example_seurat, ref=ref)
 }
