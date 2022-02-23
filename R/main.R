@@ -423,6 +423,10 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   #Set genes
   if (is.null(genes4radar)) {
     genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
+    int <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+    if (length(int) ==0) {
+       genes4radar <- toupper(genes4radar)
+    }
   }
   
   #Set colors
@@ -444,9 +448,19 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  genes4radar <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
-  genes4radar <- sort(genes4radar)
-  order <- match(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  #Check gene names
+  genes.use <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  if (length(genes.use)==0) {
+    stop("None of the provided genes were found - check option 'genes4radar'")
+  }
+  genes.missing <- setdiff(genes4radar, genes.use)
+  if (length(genes.missing)>0) {
+    to.print <- paste(genes.missing, sep=",", collapse = ",")
+    warning(sprintf("Some gene symbols were not found:\n%s", to.print))
+  }
+  
+  genes.use <- sort(genes.use)
+  order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
   rr <- ref@assays[[ref.assay]]@data[order,]
   
   labels <- ref[[labels.col]][,1]
@@ -467,15 +481,15 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     
     for (i in 1:length(query)) {
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-      order <- match(genes4radar, row.names(query[[i]]@assays[[query.assay]]@data))
+      order <- match(genes.use, row.names(query[[i]]@assays[[query.assay]]@data))
       qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
     }
   }
   
   #Get raw expression means, to normalize by gene
-  m <- matrix(, nrow = length(states_all), ncol = length(genes4radar))
+  m <- matrix(, nrow = length(states_all), ncol = length(genes.use))
   rownames(m) <- states_all
-  colnames(m) <- genes4radar
+  colnames(m) <- genes.use
   for (i in 1:length(states_all)) {
     s <- states_all[i]
     m[i,] <- apply(rr[, labels == s], MARGIN=1, mean)
@@ -522,7 +536,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
       scale_colour_manual(values= radar.colors) +
       theme_light() +
       theme(axis.text.x=element_blank()) +
-      annotate(geom="text", x=seq(1,length(genes4radar)), y=ymax-0.05*ymax, label=genes4radar, size=3) +
+      annotate(geom="text", x=seq(1,length(genes.use)), y=ymax-0.05*ymax, label=genes.use, size=3) +
       coord_polar()
     
   }
