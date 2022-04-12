@@ -146,7 +146,9 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                              seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
+                              seurat.k.filter=200, skip.normalize=FALSE, id="query1",
+                              correction_quantile=1, correction_scale=0.2,
+                              scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
   do.orthology <- FALSE
@@ -262,8 +264,13 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         ref <- RunPCA(ref, features = genes4integration,verbose = F)
         query <- RunPCA(query, features = genes4integration,verbose = F)
         
-        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query), anchor.features = genes4integration,
-                                               dims = 1:pca.dim, k.filter = seurat.k.filter, assay=c("integrated",query.assay))
+        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
+            anchor.features = genes4integration, dims = 1:pca.dim,
+            k.filter = seurat.k.filter, assay=c("integrated",query.assay),
+            correction_quantile=correction_quantile, correction_scale=correction_scale)
+        
+        check <<- proj.anchors
+        
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
         proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)

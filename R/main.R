@@ -134,6 +134,8 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
 #' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
+#' @param batch_correction Strength of batch-effect correction, between 0 and 1, where low values indicate weak batch correction and high values strong batch correction.
+#' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
 #' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
@@ -146,9 +148,9 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat, ref=ref)
 #' @import BiocParallel
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
-                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                            direct.projection=FALSE, ncores=1) {
+make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
+    batch_correction=1, correction_scale=0.2, seurat.k.filter=200, skip.normalize=FALSE, 
+    fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
   if(is.null(ref)){
@@ -191,9 +193,10 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
     BPPARAM =  param,
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                        direct.projection=direct.projection, fast.mode=fast.mode,
-                                        seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
-                                        skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
+            direct.projection=direct.projection, fast.mode=fast.mode, seurat.k.filter=seurat.k.filter,
+            correction_quantile=batch_correction, correction_scale=correction_scale,
+            ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
+            scGate_model=scGate_model)
       }
   )
       

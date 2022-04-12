@@ -139,26 +139,28 @@ ReadMtx.fix <- function(
 
 #Find integration anchors using reciprocal PCA
 FindIntegrationAnchors_local <- function(
-  object.list = NULL,
-  assay = NULL,
-  anchor.features = 2000,
-  sct.clip.range = NULL,
-  l2.norm = TRUE,
-  dims = 1:30,
-  k.anchor = 5,
-  k.filter = 200,
-  k.score = 30,
-  max.features = 200,
-  nn.method = "annoy",
-  n.trees = 50,
-  eps = 0,
-  verbose = TRUE
+    object.list = NULL,
+    assay = NULL,
+    correction_quantile = 1,  #level of anchor filtering by distance [0,1]
+    correction_scale = 0.2, #slope of the correction (multiplied by SD(distances))
+    anchor.features = 2000,
+    sct.clip.range = NULL,
+    l2.norm = TRUE,
+    dims = 1:30,
+    k.anchor = 5,
+    k.filter = 200,
+    k.score = 30,
+    max.features = 200,
+    nn.method = "annoy",
+    n.trees = 50,
+    eps = 0,
+    verbose = TRUE
 ) {
   
   normalization.method <- "LogNormalize"
   reference <- NULL
   reduction <- "pca"
-
+  
   object.ncells <- sapply(X = object.list, FUN = function(x) dim(x = x)[2])
   if (any(object.ncells <= max(dims))) {
     bad.obs <- which(x = object.ncells <= max(dims))
@@ -185,20 +187,9 @@ FindIntegrationAnchors_local <- function(
   
   slot <- "data"
   
-  if (is.numeric(x = anchor.features)) {
-    if (verbose) {
-      message("Computing ", anchor.features, " integration features")
-    }
-    anchor.features <- SelectIntegrationFeatures_local(
-      object.list = object.list,
-      nfeatures = anchor.features,
-      assay = assay
-    )
-  }
- 
   nn.reduction <- reduction
   internal.neighbors <- list()
-
+  
   k.filter <- NA
   if (verbose) {
     message("Computing within dataset neighborhoods")
@@ -216,167 +207,178 @@ FindIntegrationAnchors_local <- function(
       )
     }
   )
-  
-  # determine pairwise combinations
-  combinations <- expand.grid(1:length(x = object.list), 1:length(x = object.list))
-  combinations <- combinations[combinations$Var1 < combinations$Var2, , drop = FALSE]
   # determine the proper offsets for indexing anchors
   objects.ncell <- sapply(X = object.list, FUN = ncol)
   offsets <- as.vector(x = cumsum(x = c(0, objects.ncell)))[1:length(x = object.list)]
-
+  
   if (verbose) {
     message("Finding all pairwise anchors")
   }
-  all.anchors <- lapply(
-    X = 1:nrow(x = combinations),
-    FUN = function(row) {
-      i <- combinations[row, 1]
-      j <- combinations[row, 2]
-      object.1 <- DietSeurat(
-        object = object.list[[i]],
-        assays = assay[i],
-        features = anchor.features,
-        counts = FALSE,
-        scale.data = TRUE,
-        dimreducs = reduction
-      )
-      object.2 <- DietSeurat(
-        object = object.list[[j]],
-        assays = assay[j],
-        features = anchor.features,
-        counts = FALSE,
-        scale.data = TRUE,
-        dimreducs = reduction
-      )
-      # suppress key duplication warning
-      suppressWarnings(object.1[["ToIntegrate"]] <- object.1[[assay[i]]])
-      DefaultAssay(object = object.1) <- "ToIntegrate"
-      if (reduction %in% Reductions(object = object.1)) {
-        slot(object = object.1[[reduction]], name = "assay.used") <- "ToIntegrate"
-      }
-      object.1 <- DietSeurat(object = object.1, 
-                             assays = "ToIntegrate",
-                             counts = FALSE,
-                             scale.data = TRUE, 
-                             dimreducs = reduction)
-      suppressWarnings(object.2[["ToIntegrate"]] <- object.2[[assay[j]]])
-      
-      DefaultAssay(object = object.2) <- "ToIntegrate"
-      if (reduction %in% Reductions(object = object.2)) {
-        slot(object = object.2[[reduction]], name = "assay.used") <- "ToIntegrate"
-      }
-      object.2 <- DietSeurat(object = object.2, 
-                             assays = "ToIntegrate",
-                             counts = FALSE,
-                             scale.data = TRUE, 
-                             dimreducs = reduction)
-      
-      #Reciprocal PCA
-      common.features <- intersect(
-        x = rownames(x = Loadings(object = object.1[["pca"]])),
-        y = rownames(x = Loadings(object = object.2[["pca"]]))
-      )
-      common.features <- intersect(
-        x = common.features,
-        y = anchor.features
-      )
-      object.pair <- merge(x = object.1, y = object.2, merge.data = TRUE)
-      projected.embeddings.1<- t(x = GetAssayData(object = object.1, slot = "scale.data")[common.features, ]) %*%
-        Loadings(object = object.2[["pca"]])[common.features, ]
-      object.pair[['projectedpca.1']] <- CreateDimReducObject(
-        embeddings = rbind(projected.embeddings.1, Embeddings(object = object.2[["pca"]])),
-        assay = DefaultAssay(object = object.1),
-        key = "projectedpca1_"
-      )
-      projected.embeddings.2 <- t(x = GetAssayData(object = object.2, slot = "scale.data")[common.features, ]) %*%
-        Loadings(object = object.1[["pca"]])[common.features, ]
-      object.pair[['projectedpca.2']] <- CreateDimReducObject(
-        embeddings = rbind(projected.embeddings.2, Embeddings(object = object.1[["pca"]])),
-        assay = DefaultAssay(object = object.2),
-        key = "projectedpca2_"
-      )
-      object.pair[["pca"]] <- CreateDimReducObject(
-        embeddings = rbind(
-          Embeddings(object = object.1[["pca"]]),
-          Embeddings(object = object.2[["pca"]])),
-        assay = DefaultAssay(object = object.1),
-        key = "pca_"
-      )
-      reduction <- "projectedpca.1"
-      reduction.2 <- "projectedpca.2"
-      if (l2.norm){
-        slot(object = object.pair[["projectedpca.1"]], name = "cell.embeddings") <- Sweep_local(
-          x = Embeddings(object = object.pair[["projectedpca.1"]]),
-          MARGIN = 2,
-          STATS = apply(X = Embeddings(object = object.pair[["projectedpca.1"]]), MARGIN = 2, FUN = sd),
-          FUN = "/"
-        )
-        slot(object = object.pair[["projectedpca.2"]], name = "cell.embeddings") <- Sweep_local(
-          x = Embeddings(object = object.pair[["projectedpca.2"]]),
-          MARGIN = 2,
-          STATS = apply(X = Embeddings(object = object.pair[["projectedpca.2"]]), MARGIN = 2, FUN = sd),
-          FUN = "/"
-        )
-        object.pair <- L2Dim(object = object.pair, reduction = "projectedpca.1")
-        object.pair <- L2Dim(object = object.pair, reduction = "projectedpca.2")
-        reduction <- paste0(reduction, ".l2")
-        reduction.2 <- paste0(reduction.2, ".l2")
-      }
-      
-      internal.neighbors <- internal.neighbors[c(i, j)]
-      
-      anchors <- FindAnchors_local(
-        object.pair = object.pair,
-        assay = c("ToIntegrate", "ToIntegrate"),
-        slot = slot,
-        cells1 = colnames(x = object.1),
-        cells2 = colnames(x = object.2),
-        internal.neighbors = internal.neighbors,
-        reduction = reduction,
-        reduction.2 = reduction.2,
-        nn.reduction = nn.reduction,
-        dims = dims,
-        k.anchor = k.anchor,
-        k.filter = k.filter,
-        k.score = k.score,
-        max.features = max.features,
-        nn.method = nn.method,
-        n.trees = n.trees,
-        eps = eps,
-        verbose = verbose
-      )
-      anchors[, 1] <- anchors[, 1] + offsets[i]
-      anchors[, 2] <- anchors[, 2] + offsets[j]
-      return(anchors)
-    }
-  )
   
-  all.anchors <- do.call(what = 'rbind', args = all.anchors)
-  all.anchors <- rbind(all.anchors, all.anchors[, c(2, 1, 3)])
-  all.anchors <- AddDatasetID_local(anchor.df = all.anchors, offsets = offsets, obj.lengths = objects.ncell)
+  i <- 1
+  j <- 2
+  object.1 <- DietSeurat(
+    object = object.list[[i]],
+    assays = assay[i],
+    features = anchor.features,
+    counts = FALSE,
+    scale.data = TRUE,
+    dimreducs = reduction
+  )
+  object.2 <- DietSeurat(
+    object = object.list[[j]],
+    assays = assay[j],
+    features = anchor.features,
+    counts = FALSE,
+    scale.data = TRUE,
+    dimreducs = reduction
+  )
+  # suppress key duplication warning
+  suppressWarnings(object.1[["ToIntegrate"]] <- object.1[[assay[i]]])
+  DefaultAssay(object = object.1) <- "ToIntegrate"
+  if (reduction %in% Reductions(object = object.1)) {
+    slot(object = object.1[[reduction]], name = "assay.used") <- "ToIntegrate"
+  }
+  object.1 <- DietSeurat(object = object.1, 
+                         assays = "ToIntegrate",
+                         counts = FALSE,
+                         scale.data = TRUE, 
+                         dimreducs = reduction)
+  suppressWarnings(object.2[["ToIntegrate"]] <- object.2[[assay[j]]])
+  
+  DefaultAssay(object = object.2) <- "ToIntegrate"
+  if (reduction %in% Reductions(object = object.2)) {
+    slot(object = object.2[[reduction]], name = "assay.used") <- "ToIntegrate"
+  }
+  object.2 <- DietSeurat(object = object.2, 
+                         assays = "ToIntegrate",
+                         counts = FALSE,
+                         scale.data = TRUE, 
+                         dimreducs = reduction)
+  
+  #Reciprocal PCA
+  common.features <- intersect(
+    x = rownames(x = Loadings(object = object.1[["pca"]])),
+    y = rownames(x = Loadings(object = object.2[["pca"]]))
+  )
+  common.features <- intersect(
+    x = common.features,
+    y = anchor.features
+  )
+  object.pair <- merge(x = object.1, y = object.2, merge.data = TRUE)
+  projected.embeddings.1<- t(x = GetAssayData(object = object.1, slot = "scale.data")[common.features, ]) %*%
+    Loadings(object = object.2[["pca"]])[common.features, ]
+  object.pair[['projectedpca.1']] <- CreateDimReducObject(
+    embeddings = rbind(projected.embeddings.1, Embeddings(object = object.2[["pca"]])),
+    assay = DefaultAssay(object = object.1),
+    key = "projectedpca1_"
+  )
+  projected.embeddings.2 <- t(x = GetAssayData(object = object.2, slot = "scale.data")[common.features, ]) %*%
+    Loadings(object = object.1[["pca"]])[common.features, ]
+  object.pair[['projectedpca.2']] <- CreateDimReducObject(
+    embeddings = rbind(projected.embeddings.2, Embeddings(object = object.1[["pca"]])),
+    assay = DefaultAssay(object = object.2),
+    key = "projectedpca2_"
+  )
+  object.pair[["pca"]] <- CreateDimReducObject(
+    embeddings = rbind(
+      Embeddings(object = object.1[["pca"]]),
+      Embeddings(object = object.2[["pca"]])),
+    assay = DefaultAssay(object = object.1),
+    key = "pca_"
+  )
+  reduction <- "projectedpca.1"
+  reduction.2 <- "projectedpca.2"
+  if (l2.norm){
+    slot(object = object.pair[["projectedpca.1"]], name = "cell.embeddings") <- Sweep_local(
+      x = Embeddings(object = object.pair[["projectedpca.1"]]),
+      MARGIN = 2,
+      STATS = apply(X = Embeddings(object = object.pair[["projectedpca.1"]]), MARGIN = 2, FUN = sd),
+      FUN = "/"
+    )
+    slot(object = object.pair[["projectedpca.2"]], name = "cell.embeddings") <- Sweep_local(
+      x = Embeddings(object = object.pair[["projectedpca.2"]]),
+      MARGIN = 2,
+      STATS = apply(X = Embeddings(object = object.pair[["projectedpca.2"]]), MARGIN = 2, FUN = sd),
+      FUN = "/"
+    )
+    object.pair <- L2Dim(object = object.pair, reduction = "projectedpca.1")
+    object.pair <- L2Dim(object = object.pair, reduction = "projectedpca.2")
+    reduction <- paste0(reduction, ".l2")
+    reduction.2 <- paste0(reduction.2, ".l2")
+  }
+  
+  internal.neighbors <- internal.neighbors[c(i, j)]
+  
+  anchors <- FindAnchors_local(
+    object.pair = object.pair,
+    assay = c("ToIntegrate", "ToIntegrate"),
+    slot = slot,
+    cells1 = colnames(x = object.1),
+    cells2 = colnames(x = object.2),
+    internal.neighbors = internal.neighbors,
+    reduction = reduction,
+    reduction.2 = reduction.2,
+    nn.reduction = nn.reduction,
+    dims = dims,
+    k.anchor = k.anchor,
+    k.filter = k.filter,
+    k.score = k.score,
+    max.features = max.features,
+    nn.method = nn.method,
+    n.trees = n.trees,
+    eps = eps,
+    verbose = verbose
+  )
+  anchors[, 1] <- anchors[, 1] + offsets[i]
+  anchors[, 2] <- anchors[, 2] + offsets[j]
+  
+  #Average distances
+  anchors <- as.data.frame(anchors)
+  anchors$dist.mean <- apply(anchors[,c("dist1.2","dist2.1")], MARGIN=1, mean)
+  
+  #Combine anchor distance with anchor score
+  sigmoid_center <- unname(quantile(anchors$dist.mean, probs = correction_quantile, na.rm = T))
+  sigmoid_correction <- correction_scale * sd(anchors$dist.mean)
+  
+  distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = sigmoid_correction)
+  distance_factors[distance_factors == 0] <- 0.0001 #avoid zeros
+  
+  #Multiply distance factors by score
+  anchors$score <- anchors$score * distance_factors
+  
+  ##Include reciprocal anchors
+  anchors <- rbind(anchors[, c(1,2,3)], anchors[, c(2,1,3)])  
+  anchors <- AddDatasetID_local(anchor.df = anchors, offsets = offsets, obj.lengths = objects.ncell)
+  
   command <- LogSeuratCommand(object = object.list[[1]], return.command = TRUE)
   anchor.set <- new(Class = "IntegrationAnchorSet",
                     object.list = object.list,
-                    reference.objects = reference %||% seq_along(object.list),
-                    anchors = all.anchors,
+                    reference.objects = seq_along(object.list),
+                    anchors = anchors,
                     offsets = offsets,
                     anchor.features = anchor.features,
                     command = command
   )
+  
   return(anchor.set)
+}
+
+sigmoid <- function(x, scale, center){
+  sigm <- 1/(1 + exp((x-center)/scale))
+  return(sigm)    
 }
 
 #Add dataset ID
 AddDatasetID_local <- function(
-  anchor.df,
-  offsets,
-  obj.lengths
+    anchor.df,
+    offsets,
+    obj.lengths
 ) {
   ndataset <- length(x = offsets)
-  total.cells <- sum(obj.lengths)
-  offsets <- c(offsets, total.cells)
-  row.offset <- rep.int(x = offsets[1:ndataset], times = obj.lengths)
+  row.offset <- rep.int(x = offsets, times = obj.lengths)
   dataset <- rep.int(x = 1:ndataset, times = obj.lengths)
+  
   anchor.df <- data.frame(
     'cell1' = anchor.df[, 1] - row.offset[anchor.df[, 1]],
     'cell2' = anchor.df[, 2] - row.offset[anchor.df[, 2]],
@@ -475,6 +477,21 @@ FindAnchors_local <- function(
       k.score = k.score
     )
   }
+  
+  ###Return distances
+  anc.tab <- object.pair@tools$integrated@anchors
+  d1.2 <- numeric(length = dim(anc.tab)[1])
+  d2.1 <- numeric(length = dim(anc.tab)[1])
+  for (r in 1:dim(anc.tab)[1]) {
+    c1 <- anc.tab[r,"cell1"]
+    c2 <- anc.tab[r,"cell2"]
+    d1.2[r] <- object.pair@tools$integrated@neighbors$nnab@nn.dist[c1, which(object.pair@tools$integrated@neighbors$nnab@nn.idx[c1,] == c2 )]
+    d2.1[r] <- object.pair@tools$integrated@neighbors$nnba@nn.dist[c2, which(object.pair@tools$integrated@neighbors$nnba@nn.idx[c2,] == c1 )]
+  }
+  
+  object.pair@tools$integrated@anchors <- cbind(object.pair@tools$integrated@anchors, dist1.2=d1.2)
+  object.pair@tools$integrated@anchors <- cbind(object.pair@tools$integrated@anchors, dist2.1=d2.1)
+  
   anchors <- GetIntegrationData(
     object = object.pair,
     integration.name = 'integrated',
@@ -701,73 +718,6 @@ CheckDuplicateCellNames_local <- function(object.list, verbose = TRUE, stop = FA
     )
   }
   return(object.list)
-}
-
-#Select integration features
-SelectIntegrationFeatures <- function(
-  object.list,
-  nfeatures = 2000,
-  assay = NULL,
-  verbose = TRUE,
-  fvf.nfeatures = 2000,
-  ...
-) {
-  if (!is.null(x = assay)) {
-    if (length(x = assay) != length(x = object.list)) {
-      stop("If specifying the assay, please specify one assay per object in the object.list")
-    }
-    for (ii in length(x = object.list)) {
-      DefaultAssay(object = object.list[[ii]]) <- assay[ii]
-    }
-  } else {
-    assay <- sapply(X = object.list, FUN = DefaultAssay)
-  }
-  for (ii in 1:length(x = object.list)) {
-    if (length(x = VariableFeatures(object = object.list[[ii]])) == 0) {
-      if (verbose) {
-        message(paste0("No variable features found for object", ii, " in the object.list. Running FindVariableFeatures ..."))
-      }
-      object.list[[ii]] <- FindVariableFeatures(object = object.list[[ii]], nfeatures = fvf.nfeatures, verbose = verbose, ...)
-    }
-  }
-  var.features <- unname(obj = unlist(x = lapply(
-    X = 1:length(x = object.list),
-    FUN = function(x) VariableFeatures(object = object.list[[x]], assay = assay[x]))
-  ))
-  var.features <- sort(x = table(var.features), decreasing = TRUE)
-  for (i in 1:length(x = object.list)) {
-    var.features <- var.features[names(x = var.features) %in% rownames(x = object.list[[i]][[assay[i]]])]
-  }
-  tie.val <- var.features[min(nfeatures, length(x = var.features))]
-  features <- names(x = var.features[which(x = var.features > tie.val)])
-  vf.list <- lapply(X = object.list, FUN = VariableFeatures)
-  if (length(x = features) > 0) {
-    feature.ranks <- sapply(X = features, FUN = function(x) {
-      ranks <- sapply(X = vf.list, FUN = function(vf) {
-        if (x %in% vf) {
-          return(which(x = x == vf))
-        }
-        return(NULL)
-      })
-      median(x = unlist(x = ranks))
-    })
-    features <- names(x = sort(x = feature.ranks))
-  }
-  features.tie <- var.features[which(x = var.features == tie.val)]
-  tie.ranks <- sapply(X = names(x = features.tie), FUN = function(x) {
-    ranks <- sapply(X = vf.list, FUN = function(vf) {
-      if (x %in% vf) {
-        return(which(x = x == vf))
-      }
-      return(NULL)
-    })
-    median(x = unlist(x = ranks))
-  })
-  features <- c(
-    features,
-    names(x = head(x = sort(x = tie.ranks), nfeatures - length(x = features)))
-  )
-  return(features)
 }
 
 # Find nearest neighbors

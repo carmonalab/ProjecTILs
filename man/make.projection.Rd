@@ -8,13 +8,15 @@ make.projection(
   query,
   ref = NULL,
   filter.cells = TRUE,
-  scGate_model = NULL,
   query.assay = NULL,
+  direct.projection = FALSE,
+  batch_correction = 1,
+  correction_scale = 0.2,
   seurat.k.filter = 200,
   skip.normalize = FALSE,
   fast.mode = FALSE,
   ortholog_table = NULL,
-  direct.projection = FALSE,
+  scGate_model = NULL,
   ncores = 1
 )
 }
@@ -25,9 +27,13 @@ make.projection(
 
 \item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.}
 
-\item{scGate_model}{scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@misc$scGate})}
-
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
+
+\item{direct.projection}{If true, apply PCA transformation directly without alignment}
+
+\item{batch_correction}{Strength of batch-effect correction, between 0 and 1, where low values indicate weak batch correction and high values strong batch correction.}
+
+\item{correction_scale}{Slope of sigmoid function used to determine strength of batch effect correction.}
 
 \item{seurat.k.filter}{Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure}
 
@@ -37,7 +43,7 @@ make.projection(
 
 \item{ortholog_table}{Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})}
 
-\item{direct.projection}{If true, apply PCA transformation directly without alignment}
+\item{scGate_model}{scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@misc$scGate})}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{BiocParallel})}
 }
