@@ -269,11 +269,14 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
             k.filter = seurat.k.filter, assay=c("integrated",query.assay),
             correction_quantile=correction_quantile, correction_scale=correction_scale)
         
-        check <<- proj.anchors
+        n.anchors <- nrow(proj.anchors@anchors)/2
         
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
-        proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)
+        proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim,
+                                         features.to.integrate = all.genes,
+                                         k.weight = n.anchors-1,  #TEST with uniform correction
+                                         preserve.order = T, verbose=F)
         
         #Subset query data from integrated space
         cells_query<- colnames(query)
