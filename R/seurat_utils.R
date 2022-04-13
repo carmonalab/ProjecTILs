@@ -142,7 +142,7 @@ FindIntegrationAnchors_local <- function(
     object.list = NULL,
     assay = NULL,
     correction_quantile = 1,  #level of anchor filtering by distance [0,1]
-    correction_scale = 0.2, #slope of the correction (multiplied by SD(distances))
+    correction_scale = 0.1, #slope of the correction (multiplied by SD(distances))
     anchor.features = 2000,
     sct.clip.range = NULL,
     l2.norm = TRUE,
@@ -337,16 +337,18 @@ FindIntegrationAnchors_local <- function(
   anchors <- as.data.frame(anchors)
   anchors$dist.mean <- apply(anchors[,c("dist1.2","dist2.1")], MARGIN=1, mean)
   
-  #Combine anchor distance with anchor score
-  sigmoid_center <- unname(quantile(anchors$dist.mean, probs = correction_quantile, na.rm = T))
-  sigmoid_correction <- correction_scale * sd(anchors$dist.mean)
-  
-  distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = sigmoid_correction)
-  distance_factors[distance_factors == 0] <- 0.0001 #avoid zeros
-  
-  #Multiply distance factors by score
-  anchors$score <- anchors$score * distance_factors
-  
+  if (correction_quantile < 1) {
+    epsilon <- 0.0001
+    #Combine anchor distance with anchor score
+    sigmoid_center <- unname(quantile(anchors$dist.mean, probs = correction_quantile, na.rm = T))
+    sigmoid_correction <- correction_scale * sd(anchors$dist.mean)
+    
+    distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = sigmoid_correction)
+    distance_factors[distance_factors < epsilon] <- epsilon #avoid zeros
+    
+    #Multiply distance factors by score
+    anchors$score <- anchors$score * distance_factors
+  }
   ##Include reciprocal anchors
   anchors <- rbind(anchors[, c(1,2,3)], anchors[, c(2,1,3)])  
   anchors <- AddDatasetID_local(anchor.df = anchors, offsets = offsets, obj.lengths = objects.ncell)

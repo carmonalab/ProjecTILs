@@ -147,7 +147,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
                               seurat.k.filter=200, skip.normalize=FALSE, id="query1",
-                              correction_quantile=1, correction_scale=0.2,
+                              correction_quantile=1, correction_scale=0.1,
                               scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE

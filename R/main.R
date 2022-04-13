@@ -149,7 +149,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    batch_correction=1, correction_scale=0.2, seurat.k.filter=200, skip.normalize=FALSE, 
+    batch_correction=1, correction_scale=0.1, seurat.k.filter=200, skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
