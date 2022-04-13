@@ -13,6 +13,7 @@ make.projection(
   batch_correction = 1,
   correction_scale = 0.1,
   seurat.k.filter = 200,
+  k.weight = 100,
   skip.normalize = FALSE,
   fast.mode = FALSE,
   ortholog_table = NULL,
@@ -36,6 +37,8 @@ make.projection(
 \item{correction_scale}{Slope of sigmoid function used to determine strength of batch effect correction.}
 
 \item{seurat.k.filter}{Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure}
+
+\item{k.weight}{Integer. Number of neighbors to consider when weighting anchors.}
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 

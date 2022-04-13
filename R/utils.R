@@ -146,7 +146,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                              seurat.k.filter=200, skip.normalize=FALSE, id="query1",
+                              seurat.k.filter=200, k.weight=100, skip.normalize=FALSE, id="query1",
                               correction_quantile=1, correction_scale=0.1,
                               scGate_model=NULL, ncores=ncores) {
   
@@ -275,7 +275,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         all.genes <- intersect(row.names(ref), row.names(query))
         proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim,
                                          features.to.integrate = all.genes,
-                                         k.weight = n.anchors-1,  #TEST with uniform correction
+                                         k.weight = k.weight,
                                          preserve.order = T, verbose=F)
         
         #Subset query data from integrated space

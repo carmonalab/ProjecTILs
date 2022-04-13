@@ -348,6 +348,10 @@ FindIntegrationAnchors_local <- function(
     
     #Multiply distance factors by score
     anchors$score <- anchors$score * distance_factors
+    
+    ##HERE. Remove distant anchors
+    anchors <- anchors[distance_factors > 0.1,] 
+    
   }
   ##Include reciprocal anchors
   anchors <- rbind(anchors[, c(1,2,3)], anchors[, c(2,1,3)])  
