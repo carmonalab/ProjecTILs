@@ -12,7 +12,7 @@ make.projection(
   direct.projection = FALSE,
   batch_correction = 1,
   correction_scale = 0.1,
-  seurat.k.filter = 200,
+  k.anchor = 5,
   k.weight = 100,
   skip.normalize = FALSE,
   fast.mode = FALSE,
@@ -36,7 +36,7 @@ make.projection(
 
 \item{correction_scale}{Slope of sigmoid function used to determine strength of batch effect correction.}
 
-\item{seurat.k.filter}{Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure}
+\item{k.anchor}{Integer. For alignment, how many neighbors (k) to use when picking anchors.}
 
 \item{k.weight}{Integer. Number of neighbors to consider when weighting anchors.}
 

@@ -148,7 +148,7 @@ FindIntegrationAnchors_local <- function(
     l2.norm = TRUE,
     dims = 1:30,
     k.anchor = 5,
-    k.filter = 200,
+    k.filter = NA,
     k.score = 30,
     max.features = 200,
     nn.method = "annoy",
@@ -190,7 +190,6 @@ FindIntegrationAnchors_local <- function(
   nn.reduction <- reduction
   internal.neighbors <- list()
   
-  k.filter <- NA
   if (verbose) {
     message("Computing within dataset neighborhoods")
   }
@@ -349,10 +348,13 @@ FindIntegrationAnchors_local <- function(
     #Multiply distance factors by score
     anchors$score <- anchors$score * distance_factors
     
-    ##HERE. Remove distant anchors
+    ##Remove distant anchors
     anchors <- anchors[distance_factors > 0.1,] 
     
   }
+  nanchors <- nrow(anchors)
+  message(sprintf("    Retaining %i anchors after filtering by rPCA distance", nanchors))
+  
   ##Include reciprocal anchors
   anchors <- rbind(anchors[, c(1,2,3)], anchors[, c(2,1,3)])  
   anchors <- AddDatasetID_local(anchor.df = anchors, offsets = offsets, obj.lengths = objects.ncell)
@@ -408,7 +410,7 @@ FindAnchors_local <- function(
   nn.reduction = reduction,
   dims = 1:10,
   k.anchor = 5,
-  k.filter = 200,
+  k.filter = NA,
   k.score = 30,
   max.features = 200,
   nn.method = "annoy",
@@ -447,33 +449,6 @@ FindAnchors_local <- function(
     k.anchor = k.anchor,
     verbose = verbose
   )
-  if (!is.na(x = k.filter)) {
-    top.features <- TopDimFeatures_local(
-      object = object.pair,
-      reduction = reduction,
-      dims = dims,
-      features.per.dim = 100,
-      max.features = max.features
-    )
-    if(length(top.features) == 2){
-      top.features <- intersect(top.features[[1]], top.features[[2]])
-    } else{
-      top.features <- as.vector(top.features)
-    }
-    top.features <- top.features[top.features %in% rownames(x = object.pair)]
-    object.pair <- FilterAnchors_local(
-      object = object.pair,
-      assay = assay,
-      slot = slot,
-      integration.name = 'integrated',
-      features = top.features,
-      k.filter = k.filter,
-      nn.method = nn.method,
-      n.trees = n.trees,
-      eps = eps,
-      verbose = verbose
-    )
-  }
   if (!is.na(x = k.score)) {
     object.pair = ScoreAnchors_local(
       object = object.pair,
@@ -588,73 +563,6 @@ TopDimFeatures_local <- function(
   })))
   features <- unique(x = features)
   return(features)
-}
-
-#Filter anchors
-FilterAnchors_local <- function(
-  object,
-  assay = NULL,
-  slot = "data",
-  integration.name = 'integrated',
-  features = NULL,
-  k.filter = 200,
-  nn.method = "annoy",
-  n.trees = 50,
-  eps = 0,
-  verbose = TRUE
-) {
-  if (verbose) {
-    message("Filtering anchors")
-  }
-  assay <- assay %||% DefaultAssay(object = object)
-  features <- features %||% VariableFeatures(object = object)
-  if (length(x = features) == 0) {
-    stop("No features provided and no VariableFeatures computed.")
-  }
-  features <- unique(x = features)
-  neighbors <- GetIntegrationData(object = object, integration.name = integration.name, slot = 'neighbors')
-  nn.cells1 <- neighbors$cells1
-  nn.cells2 <- neighbors$cells2
-  if (min(length(x = nn.cells1), length(x = nn.cells2)) < k.filter) {
-    warning("Number of anchor cells is less than k.filter. Retaining all anchors.")
-    k.filter <- min(length(x = nn.cells1), length(x = nn.cells2))
-    anchors <- GetIntegrationData(object = object, integration.name = integration.name, slot = "anchors")
-  } else {
-    cn.data1 <- L2Norm(
-      mat = as.matrix(x = t(x = GetAssayData(
-        object = object[[assay[1]]],
-        slot = slot)[features, nn.cells1])),
-      MARGIN = 1)
-    cn.data2 <- L2Norm(
-      mat = as.matrix(x = t(x = GetAssayData(
-        object = object[[assay[2]]],
-        slot = slot)[features, nn.cells2])),
-      MARGIN = 1)
-    nn <- Seurat:::NNHelper(
-      data = cn.data2[nn.cells2, ],
-      query = cn.data1[nn.cells1, ],
-      k = k.filter,
-      method = nn.method,
-      n.trees = n.trees,
-      eps = eps
-    )
-    
-    anchors <- GetIntegrationData(object = object, integration.name = integration.name, slot = "anchors")
-    position <- sapply(X = 1:nrow(x = anchors), FUN = function(x) {
-      which(x = anchors[x, "cell2"] == Indices(object = nn)[anchors[x, "cell1"], ])[1]
-    })
-    anchors <- anchors[!is.na(x = position), ]
-    if (verbose) {
-      message("\tRetained ", nrow(x = anchors), " anchors")
-    }
-  }
-  object <- SetIntegrationData(
-    object = object,
-    integration.name = integration.name,
-    slot = "anchors",
-    new.data = anchors
-  )
-  return(object)
 }
 
 #Score anchors

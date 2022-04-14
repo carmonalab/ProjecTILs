@@ -146,7 +146,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                              seurat.k.filter=200, k.weight=100, skip.normalize=FALSE, id="query1",
+                              k.weight=100, k.anchor=5, skip.normalize=FALSE, id="query1",
                               correction_quantile=1, correction_scale=0.1,
                               scGate_model=NULL, ncores=ncores) {
   
@@ -266,7 +266,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         
         proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
             anchor.features = genes4integration, dims = 1:pca.dim,
-            k.filter = seurat.k.filter, assay=c("integrated",query.assay),
+            assay=c("integrated",query.assay), k.anchor=k.anchor,
             correction_quantile=correction_quantile, correction_scale=correction_scale)
         
         n.anchors <- nrow(proj.anchors@anchors)/2

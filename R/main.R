@@ -136,7 +136,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param batch_correction Strength of batch-effect correction, between 0 and 1, where low values indicate weak batch correction and high values strong batch correction.
 #' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
-#' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
+#' @param k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
 #' @param k.weight Integer. Number of neighbors to consider when weighting anchors.
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
@@ -150,7 +150,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    batch_correction=1, correction_scale=0.1, seurat.k.filter=200, k.weight=100, skip.normalize=FALSE, 
+    batch_correction=1, correction_scale=0.1, k.anchor=5, k.weight=100, skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -194,8 +194,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
     BPPARAM =  param,
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-            direct.projection=direct.projection, fast.mode=fast.mode, seurat.k.filter=seurat.k.filter,
-            k.weight=k.weight,
+            direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=k.anchor, k.weight=k.weight,
             correction_quantile=batch_correction, correction_scale=correction_scale,
             ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
             scGate_model=scGate_model)
@@ -317,7 +316,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use, alpha=0.3) +
       geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
       geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
