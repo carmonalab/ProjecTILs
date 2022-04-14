@@ -541,6 +541,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     
     levs <- unique(this.df$Dataset)
     this.df$Dataset <- factor(this.df$Dataset, levels=levs)
+    this.df$Gene <- factor(this.df$Gene, levels=genes.use)
     
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
       geom_point(size=2) +
