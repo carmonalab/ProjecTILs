@@ -11,7 +11,7 @@ make.projection(
   query.assay = NULL,
   direct.projection = FALSE,
   batch_correction = 0.7,
-  correction_scale = 0.1,
+  correction_scale = 100,
   k.anchor = 5,
   k.weight = 50,
   skip.normalize = FALSE,
