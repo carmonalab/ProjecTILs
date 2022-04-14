@@ -150,7 +150,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    batch_correction=1, correction_scale=0.1, k.anchor=5, k.weight=100, skip.normalize=FALSE, 
+    batch_correction=0.5, correction_scale=0.1, k.anchor=8, k.weight=50, skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -276,13 +276,15 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param linesize Contour line thickness for projected query
 #' @param pointsize Point size for cells in projected query
 #' @param ref.alpha Transparency parameter for reference cells
+#' @param ref.size Point size for reference cells
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
 #' @export plot.projection
 
 plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
-                          cols=NULL, linesize=1, pointsize=1, ref.alpha=0.5) {
+                          cols=NULL, linesize=1, pointsize=1,
+                          ref.alpha=0.3, ref.size=1) {
   require(Seurat)
   require(ggplot2)
   require(scales)
@@ -314,14 +316,20 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
   }
   names(palette) <- states_all
   cols_use <- palette[states_all]
+  #apply transparency to ref cells
+  cols_use <- alpha(cols_use, alpha=ref.alpha)
   
   if (is.null(query)) {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 
+                 repel = T, pt.size=ref.size, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=alpha(cols_use, alpha=ref.alpha)) +
-      geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
-      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col,
+                 repel = T, pt.size=ref.size, cols=cols_use) +
+      geom_point(data.frame(query@reductions$umap@cell.embeddings), 
+                 mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
+      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), 
+                      mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
   return(p)
@@ -466,7 +474,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     warning(sprintf("Some gene symbols were not found:\n%s", to.print))
   }
   
-  genes.use <- sort(genes.use)
+  #genes.use <- sort(genes.use)
   order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
   rr <- ref@assays[[ref.assay]]@data[order,]
   
