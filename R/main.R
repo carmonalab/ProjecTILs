@@ -275,14 +275,17 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param cols Custom color palette for clusters
 #' @param linesize Contour line thickness for projected query
 #' @param pointsize Point size for cells in projected query
+#' @param ref.alpha Transparency parameter for reference cells
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
 #' @export plot.projection
 
-plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols=NULL, linesize=1, pointsize=1) {
+plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
+                          cols=NULL, linesize=1, pointsize=1, ref.alpha=0.5) {
   require(Seurat)
   require(ggplot2)
+  require(scales)
   
   labels <- ref[[labels.col]][,1]
   
@@ -316,7 +319,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use, alpha=0.3) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=alpha(cols_use, alpha=ref.alpha)) +
       geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
       geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
