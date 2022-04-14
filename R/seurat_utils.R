@@ -335,6 +335,7 @@ FindIntegrationAnchors_local <- function(
   #Average distances
   anchors <- as.data.frame(anchors)
   anchors$dist.mean <- apply(anchors[,c("dist1.2","dist2.1")], MARGIN=1, mean)
+  message(sprintf("  SD on anchor distances: %.3f",sd(anchors$dist.mean)))
   
   if (correction_quantile < 1) {
     epsilon <- 0.0001
@@ -356,7 +357,8 @@ FindIntegrationAnchors_local <- function(
   message(sprintf("    Retaining %i anchors after filtering by rPCA distance", nanchors))
   
   ##Include reciprocal anchors
-  anchors <- rbind(anchors[, c(1,2,3)], anchors[, c(2,1,3)])  
+  anchors <- rbind(anchors[, c("cell1","cell2","score","dist.mean")],
+                   anchors[, c("cell2","cell1","score","dist.mean")])  
   anchors <- AddDatasetID_local(anchor.df = anchors, offsets = offsets, obj.lengths = objects.ncell)
   
   command <- LogSeuratCommand(object = object.list[[1]], return.command = TRUE)
@@ -388,11 +390,12 @@ AddDatasetID_local <- function(
   dataset <- rep.int(x = 1:ndataset, times = obj.lengths)
   
   anchor.df <- data.frame(
-    'cell1' = anchor.df[, 1] - row.offset[anchor.df[, 1]],
-    'cell2' = anchor.df[, 2] - row.offset[anchor.df[, 2]],
-    'score' = anchor.df[, 3],
-    'dataset1' = dataset[anchor.df[, 1]],
-    'dataset2' = dataset[anchor.df[, 2]]
+    'cell1' = anchor.df[, 'cell1'] - row.offset[anchor.df[, 'cell1']],
+    'cell2' = anchor.df[, 'cell2'] - row.offset[anchor.df[, 'cell2']],
+    'score' = anchor.df[, 'score'],
+    'dataset1' = dataset[anchor.df[, 'cell1']],
+    'dataset2' = dataset[anchor.df[, 'cell2']],
+    'dist.mean' = anchor.df[, 'dist.mean']
   )
   return(anchor.df)
 }

@@ -150,7 +150,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    batch_correction=0.5, correction_scale=0.1, k.anchor=8, k.weight=50, skip.normalize=FALSE, 
+    batch_correction=0.7, correction_scale=0.1, k.anchor=5, k.weight=50, skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -276,7 +276,7 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param linesize Contour line thickness for projected query
 #' @param pointsize Point size for cells in projected query
 #' @param ref.alpha Transparency parameter for reference cells
-#' @param ref.size Point size for reference cells
+#' @param ref.size Adjust point size for reference cells
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
@@ -284,7 +284,7 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 
 plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
                           cols=NULL, linesize=1, pointsize=1,
-                          ref.alpha=0.3, ref.size=1) {
+                          ref.alpha=0.3, ref.size=NULL) {
   require(Seurat)
   require(ggplot2)
   require(scales)

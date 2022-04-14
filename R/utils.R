@@ -269,7 +269,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
             assay=c("integrated",query.assay), k.anchor=k.anchor,
             correction_quantile=correction_quantile, correction_scale=correction_scale)
         
-        n.anchors <- nrow(proj.anchors@anchors)/2
+        #n.anchors <- nrow(proj.anchors@anchors)/2
+        #sd.anchors <- sd(proj.anchors@anchors$dist.mean)
         
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
@@ -279,10 +280,16 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
                                          preserve.order = T, verbose=F)
         
         #Subset query data from integrated space
-        cells_query<- colnames(query)
+        cells_query <- colnames(query)
         projected <- subset(proj.integrated, cells = cells_query)
         
         projected@meta.data <- query.metadata
+        
+        #Add anchor score to metadata
+        aa <- proj.anchors@anchors
+        aa.score <- aggregate(data=aa, x=aa$score, by=list(qcell = aa$cell2), FUN = mean)
+        projected@meta.data[,"anchor.score"] <- 0
+        projected@meta.data[aa.score$qcell, "anchor.score"] <- aa.score$x
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")

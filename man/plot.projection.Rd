@@ -12,7 +12,7 @@
   linesize = 1,
   pointsize = 1,
   ref.alpha = 0.3,
-  ref.size = 1
+  ref.size = NULL
 )
 }
 \arguments{
@@ -30,7 +30,7 @@
 
 \item{ref.alpha}{Transparency parameter for reference cells}
 
-\item{ref.size}{Point size for reference cells}
+\item{ref.size}{Adjust point size for reference cells}
 }
 \value{
 UMAP plot of reference map with projected query set in the same space
