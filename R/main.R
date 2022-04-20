@@ -225,9 +225,9 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
 #' @examples
 #' cellstate.predict(ref, query_example.seurat)
+#' @import Seurat
 #' @export
 cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.col="functional.cluster") {
-  require(Seurat)
   tdim <- dim(ref@reductions[[reduction]]@cell.embeddings)[2]
   if (ndim > tdim) {
      warning(sprintf("Number of dimensions ndim=%i is larger than the dimensions in reduction %s - Using only first %i dimensions",ndim,reduction,tdim))
@@ -280,14 +280,14 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
+#' @import Seurat
+#' @import ggplot2
+#' @import scales
 #' @export plot.projection
 
 plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
                           cols=NULL, linesize=1, pointsize=1,
                           ref.alpha=0.3, ref.size=NULL) {
-  require(Seurat)
-  require(ggplot2)
-  require(scales)
   
   labels <- ref[[labels.col]][,1]
   
@@ -295,29 +295,22 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
   nstates <- length(states_all)
   
   if (!is.null(cols)) {  #custom palette
-    if (nstates<=length(cols)) {
-      palette <- cols[1:nstates]
-    } else {  
+    if (nstates>length(cols)) {
       warning("Not enough colors provided. Making an automatic palette")
       palette <- rainbow(n=nstates)
     }  
   } else {   #default palette
-    
     if (!is.null(ref@misc$atlas.palette)) {  #read directly from atlas, if stored
       palette <- ref@misc$atlas.palette
     } else {
       palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-      if (nstates<=length(palette)) {
-        palette <- palette[1:nstates]
-      } else {   #make a new palette
+      if (nstates > length(palette)) {
         palette <- rainbow(n=nstates)
       }
     }  
   }
-  names(palette) <- states_all
-  cols_use <- palette[states_all]
   #apply transparency to ref cells
-  cols_use <- alpha(cols_use, alpha=ref.alpha)
+  cols_use <- alpha(palette, alpha=ref.alpha)
   
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 
@@ -428,7 +421,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @importFrom gridExtra arrangeGrob
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
-                                  genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
+                                  genes4radar=NULL, min.cells=50, cols=NULL, return=F, return.as.list=F) {
   
   #Make sure query is a list
   if(!is.list(query)) {
@@ -756,8 +749,8 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 
 plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RNA",
                                  labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
-  require(plotly)
   
+  require(plotly)
   reduction=NULL
   message(paste0("Generating UMAP with 3rd dimension on ",extra.dim))
   if (grepl("^ica_\\d+", tolower(extra.dim), perl=T)) {
@@ -834,7 +827,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
   
   plotting.data$size <- ifelse(plotting.data$queryGroup == "Reference",0.3,6)
   
-  g <- plot_ly(data = plotting.data,
+  g <- plot_ly::plot_ly(data = plotting.data,
                x = ~UMAP_1, y = ~UMAP_2, z = ~Discriminant,
                color = ~queryGroup,
                type = "scatter3d",
@@ -874,7 +867,12 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param test Type of test for DE analysis. See help for `FindMarkers` for implemented tests.
 #' @param min.cells Minimum number of cells in the cell type to proceed with analysis.
-#' @param all.genes Whether to consider all genes for DE analysis (default is variable genes of the reference)
+#' @param genes.use What subset of genes to consider for DE analysis:
+#' \itemize{
+#'   \item{"variable" - Only consider variable genes of the reference}
+#'   \item{"all" - Use intersection of all genes in query and control}
+#'   \item{A custom list of genes}
+#' }
 #' @param ... Adding parameters for `FindMarkers`
 #' @return A dataframe with a ranked list of genes as rows, and statistics as columns (e.g. log fold-change, p-values). See help for `FindMarkers` for more details.
 #' @examples
@@ -893,7 +891,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' 
 find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay="RNA",
                                     state="largest", labels.col="functional.cluster",
-                                    test="wilcox", min.cells=10, all.genes=F, ...)  ##use ellipsis to pass parameters to FindMarkers
+                                    test="wilcox", min.cells=10, genes.use=c("variable","all"), ...)
 {  
   
   if (is.null(ref)) {stop("Please provide the reference object (ref")}
@@ -944,13 +942,16 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
     stop(sprintf("Too few cells for state %s in query control. Exit.", state))
   }
   
-  #Subset on subtype 
+  #Subset on subtype
+  DefaultAssay(query) <- query.assay
   s1 <- subset(query, cells=s1.cells)
   s1$Group <- "Query"
   
   if (!is.null(query.control)) {
+    DefaultAssay(query.control) <- query.assay
     s2 <- subset(query.control, cells=s2.cells)
   } else {
+    DefaultAssay(ref) <- query.assay
     s2 <- subset(ref, cells=s2.cells)
   }
   s2$Group <- "Control"
@@ -959,11 +960,13 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
   Idents(s.m) <- "Group"
   
   #use all genes or only variable genes from the reference
-  if (all.genes) {
+  if (genes.use[1] == "all") {
     which.genes <- NULL
-  } else {
+  } else if (genes.use[1] == "variable") {
     which.genes <- intersect(ref@assays$integrated@var.features, rownames(s.m))
-  } 
+  } else {
+    which.genes <- intersect(genes.use, rownames(s.m))
+  }
   
   markers <- FindMarkers(s.m, slot="data", ident.1="Query", ident.2="Control", only.pos = F, test.use=test, assay=query.assay,
                          features = which.genes, ...)
@@ -1073,4 +1076,98 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   }
   ref@misc$projecTILs=atlas.name
   return(ref)
+}
+
+#' Merge Seurat objects, including reductions (e.g. PCA, UMAP, ICA)
+#'
+#' Given two Seurat objects, merge counts and data as well as dim reductions (PCA, UMAP, ICA, etc.)
+#'
+#' @param x First object to merge
+#' @param y Second object to merge
+#' @param ... More parameters to \code{merge} function
+#' @return A merged Seurat object
+#' @examples 
+#' seurat.merged <- merge.Seurat.embeddings(obj.1, obj.2)  
+#' #To merge multiple object stored in a list
+#' seurat.merged <- Reduce(f=merge.Seurat.embeddings, x=obj.list)
+#' @import Seurat
+#' @export merge.Seurat.embeddings
+
+merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
+{  
+  #first regular Seurat merge, inheriting parameters
+  m <- merge(x, y, ...)
+  #preserve reductions (PCA, UMAP, ...)
+  
+  reds <- intersect(names(x@reductions), names(y@reductions))
+  for (r in reds) {
+    message(sprintf("Merging %s embeddings...", r))
+    
+    m@reductions[[r]] <- x@reductions[[r]]
+    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
+      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
+      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
+      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
+    }
+  }
+  return(m)
+}
+
+#' Recalculate low dimensional embeddings after projection
+#'
+#' Given a reference object and a (list of) projected objects, recalculate low-dim embeddings accounting for the projected cells
+#'
+#' @param ref Reference map
+#' @param projected A projected object (or list of projected objects) generated using \code{make.projection}
+#' @param ref.assay Assay for reference object
+#' @param proj.assay Assay for projected object(s)
+#' @param ndim Number of dimensions for recalculating dimensionality reductions
+#' @param n.neighbors Number of neighbors for UMAP algorithm
+#' @param min.dist Tightness parameter for UMAP embedding
+#' @param recalc.pca Whether to recalculate the PCA embeddings with the combined reference and projected data
+#' @param seed Random seed for reproducibility
+#' @return A combined reference object of reference and projected object(s), with new low dimensional embeddings
+#' @examples 
+#' combined <- recalculate.embeddings(ref, projected, ndim=10)
+#' @export recalculate.embeddings
+
+recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
+                                   ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE, seed=123){ 
+  
+  if (is.null(ref) | is.null(projected)) {
+    stop("Please provide a reference and a projected object (or list of projected objects)")
+  }
+  
+  if (is.list(projected)) {
+    projected <- Reduce(f=merge.Seurat.embeddings, x=projected)
+  } 
+  projected$ref_or_query <- "query"
+  ref$ref_or_query <- "ref"
+  
+  projected <- RenameCells(object = projected, add.cell.id = "Q")
+
+  merged <- merge.Seurat.embeddings(ref, projected)
+  
+  DefaultAssay(merged) <- proj.assay
+  DefaultAssay(ref) <- ref.assay
+  
+  if (is.null(ndim)) {
+    ndim <- ncol(ref@misc$umap_object$data)
+    if (is.null(ndim)) {
+      stop("Please provide number of dimensions for dimensionality reduction (ndim)")
+    }
+  }
+  
+  if (recalc.pca) {
+    VariableFeatures(merged) <- VariableFeatures(ref)
+    merged <- ScaleData(merged)
+    merged <- RunPCA(merged, npcs = ndim)
+  }
+  merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
+                     n.neighbors=n.neighbors, min.dist=min.dist)
+  return(merged)
 }

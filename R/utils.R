@@ -114,35 +114,6 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
   return(obj)
 }
 
-
-#Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
-merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
-{  
-  require(Seurat)
-  
-  #first regular Seurat merge, inheriting parameters
-  m <- merge(x, y, ...)
-  #preserve reductions (PCA, UMAP, ...)
-  
-  reds <- intersect(names(x@reductions), names(y@reductions))
-  for (r in reds) {
-    message(sprintf("Merging %s embeddings...", r))
-    
-    m@reductions[[r]] <- x@reductions[[r]]
-    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
-      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
-      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
-      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
-    }
-  }
-  return(m)
-  
-}
-
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,

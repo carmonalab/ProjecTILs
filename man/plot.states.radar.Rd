@@ -11,7 +11,7 @@
   ref.assay = "RNA",
   query.assay = "RNA",
   genes4radar = NULL,
-  min.cells = 10,
+  min.cells = 50,
   cols = NULL,
   return = F,
   return.as.list = F

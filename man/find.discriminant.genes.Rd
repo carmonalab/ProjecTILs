@@ -13,7 +13,7 @@ find.discriminant.genes(
   labels.col = "functional.cluster",
   test = "wilcox",
   min.cells = 10,
-  all.genes = F,
+  genes.use = c("variable", "all"),
   ...
 )
 }
@@ -39,7 +39,12 @@ find.discriminant.genes(
 
 \item{min.cells}{Minimum number of cells in the cell type to proceed with analysis.}
 
-\item{all.genes}{Whether to consider all genes for DE analysis (default is variable genes of the reference)}
+\item{genes.use}{What subset of genes to consider for DE analysis:
+\itemize{
+  \item{"variable" - Only consider variable genes of the reference}
+  \item{"all" - Use intersection of all genes in query and control}
+  \item{A custom list of genes}
+}}
 
 \item{...}{Adding parameters for `FindMarkers`}
 }
