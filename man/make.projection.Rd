@@ -12,8 +12,9 @@ make.projection(
   direct.projection = FALSE,
   batch_correction = 0.7,
   correction_scale = 100,
+  remove.thr = 0,
   k.anchor = 5,
-  k.weight = 50,
+  k.weight = "max",
   skip.normalize = FALSE,
   fast.mode = FALSE,
   ortholog_table = NULL,
@@ -36,9 +37,11 @@ make.projection(
 
 \item{correction_scale}{Slope of sigmoid function used to determine strength of batch effect correction.}
 
+\item{remove.thr}{Threshold to remove anchors before integration.}
+
 \item{k.anchor}{Integer. For alignment, how many neighbors (k) to use when picking anchors.}
 
-\item{k.weight}{Integer. Number of neighbors to consider when weighting anchors.}
+\item{k.weight}{Number of neighbors to consider when weighting anchors. Default is "max", which disables local anchor weighting.}
 
 \item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
 

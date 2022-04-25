@@ -137,7 +137,8 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param batch_correction Strength of batch-effect correction, between 0 and 1, where low values indicate weak batch correction and high values strong batch correction.
 #' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
 #' @param k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
-#' @param k.weight Integer. Number of neighbors to consider when weighting anchors.
+#' @param k.weight Number of neighbors to consider when weighting anchors. Default is "max", which disables local anchor weighting.
+#' @param remove.thr Threshold to remove anchors before integration.
 #' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
 #' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})
@@ -150,7 +151,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    batch_correction=0.7, correction_scale=100, k.anchor=5, k.weight=50, skip.normalize=FALSE, 
+    batch_correction=0.7, correction_scale=100, remove.thr=0, k.anchor=5, k.weight="max", skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -195,7 +196,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
             direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=k.anchor, k.weight=k.weight,
-            correction_quantile=batch_correction, correction_scale=correction_scale,
+            correction_quantile=batch_correction, correction_scale=correction_scale, remove.thr=remove.thr,
             ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
             scGate_model=scGate_model)
       }

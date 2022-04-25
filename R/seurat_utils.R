@@ -150,6 +150,7 @@ FindIntegrationAnchors_local <- function(
     k.anchor = 5,
     k.filter = NA,
     k.score = 30,
+    remove.thr = 0,
     max.features = 200,
     nn.method = "annoy",
     n.trees = 50,
@@ -348,7 +349,7 @@ FindIntegrationAnchors_local <- function(
     anchors$score <- anchors$score * distance_factors
     
     ##Remove distant anchors
-    anchors <- anchors[distance_factors > 0.1,] 
+    anchors <- anchors[distance_factors > remove.thr,] 
     
   }
   nanchors <- nrow(anchors)
