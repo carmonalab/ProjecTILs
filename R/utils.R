@@ -128,7 +128,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   DefaultAssay(ref) <- "integrated"
   ref.var.features <- ref@assays$integrated@var.features
   
-  #If query.assay not speficied, use the default
+  #If query.assay not specified, use the default
   if (is.null(query.assay)) {
     query.assay <- DefaultAssay(query)
   } else {
@@ -151,7 +151,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
   
   if(filter.cells){
-    message("Pre-filtering cells with scGate...")   #Update text
+    require(scGate)
+    message("Pre-filtering cells with scGate...")
     
     if (is.null(scGate_model)) {  #read filter model from atlas
       if (!is.null(ref@misc$scGate[[species.query$species]])) {

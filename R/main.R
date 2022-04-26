@@ -1017,17 +1017,12 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   } 
   
   #Recompute PCA embeddings using prcomp
-  refdata <- data.frame(t(as.matrix(ref@assays[[assay]]@data[varfeat,])))
-  refdata <- refdata[, sort(colnames(refdata))]
-  
-  ref.pca <- prcomp(refdata, rank. = 50, scale. = TRUE, center = TRUE, retx=TRUE)
-  
-  #Save PCA rotation object
-  ref@misc$pca_object <- ref.pca
-  
+  ref <- prcomp.seurat(ref, ndim=ndim, assay=assay)
+
   #Recalculate UMAP, or use an already-present dimensionality reduction
   if (!recalculate.umap) {
     if (dimred %in% names(ref@reductions)) {
+      ref.pca <- ref@misc$pca_object
       cell.order = rownames(ref.pca$x)
       low.emb <- ref@reductions[[dimred]]@cell.embeddings[cell.order,]
       colnames(low.emb) <- c("UMAP_1","UMAP_2")
@@ -1041,31 +1036,12 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
     }
   } else {
     
-    library(umap)   #generate UMAP embeddings
-    n.neighbors=30
-    min.dist=0.3
-    metric="cosine"
-    ndim=ndim
-    
-    umap.config <- umap.defaults
-    umap.config$n_neighbors = n.neighbors
-    umap.config$min_dist = min.dist
-    umap.config$metric = metric
-    umap.config$n_components = 2
-    umap.config$random_state = seed
-    umap.config$transform_state = seed
-    
-    ref.umap <- umap(ref.pca$x[,1:ndim], config=umap.config)
-    colnames(ref.umap$layout) <- c("UMAP_1","UMAP_2")
-    
+    #generate UMAP embeddings
+    ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed)
+
     #Save UMAP object
     ref@misc$umap_object <- ref.umap
-    #Also change slots of the Seurat object with the new embedding
     ref@reductions$umap@cell.embeddings <- ref.umap$layout
-    ref@reductions$pca@cell.embeddings <- ref.pca$x
-    ref@reductions$pca@feature.loadings <- ref.pca$rotation
-    colnames(ref@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
-    colnames(ref@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
   }
   
   #store in integrated assay, to be understood by ProjecTILs
@@ -1130,6 +1106,9 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #' @param n.neighbors Number of neighbors for UMAP algorithm
 #' @param min.dist Tightness parameter for UMAP embedding
 #' @param recalc.pca Whether to recalculate the PCA embeddings with the combined reference and projected data
+#' @param umap.method Which method should be used to calculate UMAP embeddings
+#' @param resol Resolution for unsupervised clustering
+#' @param k.param Number of nearest neighbors for clustering
 #' @param seed Random seed for reproducibility
 #' @return A combined reference object of reference and projected object(s), with new low dimensional embeddings
 #' @examples 
@@ -1137,7 +1116,9 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #' @export recalculate.embeddings
 
 recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
-                                   ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE, seed=123){ 
+                                   ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
+                                   resol=0.4, k.param=15,
+                                   umap.method=c('uwot','umap'),seed=123){ 
   
   if (is.null(ref) | is.null(projected)) {
     stop("Please provide a reference and a projected object (or list of projected objects)")
@@ -1148,6 +1129,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   } 
   projected$ref_or_query <- "query"
   ref$ref_or_query <- "ref"
+  umap.method <- umap.method[1]
   
   projected <- RenameCells(object = projected, add.cell.id = "Q")
 
@@ -1163,12 +1145,37 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
     }
   }
   
-  if (recalc.pca) {
-    VariableFeatures(merged) <- VariableFeatures(ref)
-    merged <- ScaleData(merged)
-    merged <- RunPCA(merged, npcs = ndim)
+  VariableFeatures(merged) <- VariableFeatures(ref)
+  merged@misc <- ref@misc
+  merged@misc$pca_object$x <- merged@reductions$pca@cell.embeddings
+  
+  if (umap.method=="uwot") {  #use Seurat default UWOT method
+    if (recalc.pca) {
+      merged <- ScaleData(merged)
+      merged <- RunPCA(merged, npcs = ndim)
+    }
+    merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
+                       n.neighbors=n.neighbors, min.dist=min.dist)
+  } else { #use 'umap' package
+    if (recalc.pca) {
+      merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
+    }
+    
+    message("Recalculating UMAP embeddings...")
+    ref.umap <- run.umap.2(merged@misc$pca_object, ndim=ndim, n.neighbors = n.neighbors, min.dist=min.dist, seed=seed)
+    #Save UMAP object
+    merged@misc$umap_object <- ref.umap
+    merged@reductions$umap@cell.embeddings <- ref.umap$layout
   }
-  merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
-                     n.neighbors=n.neighbors, min.dist=min.dist)
+  
+  #Did any new clusters arise after adding projected data?
+  DefaultAssay(merged) <- "integrated"
+  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim, k.param = k.param)
+  merged <- FindClusters(merged, resolution = resol)
+  
+  tab <- table(merged$seurat_clusters, merged$ref_or_query)
+  freq <- apply(tab, 1, function(x){x/sum(x)})["query",]
+  merged$newclusters <- freq[merged$seurat_clusters]
+  
   return(merged)
 }

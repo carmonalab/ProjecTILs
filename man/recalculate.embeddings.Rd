@@ -13,6 +13,9 @@ recalculate.embeddings(
   n.neighbors = 20,
   min.dist = 0.3,
   recalc.pca = FALSE,
+  resol = 0.4,
+  k.param = 15,
+  umap.method = c("uwot", "umap"),
   seed = 123
 )
 }
@@ -32,6 +35,12 @@ recalculate.embeddings(
 \item{min.dist}{Tightness parameter for UMAP embedding}
 
 \item{recalc.pca}{Whether to recalculate the PCA embeddings with the combined reference and projected data}
+
+\item{resol}{Resolution for unsupervised clustering}
+
+\item{k.param}{Number of nearest neighbors for clustering}
+
+\item{umap.method}{Which method should be used to calculate UMAP embeddings}
 
 \item{seed}{Random seed for reproducibility}
 }
