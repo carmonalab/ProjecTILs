@@ -1174,7 +1174,10 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   merged <- FindClusters(merged, resolution = resol)
   
   tab <- table(merged$seurat_clusters, merged$ref_or_query)
-  freq <- apply(tab, 1, function(x){x/sum(x)})["query",]
+  
+  glob.freq <- table(merged$ref_or_query)["query"]/ncol(merged)
+  freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
+  freq[freq<0] <- 0
   merged$newclusters <- freq[merged$seurat_clusters]
   
   return(merged)
