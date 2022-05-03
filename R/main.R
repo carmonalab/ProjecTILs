@@ -828,7 +828,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
   
   plotting.data$size <- ifelse(plotting.data$queryGroup == "Reference",0.3,6)
   
-  g <- plot_ly::plot_ly(data = plotting.data,
+  g <- plotly::plot_ly(data = plotting.data,
                x = ~UMAP_1, y = ~UMAP_2, z = ~Discriminant,
                color = ~queryGroup,
                type = "scatter3d",
