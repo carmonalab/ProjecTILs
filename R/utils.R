@@ -241,12 +241,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
             assay=c("integrated",query.assay), k.anchor=k.anchor, remove.thr=remove.thr,
             correction_quantile=correction_quantile, correction_scale=correction_scale)
         
-        #n.anchors <- nrow(proj.anchors@anchors)/2
-        #sd.anchors <- sd(proj.anchors@anchors$dist.mean)
-        
-        #check <<- proj.anchors
-        
-        #Use all anchors for reweighting - essentially disables local weighting
+
+        #Use all anchors for re-weighting - essentially disables local weighting
         if (k.weight == "max") {
           k.weight <- length(unique(proj.anchors@anchors$cell2))
         }

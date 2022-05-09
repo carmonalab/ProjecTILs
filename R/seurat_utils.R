@@ -353,7 +353,7 @@ FindIntegrationAnchors_local <- function(
     
   }
   nanchors <- nrow(anchors)
-  message(sprintf("    Retaining %i anchors after filtering by rPCA distance", nanchors))
+  #message(sprintf("    Retaining %i anchors after filtering by rPCA distance", nanchors))
   
   ##Include reciprocal anchors
   anchors <- rbind(anchors[, c("cell1","cell2","score","dist.mean")],
