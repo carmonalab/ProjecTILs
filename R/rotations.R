@@ -1,4 +1,44 @@
 #Rotations
+run.umap.2 <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, min.dist=0.3, metric="cosine",seed=1234) {
+  library(umap)
+  
+  umap.config <- umap.defaults
+  umap.config$n_neighbors = n.neighbors
+  umap.config$min_dist = min.dist
+  umap.config$metric = metric
+  umap.config$n_components = n.components
+  umap.config$random_state = seed
+  umap.config$transform_state = seed
+  
+  if (is.null(ndim)) {
+    ndim <- ncol(pca.obj$x)
+  }
+  
+  ref.umap <- umap(pca.obj$x[,1:ndim], config=umap.config)
+  colnames(ref.umap$layout) <- c("UMAP_1","UMAP_2")
+  return(ref.umap)
+}
+
+prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
+  
+  if (is.null(assay)) {
+    assay <- DefaultAssay(obj)
+  }
+  varfeat <- VariableFeatures(obj)
+  refdata <- data.frame(t(as.matrix(obj@assays[[assay]]@data[varfeat,])))
+  refdata <- refdata[, sort(colnames(refdata))]
+  ref.pca <- prcomp(refdata, rank. = ndim, scale. = scale, center = TRUE, retx=TRUE)
+  
+  #Save PCA rotation object
+  obj@misc$pca_object <- ref.pca
+  obj@reductions$pca@cell.embeddings <- ref.pca$x
+  obj@reductions$pca@feature.loadings <- ref.pca$rotation
+  colnames(obj@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
+  colnames(obj@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
+  
+  return(obj)
+}
+
 apply.pca.obj.2 <- function(query, query.assay="RNA", pca.obj) {
 
   newdata <- data.frame(t(as.matrix(query@assays[[query.assay]]@data)))

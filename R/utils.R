@@ -114,39 +114,12 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
   return(obj)
 }
 
-
-#Internal function to merge Seurat objects including reductions (PCA, UMAP, ICA)
-merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
-{  
-  require(Seurat)
-  
-  #first regular Seurat merge, inheriting parameters
-  m <- merge(x, y, ...)
-  #preserve reductions (PCA, UMAP, ...)
-  
-  reds <- intersect(names(x@reductions), names(y@reductions))
-  for (r in reds) {
-    message(sprintf("Merging %s embeddings...", r))
-    
-    m@reductions[[r]] <- x@reductions[[r]]
-    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
-      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
-      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
-      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
-    }
-  }
-  return(m)
-  
-}
-
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                              seurat.k.filter=200, skip.normalize=FALSE, id="query1", scGate_model=NULL, ncores=ncores) {
+                              k.weight=100, k.anchor=5, skip.normalize=FALSE, id="query1",
+                              correction_quantile=1, correction_scale=100, remove.thr=0,
+                              scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
   do.orthology <- FALSE
@@ -155,7 +128,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   DefaultAssay(ref) <- "integrated"
   ref.var.features <- ref@assays$integrated@var.features
   
-  #If query.assay not speficied, use the default
+  #If query.assay not specified, use the default
   if (is.null(query.assay)) {
     query.assay <- DefaultAssay(query)
   } else {
@@ -178,7 +151,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
   
   if(filter.cells){
-    message("Pre-filtering cells with scGate...")   #Update text
+    require(scGate)
+    message("Pre-filtering cells with scGate...")
     
     if (is.null(scGate_model)) {  #read filter model from atlas
       if (!is.null(ref@misc$scGate[[species.query$species]])) {
@@ -262,17 +236,35 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         ref <- RunPCA(ref, features = genes4integration,verbose = F)
         query <- RunPCA(query, features = genes4integration,verbose = F)
         
-        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query), anchor.features = genes4integration,
-                                               dims = 1:pca.dim, k.filter = seurat.k.filter, assay=c("integrated",query.assay))
+        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
+            anchor.features = genes4integration, dims = 1:pca.dim,
+            assay=c("integrated",query.assay), k.anchor=k.anchor, remove.thr=remove.thr,
+            correction_quantile=correction_quantile, correction_scale=correction_scale)
+        
+
+        #Use all anchors for re-weighting - essentially disables local weighting
+        if (k.weight == "max") {
+          k.weight <- length(unique(proj.anchors@anchors$cell2))
+        }
+        
         #Do integration
         all.genes <- intersect(row.names(ref), row.names(query))
-        proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim, features.to.integrate = all.genes,  preserve.order = T, verbose=F)
+        proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim,
+                                         features.to.integrate = all.genes,
+                                         k.weight = k.weight,
+                                         preserve.order = T, verbose=F)
         
         #Subset query data from integrated space
-        cells_query<- colnames(query)
+        cells_query <- colnames(query)
         projected <- subset(proj.integrated, cells = cells_query)
         
         projected@meta.data <- query.metadata
+        
+        #Add anchor score to metadata
+        aa <- proj.anchors@anchors
+        aa.score <- aggregate(data=aa, x=aa$score, by=list(qcell = aa$cell2), FUN = mean)
+        projected@meta.data[,"anchor.score"] <- 0
+        projected@meta.data[aa.score$qcell, "anchor.score"] <- aa.score$x
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")

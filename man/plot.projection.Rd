@@ -10,7 +10,9 @@
   labels.col = "functional.cluster",
   cols = NULL,
   linesize = 1,
-  pointsize = 1
+  pointsize = 1,
+  ref.alpha = 0.3,
+  ref.size = NULL
 )
 }
 \arguments{
@@ -25,6 +27,10 @@
 \item{linesize}{Contour line thickness for projected query}
 
 \item{pointsize}{Point size for cells in projected query}
+
+\item{ref.alpha}{Transparency parameter for reference cells}
+
+\item{ref.size}{Adjust point size for reference cells}
 }
 \value{
 UMAP plot of reference map with projected query set in the same space

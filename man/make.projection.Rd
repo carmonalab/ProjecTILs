@@ -8,13 +8,17 @@ make.projection(
   query,
   ref = NULL,
   filter.cells = TRUE,
-  scGate_model = NULL,
   query.assay = NULL,
-  seurat.k.filter = 200,
+  direct.projection = FALSE,
+  anchor_coverage = 0.7,
+  correction_scale = 100,
+  remove.thr = 0,
+  k.anchor = 5,
+  k.weight = "max",
   skip.normalize = FALSE,
   fast.mode = FALSE,
   ortholog_table = NULL,
-  direct.projection = FALSE,
+  scGate_model = NULL,
   ncores = 1
 )
 }
@@ -23,21 +27,36 @@ make.projection(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.}
-
-\item{scGate_model}{scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@misc$scGate})}
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+been previously subset to desired cell type.}
 
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
 
-\item{seurat.k.filter}{Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure}
-
-\item{skip.normalize}{By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.}
-
-\item{fast.mode}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
-
-\item{ortholog_table}{Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})}
-
 \item{direct.projection}{If true, apply PCA transformation directly without alignment}
+
+\item{anchor_coverage}{Focus on few robust anchors (low anchor_coverage) or on a large amount
+of anchors (high anchor_coverage). Must be number between 0 and 1.}
+
+\item{correction_scale}{Slope of sigmoid function used to determine strength of batch effect correction.}
+
+\item{remove.thr}{Threshold to remove anchors before integration.}
+
+\item{k.anchor}{Integer. For alignment, how many neighbors (k) to use when picking anchors.}
+
+\item{k.weight}{Number of neighbors to consider when weighting anchors.
+Default is "max", which disables local anchor weighting.}
+
+\item{skip.normalize}{By default, log-normalize the count data.
+If you have already normalized your data, you can skip normalization.}
+
+\item{fast.mode}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
+
+\item{ortholog_table}{Dataframe for conversion between ortholog genes
+(by default package object \code{Hs2Mm.convert.table})}
+
+\item{scGate_model}{scGate model used to filter target cell type from query data
+(if NULL use the model stored in \code{ref@misc$scGate})}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{BiocParallel})}
 }

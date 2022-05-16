@@ -130,14 +130,25 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has been previously subset to desired cell type.
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+#'     been previously subset to desired cell type.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
-#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
-#' @param seurat.k.filter Integer. For alignment, how many neighbors (k) to use when picking anchors. Default is 200; try lower value in case of failure
-#' @param skip.normalize By default, log-normalize the count data. If you have already normalized your data, you can skip normalization.
-#' @param scGate_model scGate model used to filter target cell type from query data (if NULL use the model stored in \code{ref@@misc$scGate})
-#' @param ortholog_table Dataframe for conversion between ortholog genes (by default package object \code{Hs2Mm.convert.table})
+#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+#'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
+#' @param anchor_coverage Focus on few robust anchors (low anchor_coverage) or on a large amount
+#'     of anchors (high anchor_coverage). Must be number between 0 and 1.
+#' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
+#' @param k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
+#' @param k.weight Number of neighbors to consider when weighting anchors.
+#'     Default is "max", which disables local anchor weighting.
+#' @param remove.thr Threshold to remove anchors before integration.
+#' @param skip.normalize By default, log-normalize the count data.
+#'     If you have already normalized your data, you can skip normalization.
+#' @param scGate_model scGate model used to filter target cell type from query data
+#'     (if NULL use the model stored in \code{ref@@misc$scGate})
+#' @param ortholog_table Dataframe for conversion between ortholog genes
+#'     (by default package object \code{Hs2Mm.convert.table})
 #' @param ncores Number of cores for parallel execution (requires \code{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 #' @examples
@@ -146,9 +157,9 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat, ref=ref)
 #' @import BiocParallel
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NULL, query.assay=NULL, 
-                             seurat.k.filter=200, skip.normalize=FALSE, fast.mode=FALSE, ortholog_table=NULL,
-                            direct.projection=FALSE, ncores=1) {
+make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
+    anchor_coverage=0.7, correction_scale=100, remove.thr=0, k.anchor=5, k.weight="max", skip.normalize=FALSE, 
+    fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
   if(is.null(ref)){
@@ -191,9 +202,10 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
     BPPARAM =  param,
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-                                        direct.projection=direct.projection, fast.mode=fast.mode,
-                                        seurat.k.filter=seurat.k.filter, ncores=ncores, ortholog_table=ortholog_table,
-                                        skip.normalize=skip.normalize, id=names(query.list)[i], scGate_model=scGate_model)
+            direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=k.anchor, k.weight=k.weight,
+            correction_quantile=anchor_coverage, correction_scale=correction_scale, remove.thr=remove.thr,
+            ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
+            scGate_model=scGate_model)
       }
   )
       
@@ -221,9 +233,9 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, scGate_model=NUL
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
 #' @examples
 #' cellstate.predict(ref, query_example.seurat)
+#' @import Seurat
 #' @export
 cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.col="functional.cluster") {
-  require(Seurat)
   tdim <- dim(ref@reductions[[reduction]]@cell.embeddings)[2]
   if (ndim > tdim) {
      warning(sprintf("Number of dimensions ndim=%i is larger than the dimensions in reduction %s - Using only first %i dimensions",ndim,reduction,tdim))
@@ -271,14 +283,19 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param cols Custom color palette for clusters
 #' @param linesize Contour line thickness for projected query
 #' @param pointsize Point size for cells in projected query
+#' @param ref.alpha Transparency parameter for reference cells
+#' @param ref.size Adjust point size for reference cells
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' plot.projection(ref, query_example.seurat)
+#' @import Seurat
+#' @import ggplot2
+#' @import scales
 #' @export plot.projection
 
-plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols=NULL, linesize=1, pointsize=1) {
-  require(Seurat)
-  require(ggplot2)
+plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
+                          cols=NULL, linesize=1, pointsize=1,
+                          ref.alpha=0.3, ref.size=NULL) {
   
   labels <- ref[[labels.col]][,1]
   
@@ -286,35 +303,34 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster", cols
   nstates <- length(states_all)
   
   if (!is.null(cols)) {  #custom palette
-    if (nstates<=length(cols)) {
-      palette <- cols[1:nstates]
-    } else {  
+    if (nstates>length(cols)) {
       warning("Not enough colors provided. Making an automatic palette")
       palette <- rainbow(n=nstates)
     }  
   } else {   #default palette
-    
     if (!is.null(ref@misc$atlas.palette)) {  #read directly from atlas, if stored
       palette <- ref@misc$atlas.palette
     } else {
       palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-      if (nstates<=length(palette)) {
-        palette <- palette[1:nstates]
-      } else {   #make a new palette
+      if (nstates > length(palette)) {
         palette <- rainbow(n=nstates)
       }
     }  
   }
-  names(palette) <- states_all
-  cols_use <- palette[states_all]
+  #apply transparency to ref cells
+  cols_use <- alpha(palette, alpha=ref.alpha)
   
   if (is.null(query)) {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 
+                 repel = T, pt.size=ref.size, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, repel = T, cols=cols_use) +
-      geom_point(data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
-      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
+    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col,
+                 repel = T, pt.size=ref.size, cols=cols_use) +
+      geom_point(data.frame(query@reductions$umap@cell.embeddings), 
+                 mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
+      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), 
+                      mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
   return(p)
@@ -413,7 +429,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @importFrom gridExtra arrangeGrob
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
-                                  genes4radar=NULL, min.cells=10, cols=NULL, return=F, return.as.list=F) {
+                                  genes4radar=NULL, min.cells=50, cols=NULL, return=F, return.as.list=F) {
   
   #Make sure query is a list
   if(!is.list(query)) {
@@ -423,6 +439,10 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   #Set genes
   if (is.null(genes4radar)) {
     genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
+    int <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+    if (length(int) ==0) {
+       genes4radar <- toupper(genes4radar)
+    }
   }
   
   #Set colors
@@ -444,9 +464,19 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  genes4radar <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
-  genes4radar <- sort(genes4radar)
-  order <- match(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  #Check gene names
+  genes.use <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
+  if (length(genes.use)==0) {
+    stop("None of the provided genes were found - check option 'genes4radar'")
+  }
+  genes.missing <- setdiff(genes4radar, genes.use)
+  if (length(genes.missing)>0) {
+    to.print <- paste(genes.missing, sep=",", collapse = ",")
+    warning(sprintf("Some gene symbols were not found:\n%s", to.print))
+  }
+  
+  #genes.use <- sort(genes.use)
+  order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
   rr <- ref@assays[[ref.assay]]@data[order,]
   
   labels <- ref[[labels.col]][,1]
@@ -467,15 +497,15 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     
     for (i in 1:length(query)) {
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-      order <- match(genes4radar, row.names(query[[i]]@assays[[query.assay]]@data))
+      order <- match(genes.use, row.names(query[[i]]@assays[[query.assay]]@data))
       qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
     }
   }
   
   #Get raw expression means, to normalize by gene
-  m <- matrix(, nrow = length(states_all), ncol = length(genes4radar))
+  m <- matrix(, nrow = length(states_all), ncol = length(genes.use))
   rownames(m) <- states_all
-  colnames(m) <- genes4radar
+  colnames(m) <- genes.use
   for (i in 1:length(states_all)) {
     s <- states_all[i]
     m[i,] <- apply(rr[, labels == s], MARGIN=1, mean)
@@ -512,6 +542,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     
     levs <- unique(this.df$Dataset)
     this.df$Dataset <- factor(this.df$Dataset, levels=levs)
+    this.df$Gene <- factor(this.df$Gene, levels=genes.use)
     
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
       geom_point(size=2) +
@@ -522,7 +553,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
       scale_colour_manual(values= radar.colors) +
       theme_light() +
       theme(axis.text.x=element_blank()) +
-      annotate(geom="text", x=seq(1,length(genes4radar)), y=ymax-0.05*ymax, label=genes4radar, size=3) +
+      annotate(geom="text", x=seq(1,length(genes.use)), y=ymax-0.05*ymax, label=genes.use, size=3) +
       coord_polar()
     
   }
@@ -726,8 +757,8 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 
 plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RNA",
                                  labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
-  require(plotly)
   
+  require(plotly)
   reduction=NULL
   message(paste0("Generating UMAP with 3rd dimension on ",extra.dim))
   if (grepl("^ica_\\d+", tolower(extra.dim), perl=T)) {
@@ -804,7 +835,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
   
   plotting.data$size <- ifelse(plotting.data$queryGroup == "Reference",0.3,6)
   
-  g <- plot_ly(data = plotting.data,
+  g <- plotly::plot_ly(data = plotting.data,
                x = ~UMAP_1, y = ~UMAP_2, z = ~Discriminant,
                color = ~queryGroup,
                type = "scatter3d",
@@ -844,7 +875,12 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param test Type of test for DE analysis. See help for `FindMarkers` for implemented tests.
 #' @param min.cells Minimum number of cells in the cell type to proceed with analysis.
-#' @param all.genes Whether to consider all genes for DE analysis (default is variable genes of the reference)
+#' @param genes.use What subset of genes to consider for DE analysis:
+#' \itemize{
+#'   \item{"variable" - Only consider variable genes of the reference}
+#'   \item{"all" - Use intersection of all genes in query and control}
+#'   \item{A custom list of genes}
+#' }
 #' @param ... Adding parameters for `FindMarkers`
 #' @return A dataframe with a ranked list of genes as rows, and statistics as columns (e.g. log fold-change, p-values). See help for `FindMarkers` for more details.
 #' @examples
@@ -863,7 +899,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' 
 find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay="RNA",
                                     state="largest", labels.col="functional.cluster",
-                                    test="wilcox", min.cells=10, all.genes=F, ...)  ##use ellipsis to pass parameters to FindMarkers
+                                    test="wilcox", min.cells=10, genes.use=c("variable","all"), ...)
 {  
   
   if (is.null(ref)) {stop("Please provide the reference object (ref")}
@@ -914,13 +950,16 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
     stop(sprintf("Too few cells for state %s in query control. Exit.", state))
   }
   
-  #Subset on subtype 
+  #Subset on subtype
+  DefaultAssay(query) <- query.assay
   s1 <- subset(query, cells=s1.cells)
   s1$Group <- "Query"
   
   if (!is.null(query.control)) {
+    DefaultAssay(query.control) <- query.assay
     s2 <- subset(query.control, cells=s2.cells)
   } else {
+    DefaultAssay(ref) <- query.assay
     s2 <- subset(ref, cells=s2.cells)
   }
   s2$Group <- "Control"
@@ -929,11 +968,13 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
   Idents(s.m) <- "Group"
   
   #use all genes or only variable genes from the reference
-  if (all.genes) {
+  if (genes.use[1] == "all") {
     which.genes <- NULL
-  } else {
+  } else if (genes.use[1] == "variable") {
     which.genes <- intersect(ref@assays$integrated@var.features, rownames(s.m))
-  } 
+  } else {
+    which.genes <- intersect(genes.use, rownames(s.m))
+  }
   
   markers <- FindMarkers(s.m, slot="data", ident.1="Query", ident.2="Control", only.pos = F, test.use=test, assay=query.assay,
                          features = which.genes, ...)
@@ -983,17 +1024,12 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   } 
   
   #Recompute PCA embeddings using prcomp
-  refdata <- data.frame(t(as.matrix(ref@assays[[assay]]@data[varfeat,])))
-  refdata <- refdata[, sort(colnames(refdata))]
-  
-  ref.pca <- prcomp(refdata, rank. = 50, scale. = TRUE, center = TRUE, retx=TRUE)
-  
-  #Save PCA rotation object
-  ref@misc$pca_object <- ref.pca
-  
+  ref <- prcomp.seurat(ref, ndim=ndim, assay=assay)
+
   #Recalculate UMAP, or use an already-present dimensionality reduction
   if (!recalculate.umap) {
     if (dimred %in% names(ref@reductions)) {
+      ref.pca <- ref@misc$pca_object
       cell.order = rownames(ref.pca$x)
       low.emb <- ref@reductions[[dimred]]@cell.embeddings[cell.order,]
       colnames(low.emb) <- c("UMAP_1","UMAP_2")
@@ -1007,31 +1043,12 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
     }
   } else {
     
-    library(umap)   #generate UMAP embeddings
-    n.neighbors=30
-    min.dist=0.3
-    metric="cosine"
-    ndim=ndim
-    
-    umap.config <- umap.defaults
-    umap.config$n_neighbors = n.neighbors
-    umap.config$min_dist = min.dist
-    umap.config$metric = metric
-    umap.config$n_components = 2
-    umap.config$random_state = seed
-    umap.config$transform_state = seed
-    
-    ref.umap <- umap(ref.pca$x[,1:ndim], config=umap.config)
-    colnames(ref.umap$layout) <- c("UMAP_1","UMAP_2")
-    
+    #generate UMAP embeddings
+    ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed)
+
     #Save UMAP object
     ref@misc$umap_object <- ref.umap
-    #Also change slots of the Seurat object with the new embedding
     ref@reductions$umap@cell.embeddings <- ref.umap$layout
-    ref@reductions$pca@cell.embeddings <- ref.pca$x
-    ref@reductions$pca@feature.loadings <- ref.pca$rotation
-    colnames(ref@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
-    colnames(ref@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
   }
   
   #store in integrated assay, to be understood by ProjecTILs
@@ -1043,4 +1060,132 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   }
   ref@misc$projecTILs=atlas.name
   return(ref)
+}
+
+#' Merge Seurat objects, including reductions (e.g. PCA, UMAP, ICA)
+#'
+#' Given two Seurat objects, merge counts and data as well as dim reductions (PCA, UMAP, ICA, etc.)
+#'
+#' @param x First object to merge
+#' @param y Second object to merge
+#' @param ... More parameters to \code{merge} function
+#' @return A merged Seurat object
+#' @examples 
+#' seurat.merged <- merge.Seurat.embeddings(obj.1, obj.2)  
+#' #To merge multiple object stored in a list
+#' seurat.merged <- Reduce(f=merge.Seurat.embeddings, x=obj.list)
+#' @import Seurat
+#' @export merge.Seurat.embeddings
+
+merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
+{  
+  #first regular Seurat merge, inheriting parameters
+  m <- merge(x, y, ...)
+  #preserve reductions (PCA, UMAP, ...)
+  
+  reds <- intersect(names(x@reductions), names(y@reductions))
+  for (r in reds) {
+    message(sprintf("Merging %s embeddings...", r))
+    
+    m@reductions[[r]] <- x@reductions[[r]]
+    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
+      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
+      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
+    }
+    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
+      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
+    }
+  }
+  return(m)
+}
+
+#' Recalculate low dimensional embeddings after projection
+#'
+#' Given a reference object and a (list of) projected objects, recalculate low-dim embeddings accounting for the projected cells
+#'
+#' @param ref Reference map
+#' @param projected A projected object (or list of projected objects) generated using \code{make.projection}
+#' @param ref.assay Assay for reference object
+#' @param proj.assay Assay for projected object(s)
+#' @param ndim Number of dimensions for recalculating dimensionality reductions
+#' @param n.neighbors Number of neighbors for UMAP algorithm
+#' @param min.dist Tightness parameter for UMAP embedding
+#' @param recalc.pca Whether to recalculate the PCA embeddings with the combined reference and projected data
+#' @param umap.method Which method should be used to calculate UMAP embeddings
+#' @param resol Resolution for unsupervised clustering
+#' @param k.param Number of nearest neighbors for clustering
+#' @param seed Random seed for reproducibility
+#' @return A combined reference object of reference and projected object(s), with new low dimensional embeddings
+#' @examples 
+#' combined <- recalculate.embeddings(ref, projected, ndim=10)
+#' @export recalculate.embeddings
+
+recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
+                                   ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
+                                   resol=0.4, k.param=15,
+                                   umap.method=c('uwot','umap'),seed=123){ 
+  
+  if (is.null(ref) | is.null(projected)) {
+    stop("Please provide a reference and a projected object (or list of projected objects)")
+  }
+  
+  if (is.list(projected)) {
+    projected <- Reduce(f=merge.Seurat.embeddings, x=projected)
+  } 
+  projected$ref_or_query <- "query"
+  ref$ref_or_query <- "ref"
+  umap.method <- umap.method[1]
+  
+  projected <- RenameCells(object = projected, add.cell.id = "Q")
+
+  merged <- merge.Seurat.embeddings(ref, projected)
+  
+  DefaultAssay(merged) <- proj.assay
+  DefaultAssay(ref) <- ref.assay
+  
+  if (is.null(ndim)) {
+    ndim <- ncol(ref@misc$umap_object$data)
+    if (is.null(ndim)) {
+      stop("Please provide number of dimensions for dimensionality reduction (ndim)")
+    }
+  }
+  
+  VariableFeatures(merged) <- VariableFeatures(ref)
+  merged@misc <- ref@misc
+  merged@misc$pca_object$x <- merged@reductions$pca@cell.embeddings
+  
+  if (umap.method=="uwot") {  #use Seurat default UWOT method
+    if (recalc.pca) {
+      merged <- ScaleData(merged)
+      merged <- RunPCA(merged, npcs = ndim)
+    }
+    merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
+                       n.neighbors=n.neighbors, min.dist=min.dist)
+  } else { #use 'umap' package
+    if (recalc.pca) {
+      merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
+    }
+    
+    message("Recalculating UMAP embeddings...")
+    ref.umap <- run.umap.2(merged@misc$pca_object, ndim=ndim, n.neighbors = n.neighbors, min.dist=min.dist, seed=seed)
+    #Save UMAP object
+    merged@misc$umap_object <- ref.umap
+    merged@reductions$umap@cell.embeddings <- ref.umap$layout
+  }
+  
+  #Did any new clusters arise after adding projected data?
+  DefaultAssay(merged) <- "integrated"
+  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim, k.param = k.param)
+  merged <- FindClusters(merged, resolution = resol)
+  
+  tab <- table(merged$seurat_clusters, merged$ref_or_query)
+  
+  glob.freq <- table(merged$ref_or_query)["query"]/ncol(merged)
+  freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
+  freq[freq<0] <- 0
+  merged$newclusters <- freq[merged$seurat_clusters]
+  
+  return(merged)
 }
