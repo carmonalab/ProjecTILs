@@ -8,14 +8,15 @@ Authors@R: c(
   )
 Description: This package implements methods to project single-cell RNA-seq data onto a reference atlas, enabling interpretation of unknown cell transcriptomic states in the the context of known, reference states. 
 Depends:
-    R(>= 3.6.1),
-    Seurat(>= 3.2.1),
+    R(>= 4.0.0),
+    Seurat,
     umap,
     Matrix,
     BiocParallel,
     gridExtra,
     reshape2,
     ggplot2,
+    UCell,
     scGate
 Suggests:
     fastICA,
