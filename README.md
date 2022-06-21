@@ -12,7 +12,7 @@ For real-life applications, check out our list of [ProjecTILs Case Studies](http
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs.demo/tutorial.html) and [Tutorial (repository)](https://github.com/carmonalab/ProjecTILs.demo)
 
-If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo)
+If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) (might not include the latest version)
 
 ### Package Installation
 
