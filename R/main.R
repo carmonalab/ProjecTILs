@@ -432,7 +432,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
                                   genes4radar=NULL, min.cells=50, cols=NULL, return=F, return.as.list=F) {
   
   #Make sure query is a list
-  if(!is.list(query)) {
+  if(!is.null(query) & !is.list(query)) {
     query <- list(Query=query)
   }
   
@@ -475,7 +475,6 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     warning(sprintf("Some gene symbols were not found:\n%s", to.print))
   }
   
-  #genes.use <- sort(genes.use)
   order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
   rr <- ref@assays[[ref.assay]]@data[order,]
   
@@ -484,9 +483,6 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   nstates <- length(states_all)
   
   if (!is.null(query)) {
-    if (!is.list(query)) {
-      query <- list("Query" = query)
-    }
     if (is.null(names(query))) {
       for (i in 1:length(query)) {
         names(query)[[i]] <- paste0("Query",i)
@@ -496,6 +492,11 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     qq <- list()
     
     for (i in 1:length(query)) {
+      if (!labels.col %in% colnames(query[[i]]@meta.data)) {
+         message1 <- sprintf("Could not find %s column in query object metadata.",labels.col)
+         message2 <- "Did you run cellstate.predict() on this object to predict cell states?"
+         stop(paste(message1, message2, sep="\n"))
+      }
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
       order <- match(genes.use, row.names(query[[i]]@assays[[query.assay]]@data))
       qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
