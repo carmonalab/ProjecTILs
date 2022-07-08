@@ -318,7 +318,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
     }  
   }
   #apply transparency to ref cells
-  cols_use <- alpha(palette, alpha=ref.alpha)
+  cols_use <- scales::alpha(palette, ref.alpha)
   
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 

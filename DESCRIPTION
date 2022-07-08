@@ -16,6 +16,7 @@ Depends:
     gridExtra,
     reshape2,
     ggplot2,
+    scales,
     pracma,
     UCell,
     scGate
