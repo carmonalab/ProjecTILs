@@ -309,7 +309,9 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
     if (nstates>length(cols)) {
       warning("Not enough colors provided. Making an automatic palette")
       palette <- rainbow(n=nstates)
-    }  
+    } else {
+      palette <- cols
+    } 
   } else {   #default palette
     if (!is.null(ref@misc$atlas.palette)) {  #read directly from atlas, if stored
       palette <- ref@misc$atlas.palette
