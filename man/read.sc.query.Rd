@@ -30,11 +30,11 @@ read.sc.query(
 
 \item{gene.column.10x}{For 10x format - which column of genes.tsv or features.tsv to use for gene names}
 
+\item{raw.rownames}{For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names}
+
 \item{raw.sep}{For raw matrix format - Separator for raw expression matrix}
 
 \item{raw.header}{For raw matrix format - Use headers in expression matrix}
-
-\item{raw.rawnames}{For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names}
 }
 \value{
 A Seurat object populated with raw counts and normalized counts for single-cell expression

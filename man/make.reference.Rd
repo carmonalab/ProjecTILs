@@ -34,8 +34,6 @@ make.reference(
 \item{nfeatures}{Number of variable features (only calculated if not already present)}
 
 \item{seed}{Random seed}
-
-\item{state}{Perform discriminant analysis on this cell state. Can be either:}
 }
 \value{
 A reference atlas compatible with ProjecTILs

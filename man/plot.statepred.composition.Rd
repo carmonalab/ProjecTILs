@@ -13,6 +13,8 @@
 )
 }
 \arguments{
+\item{ref}{Seurat object with the reference object}
+
 \item{query}{Seurat object with query data}
 
 \item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
