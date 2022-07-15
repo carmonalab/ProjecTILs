@@ -123,32 +123,35 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 
 #' Project a query scRNA-seq dataset onto a reference atlas
 #'
-#' This function allows projecting single-cell RNA-seq datasets onto a reference map of cellular states. To project multiple dataset, submit a list of
-#' Seurat objects with the query parameter.
+#' This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map (i.e. a curated and annotated scRNA-seq dataset). 
+#' To project multiple datasets, submit a list of Seurat objects with the query parameter.
+#' The projection consists in 3 phases: 
+#' i) pre-processing (optional steps), that might include pre-filtering of cells by markers using `scGate`, data normalization, and ortholog conversion
+#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects (this step assumes that at least a fraction of the cells in the query are in the same state than cells in the reference)
+#' iii) embedding of (corrected) query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
 #' 
 #' See `load.reference.map()` to load or download a reference atlas.
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
-#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
-#'     been previously subset to desired cell type.
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
-#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
-#'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param anchor_coverage Focus on few robust anchors (low anchor_coverage) or on a large amount
 #'     of anchors (high anchor_coverage). Must be number between 0 and 1.
 #' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
 #' @param k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
 #' @param k.weight Number of neighbors to consider when weighting anchors.
 #'     Default is "max", which disables local anchor weighting.
-#' @param remove.thr Threshold to remove anchors before integration.
 #' @param skip.normalize By default, log-normalize the count data.
 #'     If you have already normalized your data, you can skip normalization.
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+#'     been previously subset to desired cell type.
 #' @param scGate_model scGate model used to filter target cell type from query data
 #'     (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes
 #'     (by default package object \code{Hs2Mm.convert.table})
+#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+#'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param ncores Number of cores for parallel execution (requires \code{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 #' @examples
