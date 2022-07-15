@@ -346,10 +346,10 @@ FindIntegrationAnchors_local <- function(
     
     distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = correction.scale)
     
-    anchors$score <- alpha*distance_factors + (1-alpha)*anchors$score
+    #anchors$score <- alpha*distance_factors + (1-alpha)*anchors$score
     
     #Multiply distance factors by score
-    #anchors$score <- anchors$score * distance_factors
+    anchors$score <- anchors$score * distance_factors
     
     ##Remove distant anchors
     anchors <- anchors[distance_factors > remove.thr,] 

@@ -41,7 +41,7 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @param min.cells Only keep genes represented in at least min.cells number of cells
 #' @param min.features Only keep cells expressing at least min.features genes
 #' @param gene.column.10x For 10x format - which column of genes.tsv or features.tsv to use for gene names
-#' @param raw.rawnames For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names
+#' @param raw.rownames For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names
 #' @param raw.sep For raw matrix format - Separator for raw expression matrix
 #' @param raw.header For raw matrix format - Use headers in expression matrix
 #' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
@@ -139,7 +139,6 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param STACAS.anchor.coverage Focus on few robust anchors (low STACAS.anchor.coverage) or on a large amount
 #'     of anchors (high STACAS.anchor.coverage). Must be number between 0 and 1.
 #' @param STACAS.correction.scale Slope of sigmoid function used to determine strength of batch effect correction.
-#' @param STACAS.alpha Weight on STACAS' rPCA distance for anchor re-scoring (between 0 and 1)
 #' @param STACAS.k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
 #' @param STACAS.k.weight Number of neighbors to consider when weighting anchors.
 #'     Default is "max", which disables local anchor weighting.
@@ -162,7 +161,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    STACAS.anchor.coverage=0.7, STACAS.correction.scale=100, STACAS.k.anchor=5, STACAS.k.weight="max", STACAS.alpha=0.5, skip.normalize=FALSE, 
+    STACAS.anchor.coverage=0.7, STACAS.correction.scale=100, STACAS.k.anchor=5, STACAS.k.weight="max", skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -207,7 +206,7 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
             direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=STACAS.k.anchor, k.weight=STACAS.k.weight,
-            anchor.coverage=STACAS.anchor.coverage, correction.scale=STACAS.correction.scale, remove.thr=0, alpha=STACAS.alpha,
+            anchor.coverage=STACAS.anchor.coverage, correction.scale=STACAS.correction.scale, remove.thr=0, alpha=0.5,
             ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
             scGate_model=scGate_model)
       }
@@ -345,6 +344,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
 #'
 #' Makes a barplot of the frequency of cell states in a query object.
 #'
+#' @param ref Seurat object with the reference object
 #' @param query Seurat object with query data
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param metric One of `Count` or `Percent`. `Count` plots the absolute number of cells, `Percent` the fraction on the total number of cells.
@@ -997,7 +997,6 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #'
 #' @param ref Seurat object with reference atlas
 #' @param assay The data slot where to pull the expression data
-#' @param state Perform discriminant analysis on this cell state. Can be either:
 #' @param atlas.name An optional name for your reference
 #' @param annotation.column The metadata column with the cluster annotations for this atlas
 #' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.

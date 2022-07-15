@@ -56,8 +56,6 @@ PCA space to assign UMAP coordinates (credits to Changsheng Li for the implement
 (if NULL use the model stored in \code{ref@misc$scGate})}
 
 \item{ncores}{Number of cores for parallel execution (requires \code{BiocParallel})}
-
-\item{STACAS.alpha}{Weight on STACAS' rPCA distance for anchor re-scoring (between 0 and 1)}
 }
 \value{
 An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
