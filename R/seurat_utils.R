@@ -142,7 +142,8 @@ FindIntegrationAnchors_local <- function(
     object.list = NULL,
     assay = NULL,
     correction_quantile = 1,  #level of anchor filtering by distance [0,1]
-    correction_scale = 100, #slope of the correction
+    correction.scale = 100, #slope of the correction
+    alpha=0.5,
     anchor.features = 2000,
     sct.clip.range = NULL,
     l2.norm = TRUE,
@@ -343,10 +344,12 @@ FindIntegrationAnchors_local <- function(
     #Combine anchor distance with anchor score
     sigmoid_center <- unname(quantile(anchors$dist.mean, probs = correction_quantile, na.rm = T))
     
-    distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = correction_scale)
+    distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = correction.scale)
+    
+    anchors$score <- alpha*distance_factors + (1-alpha)*anchors$score
     
     #Multiply distance factors by score
-    anchors$score <- anchors$score * distance_factors
+    #anchors$score <- anchors$score * distance_factors
     
     ##Remove distant anchors
     anchors <- anchors[distance_factors > remove.thr,] 

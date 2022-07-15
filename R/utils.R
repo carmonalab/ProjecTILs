@@ -118,7 +118,7 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
                               direct.projection=FALSE, fast.mode=FALSE, ortholog_table=NULL,
                               k.weight=100, k.anchor=5, skip.normalize=FALSE, id="query1",
-                              correction_quantile=1, correction_scale=100, remove.thr=0,
+                              anchor.coverage=1, correction.scale=100, alpha=0.5, remove.thr=0,
                               scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
@@ -239,7 +239,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
             anchor.features = genes4integration, dims = 1:pca.dim,
             assay=c("integrated",query.assay), k.anchor=k.anchor, remove.thr=remove.thr,
-            correction_quantile=correction_quantile, correction_scale=correction_scale)
+            anchor.coverage=anchor.coverage, correction.scale=correction.scale, alpha=alpha)
         
 
         #Use all anchors for re-weighting - essentially disables local weighting

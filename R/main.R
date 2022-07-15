@@ -136,11 +136,12 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
 #' @param query.assay Which assay slot to use for the query (defaults to DefaultAssay(query))
 #' @param direct.projection If true, apply PCA transformation directly without alignment
-#' @param anchor_coverage Focus on few robust anchors (low anchor_coverage) or on a large amount
-#'     of anchors (high anchor_coverage). Must be number between 0 and 1.
-#' @param correction_scale Slope of sigmoid function used to determine strength of batch effect correction.
-#' @param k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
-#' @param k.weight Number of neighbors to consider when weighting anchors.
+#' @param STACAS.anchor.coverage Focus on few robust anchors (low STACAS.anchor.coverage) or on a large amount
+#'     of anchors (high STACAS.anchor.coverage). Must be number between 0 and 1.
+#' @param STACAS.correction.scale Slope of sigmoid function used to determine strength of batch effect correction.
+#' @param STACAS.alpha Weight on STACAS' rPCA distance for anchor re-scoring (between 0 and 1)
+#' @param STACAS.k.anchor Integer. For alignment, how many neighbors (k) to use when picking anchors.
+#' @param STACAS.k.weight Number of neighbors to consider when weighting anchors.
 #'     Default is "max", which disables local anchor weighting.
 #' @param skip.normalize By default, log-normalize the count data.
 #'     If you have already normalized your data, you can skip normalization.
@@ -161,7 +162,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @import BiocParallel
 #' @export
 make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    anchor_coverage=0.7, correction_scale=100, remove.thr=0, k.anchor=5, k.weight="max", skip.normalize=FALSE, 
+    STACAS.anchor.coverage=0.7, STACAS.correction.scale=100, STACAS.k.anchor=5, STACAS.k.weight="max", skip.normalize=FALSE, 
     fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
    
   
@@ -205,8 +206,8 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
     BPPARAM =  param,
     FUN = function(i) {
          projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-            direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=k.anchor, k.weight=k.weight,
-            correction_quantile=anchor_coverage, correction_scale=correction_scale, remove.thr=remove.thr,
+            direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=STACAS.k.anchor, k.weight=STACAS.k.weight,
+            anchor.coverage=STACAS.anchor.coverage, correction.scale=STACAS.correction.scale, remove.thr=0, alpha=STACAS.alpha,
             ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
             scGate_model=scGate_model)
       }
