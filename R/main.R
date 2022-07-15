@@ -321,7 +321,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
     }  
   }
   #apply transparency to ref cells
-  cols_use <- alpha(palette, alpha=ref.alpha)
+  cols_use <- scales::alpha(palette, ref.alpha)
   
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 
@@ -435,7 +435,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
                                   genes4radar=NULL, min.cells=50, cols=NULL, return=F, return.as.list=F) {
   
   #Make sure query is a list
-  if(!is.list(query)) {
+  if(!is.null(query) & !is.list(query)) {
     query <- list(Query=query)
   }
   
@@ -478,7 +478,6 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     warning(sprintf("Some gene symbols were not found:\n%s", to.print))
   }
   
-  #genes.use <- sort(genes.use)
   order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
   rr <- ref@assays[[ref.assay]]@data[order,]
   
@@ -487,9 +486,6 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
   nstates <- length(states_all)
   
   if (!is.null(query)) {
-    if (!is.list(query)) {
-      query <- list("Query" = query)
-    }
     if (is.null(names(query))) {
       for (i in 1:length(query)) {
         names(query)[[i]] <- paste0("Query",i)
@@ -499,6 +495,11 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
     qq <- list()
     
     for (i in 1:length(query)) {
+      if (!labels.col %in% colnames(query[[i]]@meta.data)) {
+         message1 <- sprintf("Could not find %s column in query object metadata.",labels.col)
+         message2 <- "Did you run cellstate.predict() on this object to predict cell states?"
+         stop(paste(message1, message2, sep="\n"))
+      }
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
       order <- match(genes.use, row.names(query[[i]]@assays[[query.assay]]@data))
       qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
@@ -1192,3 +1193,81 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   
   return(merged)
 }
+
+#' Calculate Silhouette coefficient
+#'
+#' Given a projected object and its reference, calculate silhouette coefficient for query cells with respect
+#' to reference cells with the same cell labels.
+#'
+#' @param ref Reference object
+#' @param query Query object. If not specified, the silhouette coefficient of only the reference will be calculated
+#' @param reduction Which dimensionality reduction to use for euclidian distance calculation
+#' @param ndim Number of dimensions in the dimred to use for distance calculation. If NULL, use all dimensions.
+#' @param label_col Metadata column with cell type annotations. Must be present both in reference and query
+#' @param normalize.scores Whether to normalize silhouette scores by the average cell type silhouettes of the reference
+#' @param min.cells Only report silhouette scores for cell type with at least this number of cells
+#' @return A dataframe with average silhouette coefficient for each cell type
+#' @examples 
+#' combined <- compute_silhouette(ref)
+#' @importFrom pracma distmat
+#' @export compute_silhouette
+
+compute_silhouette <- function(ref, query=NULL,
+                               reduction="pca",
+                               ndim=NULL,
+                               label_col="functional.cluster",
+                               normalize.scores=FALSE,
+                               min.cells=20) {
+  
+  y <- Reductions(ref, slot=reduction)
+  if (is.null(ndim)) {
+    ndim <- ncol(y@cell.embeddings)
+  }
+  y <- y@cell.embeddings[,1:ndim]
+  
+  levs <- levels(as.factor(ref@meta.data[,label_col]))
+  labs.y <- ref@meta.data[,label_col]
+  
+  if (is.null(query)) {
+    x <- y
+    labs.x <- labs.y
+  } else {
+    
+    subtypes <- table(query@meta.data[,label_col])
+    subtypes <- names(subtypes[subtypes > min.cells])
+    cid <- Cells(query)[query@meta.data[,label_col] %in% subtypes]
+    
+    query <- subset(query, cells = cid)
+    
+    x <- Reductions(query, slot=reduction)
+    x <- x@cell.embeddings[,1:ndim]
+    
+    labs.x <- factor(query@meta.data[,label_col], levels=levs)
+  }
+  
+  dists <- pracma::distmat(x,y)
+  
+  sil <- silhouette_2sets(dists, labs.x, labs.y)
+  
+  #summarize by cluster
+  means <- aggregate(sil$sil_width, list(sil$cluster), FUN=mean) 
+  colnames(means) <- c("Cluster","Silhouette")
+  
+  if (normalize.scores) { #normalize by silhouette of the reference
+    dist.ref <- pracma::distmat(y,y)
+    sil.ref <- silhouette_2sets(dist.ref, labs.y, labs.y)
+    means.ref <- aggregate(sil.ref$sil_width, list(sil.ref$cluster), FUN=mean) 
+    colnames(means.ref) <- c("Cluster","Silhouette")
+    
+    for (i in 1:nrow(means)) {
+      subset <- means[i,"Cluster"]
+      j <- which(means.ref$Cluster == subset)
+      means[i,"Silhouette.norm"] <- means[i,"Silhouette"]/means.ref[j,"Silhouette"]
+      if (means[i,"Silhouette.norm"] > 1) {means[i,"Silhouette.norm"]=1}
+      if (means[i,"Silhouette.norm"] < 0) {means[i,"Silhouette.norm"]=0}
+    }
+  }
+  return(means)
+}
+
+

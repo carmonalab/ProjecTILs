@@ -1,11 +1,5 @@
 # Interpretation of T cell states using reference single-cell atlases
 
-<span title="Shuttling T cells into a reference transcriptomic space. A high-dimensional odyssey to interpret immune responses" >
-<p align="center">
-  <img height="100" src="docs/projectils_logo_W_square.png">
-</p>
-</span>
-
 `ProjecTILs` is a computational method to project scRNA-seq data into reference single-cell atlases, enabling their direct comparison in a stable, annotated system of coordinates.
 
 In contrast to other methods, ProjecTILs allows not only accurately embedding new scRNA-seq data into a reference without altering its structure, but also characterizing previously unknown cell states that “deviate” from the reference. ProjecTILs accurately predicts the effects of cell perturbations and identifies gene programs that are altered in different conditions and tissues.
@@ -18,7 +12,7 @@ For real-life applications, check out our list of [ProjecTILs Case Studies](http
 
 Find the installation instructions for the package below, and a vignette detailing its functions at [Tutorial (html)](https://carmonalab.github.io/ProjecTILs.demo/tutorial.html) and [Tutorial (repository)](https://github.com/carmonalab/ProjecTILs.demo)
 
-If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo)
+If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker. A ready-to-use Docker image with usage instructions is available on [DockerHub](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) (might not include the latest version)
 
 ### Package Installation
 
@@ -27,9 +21,7 @@ To install `ProjecTILs` directly from its Git repository, run the following code
 install.packages("remotes")
 library(remotes)
 
-remotes::install_github("carmonalab/UCell")
 remotes::install_github("carmonalab/scGate")
-
 remotes::install_github("carmonalab/ProjecTILs")
 ```
 

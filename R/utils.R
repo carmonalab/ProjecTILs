@@ -315,3 +315,44 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   return(projected)
 }
 
+#calculate Silhouette coefficient between for cells in rows compared to set in columns with same labels
+silhouette_2sets <- function(dist, labs.x, labs.y) {
+  
+  labs.x <- as.character(labs.x)
+  labs.y <- as.character(labs.y)
+  
+  ids <- sort(unique(c(labs.x, labs.y)))
+  k <- length(ids)
+  
+  if(k <= 1)  #must give at least two classes
+    return(NA)
+  
+  if (nrow(dist) != length(labs.x)) {
+    stop(sprintf("Distance matrix has %i rows but %i row cluster labels are given", nrow(dist), length(labs.x)))
+  }
+  if (ncol(dist) != length(labs.y)) {
+    stop(sprintf("Distance matrix has %i columns but %i column cluster labels are given", ncol(dist), length(labs.y)))
+  }
+  
+  res <- data.frame(matrix(NA, nrow(dist), 2, dimnames = list(rownames(dist), c("cluster","sil_width"))))
+  
+  for (j in 1:k) {
+    lab <- ids[j]
+    ix <- labs.x == lab
+    iy <- labs.y == lab
+    
+    Nx <- sum(ix)
+    Ny <- sum(iy)
+    Ny.n <- sum(!iy)
+    if (Nx > 1) {
+      a.i <- rowSums(dist[ix, iy])/Ny
+      b.i <- rowSums(dist[ix, !iy])/Ny.n
+      
+      s.i <- (b.i - a.i) / pmax(b.i, a.i)
+      
+      res[ix, "cluster"] <- lab
+      res[ix,"sil_width"] <- s.i
+    }
+  }  
+  res
+} 
