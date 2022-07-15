@@ -141,7 +141,7 @@ ReadMtx.fix <- function(
 FindIntegrationAnchors_local <- function(
     object.list = NULL,
     assay = NULL,
-    correction_quantile = 1,  #level of anchor filtering by distance [0,1]
+    anchor.coverage = 1,  #level of anchor filtering by distance [0,1]
     correction.scale = 100, #slope of the correction
     alpha=0.5,
     anchor.features = 2000,
@@ -339,10 +339,10 @@ FindIntegrationAnchors_local <- function(
   anchors$dist.mean <- apply(anchors[,c("dist1.2","dist2.1")], MARGIN=1, mean)
   message(sprintf("  SD on anchor distances: %.3f",sd(anchors$dist.mean)))
   
-  if (correction_quantile < 1) {
+  if (anchor.coverage < 1) {
 
     #Combine anchor distance with anchor score
-    sigmoid_center <- unname(quantile(anchors$dist.mean, probs = correction_quantile, na.rm = T))
+    sigmoid_center <- unname(quantile(anchors$dist.mean, probs = anchor.coverage, na.rm = T))
     
     distance_factors <-  sigmoid(x = anchors$dist.mean, center = sigmoid_center, scale = correction.scale)
     
