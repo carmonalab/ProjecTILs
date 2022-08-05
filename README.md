@@ -1,5 +1,9 @@
 # Interpretation of T cell states using reference single-cell atlases
 
+<p align="center">
+  <img height="80" src="docs/RSticker_ProjecTILs.png">
+</p>
+
 `ProjecTILs` is a computational method to project scRNA-seq data into reference single-cell atlases, enabling their direct comparison in a stable, annotated system of coordinates.
 
 In contrast to other methods, ProjecTILs allows not only accurately embedding new scRNA-seq data into a reference without altering its structure, but also characterizing previously unknown cell states that “deviate” from the reference. ProjecTILs accurately predicts the effects of cell perturbations and identifies gene programs that are altered in different conditions and tissues.
@@ -90,5 +94,5 @@ query.projected.list <- make.projection(data.seurat.list)
 **Interpretation of T cell states from single-cell transcriptomics data using reference atlases** Massimo Andreatta, Jesus Corria-Osorio, Soren Muller, Rafael Cubas, George Coukos,  Santiago J Carmona. *Nature Communications* **12** Article number: 2965 (2021) - https://www.nature.com/articles/s41467-021-23324-4
 
 <p align="center">
-  <img height="80" src="docs/projectils_logo_W_square.png">
+  <img height="80" src="docs/RSticker_ProjecTILs.png">
 </p>
