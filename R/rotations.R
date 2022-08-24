@@ -104,7 +104,10 @@ make.umap.predict.2 <- function(ref.umap, query, query.assay="RNA", pca.obj, pca
 }
 
 #Fast projection mode: assign UMAP coordinates based on nearest neighbors in PCA space
-make.umap.predict.weighted.mean <- function(ref.umap, query, query.assay="RNA", pca.obj, pca.query.emb=NULL, k=8) {
+make.umap.predict.weighted.mean <- function(ref.umap, query,
+                                            query.assay="RNA",
+                                            pca.obj, pca.query.emb=NULL,
+                                            k=8) {
   
   if (is.null(pca.query.emb)) {
     pca.query.emb <- apply.pca.obj.2(query=query, query.assay=query.assay, pca.obj=pca.obj)
@@ -134,7 +137,7 @@ run.ica <- function(object, assay="integrated", ndim=50) {
   set.seed(1234)
   x <- scale(Matrix::t(object@assays[[assay]][object@assays[[assay]]@var.features,]))
   set.seed(1234)
-  ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=F, tol=1e-13, method="R")
+  ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=FALSE, tol=1e-13, method="R")
   
   colnames(ref.ica$X) <- ref@assays$integrated@var.features
   rownames(ref.ica$X) <- colnames(ref)

@@ -2,10 +2,10 @@
 #'
 #' Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).
 #'
-#' @param ref Reference Atlas Seurat object (by default downloads the reference TIL atlas)
+#' @param ref Reference Atlas Seurat object (by default downloads a mouse reference TIL atlas). Otherwise provide a custom reference atlas.
 #' @examples
 #' load.reference.map()
-#' @export
+#' @export load.reference.map
 load.reference.map <- function(ref="referenceTIL") {
   if(identical(ref,"referenceTIL")){
     print("Loading Default Reference Atlas...")
@@ -44,24 +44,32 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @param raw.rownames For raw matrix format - A vector of row names, or a single number giving the column of the table which contains the row names
 #' @param raw.sep For raw matrix format - Separator for raw expression matrix
 #' @param raw.header For raw matrix format - Use headers in expression matrix
+#' @param use.readmtx Use ReadMtx function to read in 10x files with custom names
 #' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
 #' @examples
 #' fname <- "./sample_data"
 #' querydata <- read.sc.query(fname, type="10x")
-#' @export
+#' @export read.sc.query
 
-read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), project.name="Query",
-                          min.cells = 3, min.features = 50, gene.column.10x=2,
-                          raw.rownames=1, raw.sep=c("auto"," ","\t",","), raw.header=T, use.readmtx=T) {
+read.sc.query <- function(filename,
+                          type=c("10x","hdf5","raw","raw.log2"),
+                          project.name="Query",
+                          min.cells = 3,
+                          min.features = 50,
+                          gene.column.10x=2,
+                          raw.rownames=1,
+                          raw.sep=c("auto"," ","\t",","),
+                          raw.header=TRUE,
+                          use.readmtx=TRUE) {
   
   if (is.null(filename)) {stop("Please provide a query dataset in one of the supported formats")}
   type = tolower(type[1])
   
   if (type == "10x") {
     fl <- list.files(filename)
-    matrix.file <- grep("matrix.mtx", fl, value=T)[1]
-    feature.file <- grep("features.tsv|genes.tsv", fl, value=T)[1]
-    barcode.file <- grep("barcodes.tsv", fl, value=T)[1]
+    matrix.file <- grep("matrix.mtx", fl, value=TRUE)[1]
+    feature.file <- grep("features.tsv|genes.tsv", fl, value=TRUE)[1]
+    barcode.file <- grep("barcodes.tsv", fl, value=TRUE)[1]
     
     if (is.na(matrix.file)) stop("Cannot find matrix file")
     if (is.na(feature.file)) stop("Cannot find genes file")
@@ -72,7 +80,10 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
     barcode.file <- sprintf("%s/%s", filename, barcode.file)
 
     if (use.readmtx) {
-      query.exp <- ReadMtx.fix(mtx=matrix.file, cells=barcode.file, features=feature.file, feature.column=gene.column.10x)
+      query.exp <- ReadMtx.fix(mtx=matrix.file,
+                               cells=barcode.file,
+                               features=feature.file,
+                               feature.column=gene.column.10x)
     } else {
       query.exp <- Read10X(filename, gene.column = gene.column.10x)
     }
@@ -149,7 +160,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param skip.normalize By default, log-normalize the count data.
 #'     If you have already normalized your data, you can skip normalization.
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
-#'     been previously subset to desired cell type.
+#'     been previously subset to cell types represented in the reference.
 #' @param scGate_model scGate model used to filter target cell type from query data
 #'     (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes
@@ -164,7 +175,8 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' make.projection(query_example_seurat, ref=ref)
 #' @import Seurat
 #' @importFrom BiocParallel MulticoreParam bplapply
-#' @export
+#' @importFrom stats aggregate quantile sd
+#' @export make.projection
 make.projection <- function(query, ref=NULL,
                             filter.cells=TRUE,
                             query.assay=NULL,
@@ -186,14 +198,18 @@ make.projection <- function(query, ref=NULL,
     refUrl <- "https://ndownloader.figshare.com/files/23136746"
     if (file.exists(refFileName)){
       print(refFileName)
-      tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
+      tryCatch(ref <- readRDS(refFileName),
+               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
 
     } else {
       print(paste0(refFileName," not found; I will try to download it and proceed, wish me luck..."))
-      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, it didn't work.")})
-      tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
+      tryCatch(download.file(refUrl, refFileName),
+               error = function(e){ stop("Sorry, it didn't work.")})
+      tryCatch(ref <- readRDS(refFileName),
+               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
     }
-    tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")}   )
+    tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),
+              error = function(e){stop("Invalid Reference object")}   )
 
   }
   projected.list <- list()
@@ -252,9 +268,11 @@ make.projection <- function(query, ref=NULL,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' cellstate.predict(ref, query_example.seurat)
+#' q <- make.projection(query_example_seurat, ref=ref)
+#' q <- cellstate.predict(ref, query=q)
+#' table(q$functional.cluster)
 #' @import Seurat
-#' @export
+#' @export cellstate.predict
 cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.col="functional.cluster") {
   tdim <- dim(ref@reductions[[reduction]]@cell.embeddings)[2]
   if (ndim > tdim) {
@@ -307,13 +325,17 @@ cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.
 #' @param ref.size Adjust point size for reference cells
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
-#' plot.projection(ref, query_example.seurat)
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' plot.projection(ref=ref, query=q)
 #' @import Seurat
 #' @import ggplot2
-#' @import scales
+#' @importFrom scales alpha
+#' @importFrom grDevices rainbow
 #' @export plot.projection
 
-plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
+plot.projection = function(ref, query=NULL, labels.col="functional.cluster",
                           cols=NULL, linesize=1, pointsize=1,
                           ref.alpha=0.3, ref.size=NULL) {
   
@@ -343,12 +365,12 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
   cols_use <- scales::alpha(palette, ref.alpha)
   
   if (is.null(query)) {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col, 
-                 repel = T, pt.size=ref.size, cols=cols_use) +
+    p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col, 
+                 repel = TRUE, pt.size=ref.size, cols=cols_use) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
-    p <- DimPlot(ref, reduction="umap", label = F, group.by = labels.col,
-                 repel = T, pt.size=ref.size, cols=cols_use) +
+    p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col,
+                 repel = TRUE, pt.size=ref.size, cols=cols_use) +
       geom_point(data.frame(query@reductions$umap@cell.embeddings), 
                  mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
       geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), 
@@ -451,8 +473,11 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @import scales
 #' @importFrom gridExtra arrangeGrob
 #' @export plot.states.radar
-plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", ref.assay='RNA', query.assay='RNA', 
-                                  genes4radar=NULL, min.cells=50, cols=NULL, return=F, return.as.list=F) {
+plot.states.radar = function(ref, query=NULL,
+                             labels.col="functional.cluster",
+                             ref.assay='RNA', query.assay='RNA', 
+                             genes4radar=NULL, min.cells=50, cols=NULL,
+                             return=FALSE, return.as.list=FALSE) {
   
   #Make sure query is a list
   if(!is.null(query) & !is.list(query)) {
@@ -620,6 +645,7 @@ plot.states.radar = function(ref, query=NULL, labels.col="functional.cluster", r
 #' @examples
 #' find.discriminant.dimensions(ref, query=query.set)
 #' find.discriminant.dimensions(ref, query=query.set, query.control=control.set)
+#' @importFrom stats t.test ks.test
 #' @export find.discriminant.dimensions
 find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.assay="RNA",
                                          state="largest", labels.col="functional.cluster",
@@ -1028,7 +1054,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
 #' #Add a color palette for your atlas
 #' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-#' 
+#' @importFrom stats prcomp
 #' @export make.reference
 #' 
 make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annotation.column="functional.cluster",
@@ -1226,8 +1252,11 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
 #' @param normalize.scores Whether to normalize silhouette scores by the average cell type silhouettes of the reference
 #' @param min.cells Only report silhouette scores for cell type with at least this number of cells
 #' @return A dataframe with average silhouette coefficient for each cell type
-#' @examples 
-#' combined <- compute_silhouette(ref)
+#' @examples
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' combined <- compute_silhouette(ref, query=q)
 #' @importFrom pracma distmat
 #' @export compute_silhouette
 
@@ -1308,6 +1337,8 @@ compute_silhouette <- function(ref, query=NULL,
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+#'     been previously subset to cell types represented in the reference.
 #' @param reduction The dimensionality reduction used to assign cell type labels
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
@@ -1317,15 +1348,16 @@ compute_silhouette <- function(ref, query=NULL,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=T)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @export Run.ProjecTILs
 Run.ProjecTILs <- function(query, ref=NULL,
+                           filter.cells = TRUE,
                            reduction="pca",
                            ndim=10, k=20,
                            labels.col="functional.cluster", ...) {
     #Run projection
-    query <- make.projection(query=query, ref=ref, ...)
+    query <- make.projection(query=query, ref=ref, filter.cells=filter.cells, ...)
     
     #Cell type classification
     cellstate.predict(ref=ref, query=query,
@@ -1340,18 +1372,22 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim embeddings of
 #' the query object (PCA, UMAP) are not modified.
 #' 
-#' See \link{load.reference.map} to load or download a reference atlas,
-#' see \link{Run.ProjecTILs} to embed the query in the same space of the reference
+#' See \link{load.reference.map} to load or download a reference atlas.
+#' 
+#' See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
+#' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+#'     been previously subset to cell types represented in the reference.
 #' @param reduction The dimensionality reduction used to assign cell type labels
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field with label annotations of the reference, which will
 #' be transfered to the query dataset
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
-#' @return The query object with an additional metadata column containing predicted cell labels
+#' @return The query object with an additional metadata column containing predicted cell labels.
+#' If cells are filtered prior to projection, they will be labeled as 'NA'
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
@@ -1359,12 +1395,18 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' table(q$functional.cluster, useNA="ifany")
 #' @export ProjecTILs.classifier
 ProjecTILs.classifier <- function(query, ref=NULL,
+                           filter.cells = TRUE,
                            reduction="pca",
                            ndim=10, k=20,
                            labels.col="functional.cluster",
                            ...) {
+  
+  fast.mode <- TRUE
+  #only needed if we want to predict labels based on UMAP neighbors
+  if (reduction=="umap") { fast.mode <- FALSE }
   #Run projection
-  q <- make.projection(query=query, ref=ref, fast.mode = T, ...)
+  q <- make.projection(query=query, ref=ref, filter.cells=filter.cells,
+                       fast.mode = fast.mode, ...)
   
   #Cell type classification
   q <- cellstate.predict(ref=ref, query=q,

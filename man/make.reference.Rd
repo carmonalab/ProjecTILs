@@ -46,5 +46,4 @@ setting `recalculate.umap=FALSE`, or let the method apply the `umap` package.
 custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
 #Add a color palette for your atlas
 custom_reference@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
-
 }

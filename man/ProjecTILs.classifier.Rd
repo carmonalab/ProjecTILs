@@ -7,6 +7,7 @@
 ProjecTILs.classifier(
   query,
   ref = NULL,
+  filter.cells = TRUE,
   reduction = "pca",
   ndim = 10,
   k = 20,
@@ -18,6 +19,9 @@ ProjecTILs.classifier(
 \item{query}{Query data, either as single Seurat object or as a list of Seurat object}
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
+
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+been previously subset to cell types represented in the reference.}
 
 \item{reduction}{The dimensionality reduction used to assign cell type labels}
 
@@ -31,7 +35,8 @@ be transfered to the query dataset}
 \item{...}{Additional parameters to \link[ProjecTILs]{make.projection}}
 }
 \value{
-The query object with an additional metadata column containing predicted cell labels
+The query object with an additional metadata column containing predicted cell labels.
+If cells are filtered prior to projection, they will be labeled as 'NA'
 }
 \description{
 Apply label transfer to annotate a query dataset with the cell types of a reference object.
@@ -39,8 +44,9 @@ Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim em
 the query object (PCA, UMAP) are not modified.
 }
 \details{
-See \link{load.reference.map} to load or download a reference atlas,
-see \link{Run.ProjecTILs} to embed the query in the same space of the reference
+See \link{load.reference.map} to load or download a reference atlas.
+
+See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 }
 \examples{
 data(query_example_seurat)

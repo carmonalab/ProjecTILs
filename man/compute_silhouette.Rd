@@ -37,5 +37,8 @@ Given a projected object and its reference, calculate silhouette coefficient for
 to reference cells with the same cell labels.
 }
 \examples{
-combined <- compute_silhouette(ref)
+data(query_example_seurat)
+ref <- load.reference.map()
+q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+combined <- compute_silhouette(ref, query=q)
 }

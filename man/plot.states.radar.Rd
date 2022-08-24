@@ -13,8 +13,8 @@
   genes4radar = NULL,
   min.cells = 50,
   cols = NULL,
-  return = F,
-  return.as.list = F
+  return = FALSE,
+  return.as.list = FALSE
 )
 }
 \arguments{

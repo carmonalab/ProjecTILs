@@ -7,6 +7,7 @@
 Run.ProjecTILs(
   query,
   ref = NULL,
+  filter.cells = TRUE,
   reduction = "pca",
   ndim = 10,
   k = 20,
@@ -18,6 +19,9 @@ Run.ProjecTILs(
 \item{query}{Query data, either as single Seurat object or as a list of Seurat object}
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
+
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+been previously subset to cell types represented in the reference.}
 
 \item{reduction}{The dimensionality reduction used to assign cell type labels}
 
@@ -52,6 +56,6 @@ See \link{load.reference.map} to load or download a reference atlas.
 \examples{
 data(query_example_seurat)
 ref <- load.reference.map()
-q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=T)
+q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
 plot.projection(ref=ref, query=q)
 }

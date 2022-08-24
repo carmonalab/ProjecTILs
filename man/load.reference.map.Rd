@@ -7,7 +7,7 @@
 load.reference.map(ref = "referenceTIL")
 }
 \arguments{
-\item{ref}{Reference Atlas Seurat object (by default downloads the reference TIL atlas)}
+\item{ref}{Reference Atlas Seurat object (by default downloads a mouse reference TIL atlas). Otherwise provide a custom reference atlas.}
 }
 \description{
 Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).

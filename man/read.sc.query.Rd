@@ -13,8 +13,8 @@ read.sc.query(
   gene.column.10x = 2,
   raw.rownames = 1,
   raw.sep = c("auto", " ", "\\t", ","),
-  raw.header = T,
-  use.readmtx = T
+  raw.header = TRUE,
+  use.readmtx = TRUE
 )
 }
 \arguments{
@@ -35,6 +35,8 @@ read.sc.query(
 \item{raw.sep}{For raw matrix format - Separator for raw expression matrix}
 
 \item{raw.header}{For raw matrix format - Use headers in expression matrix}
+
+\item{use.readmtx}{Use ReadMtx function to read in 10x files with custom names}
 }
 \value{
 A Seurat object populated with raw counts and normalized counts for single-cell expression

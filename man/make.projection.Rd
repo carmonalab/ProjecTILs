@@ -27,7 +27,7 @@ make.projection(
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
 \item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
-been previously subset to desired cell type.}
+been previously subset to cell types represented in the reference.}
 
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
 

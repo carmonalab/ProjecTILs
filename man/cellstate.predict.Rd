@@ -37,5 +37,7 @@ query cells based on a consensus of its nearest neighbors in the reference objec
 \examples{
 data(query_example_seurat)
 ref <- load.reference.map()
-cellstate.predict(ref, query_example.seurat)
+q <- make.projection(query_example_seurat, ref=ref)
+q <- cellstate.predict(ref, query=q)
+table(q$functional.cluster)
 }

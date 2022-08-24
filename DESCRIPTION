@@ -25,10 +25,9 @@ Suggests:
     EnhancedVolcano,
     plotly
 biocViews:
-VignetteBuilder: knitr
 BugReports: https://github.com/carmonalab/ProjecTILs/issues
 URL: https://github.com/carmonalab/ProjecTILs
-License: GPL-3
+License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.1
