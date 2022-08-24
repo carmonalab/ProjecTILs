@@ -123,12 +123,16 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 
 #' Project a query scRNA-seq dataset onto a reference atlas
 #'
-#' This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map (i.e. a curated and annotated scRNA-seq dataset). 
+#' This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map
+#' (i.e. a curated and annotated scRNA-seq dataset). 
 #' To project multiple datasets, submit a list of Seurat objects with the query parameter.
-#' The projection consists in 3 phases: 
-#' i) pre-processing (optional steps), that might include pre-filtering of cells by markers using `scGate`, data normalization, and ortholog conversion
-#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects (this step assumes that at least a fraction of the cells in the query are in the same state than cells in the reference)
-#' iii) embedding of (corrected) query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
+#' The projection consists of 3 steps: 
+#' i) pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
+#' data normalization, and ortholog conversion.
+#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects
+#' (this step assumes that at least a fraction of the cells in the query are in the same state than cells in
+#' the reference)
+#' iii) embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
 #' 
 #' See `load.reference.map()` to load or download a reference atlas.
 #'
@@ -153,16 +157,27 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param ncores Number of cores for parallel execution (requires \code{BiocParallel})
-#' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
+#' @return An augmented Seurat object with projected UMAP coordinates on the reference map
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' make.projection(query_example_seurat, ref=ref)
-#' @import BiocParallel
+#' @import Seurat
+#' @importFrom BiocParallel MulticoreParam bplapply
 #' @export
-make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, direct.projection=FALSE,
-    STACAS.anchor.coverage=0.7, STACAS.correction.scale=100, STACAS.k.anchor=5, STACAS.k.weight="max", skip.normalize=FALSE, 
-    fast.mode=FALSE, ortholog_table=NULL, scGate_model=NULL, ncores=1) {
+make.projection <- function(query, ref=NULL,
+                            filter.cells=TRUE,
+                            query.assay=NULL,
+                            direct.projection=FALSE,
+                            STACAS.anchor.coverage=0.7,
+                            STACAS.correction.scale=100,
+                            STACAS.k.anchor=5,
+                            STACAS.k.weight="max",
+                            skip.normalize=FALSE,
+                            fast.mode=FALSE,
+                            ortholog_table=NULL,
+                            scGate_model=NULL,
+                            ncores=1) {
    
   
   if(is.null(ref)){
@@ -235,6 +250,8 @@ make.projection <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL
 #' @param labels.col The metadata field of the reference to annotate the clusters (default: functional.cluster)
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
 #' @examples
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
 #' cellstate.predict(ref, query_example.seurat)
 #' @import Seurat
 #' @export
@@ -1272,4 +1289,47 @@ compute_silhouette <- function(ref, query=NULL,
   return(means)
 }
 
+#' Project a query scRNA-seq dataset onto a reference atlas
+#'
+#' This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map
+#' (i.e. a curated and annotated scRNA-seq dataset). 
+#' To project multiple datasets, submit a list of Seurat objects with the query parameter.
+#' The projection consists of 3 steps: 
+#' i) pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
+#' data normalization, and ortholog conversion.
+#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects
+#' (this step assumes that at least a fraction of the cells in the query are in the same state than cells in
+#' the reference)
+#' iii) embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
+#' 
+#' This function acts as a wrapper for \link{make.projection} and \link{cellstate.predict}
+#' 
+#' See \link{load.reference.map} to load or download a reference atlas.
+#'
+#' @param query Query data, either as single Seurat object or as a list of Seurat object
+#' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
+#' @param reduction The dimensionality reduction used to assign cell type labels
+#' @param ndim The number of dimensions used for cell type classification
+#' @param k Number of neighbors for cell type classification
+#' @param labels.col The metadata field of the reference to annotate the clusters
+#' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
+#' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
+#' @examples
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
+#' Run.ProjecTILs(query_example_seurat, ref=ref)
+#' @export Run.ProjecTILs
+Run.ProjecTILs <- function(query, ref=NULL,
+                           reduction="pca",
+                           ndim=10, k=20,
+                           labels.col="functional.cluster", ...) {
+    #Run projection
+    query <- make.projection(query=query, ref=ref, ...)
+    
+    #Cell type classification
+    cellstate.predict(ref=ref, query=query,
+                               reduction=reduction,
+                               ndim=ndim, k=k,
+                               labels.col = labels.col)
+}
 

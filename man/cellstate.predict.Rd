@@ -35,5 +35,7 @@ cells in the reference map and cells in the query are calculated in a reduced sp
 query cells based on a consensus of its nearest neighbors in the reference object.
 }
 \examples{
+data(query_example_seurat)
+ref <- load.reference.map()
 cellstate.predict(ref, query_example.seurat)
 }

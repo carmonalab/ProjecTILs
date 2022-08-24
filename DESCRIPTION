@@ -1,14 +1,14 @@
 Package: ProjecTILs
 Type: Package
 Title: Projecting Tumor-Infiltrating T Lymphocytes Single-cell RNA-seq data onto a Reference Atlas 
-Version: 2.2.1
+Version: 2.3.0
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta', email = 'massimo.andreatta@unil.ch', role = c('aut','cre'), comment = c(ORCID = '0000-0002-8036-2647')),
   person(given = 'Santiago', family = 'Carmona', email = 'santiago.carmona@unil.ch', role = c('aut'), comment = c(ORCID = '0000-0002-2495-0671'))
   )
 Description: This package implements methods to project single-cell RNA-seq data onto a reference atlas, enabling interpretation of unknown cell transcriptomic states in the the context of known, reference states. 
-Depends:
-    R(>= 4.0.0),
+Depends: R(>= 4.0.0)
+Imports: 
     Seurat,
     umap,
     Matrix,
@@ -24,8 +24,11 @@ Suggests:
     fastICA,
     EnhancedVolcano,
     plotly
-Imports: 
+biocViews:
+VignetteBuilder: knitr
+BugReports: https://github.com/carmonalab/ProjecTILs/issues
+URL: https://github.com/carmonalab/ProjecTILs
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.1

@@ -58,15 +58,19 @@ PCA space to assign UMAP coordinates (credits to Changsheng Li for the implement
 \item{ncores}{Number of cores for parallel execution (requires \code{BiocParallel})}
 }
 \value{
-An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
+An augmented Seurat object with projected UMAP coordinates on the reference map
 }
 \description{
-This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map (i.e. a curated and annotated scRNA-seq dataset). 
+This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map
+(i.e. a curated and annotated scRNA-seq dataset). 
 To project multiple datasets, submit a list of Seurat objects with the query parameter.
-The projection consists in 3 phases: 
-i) pre-processing (optional steps), that might include pre-filtering of cells by markers using `scGate`, data normalization, and ortholog conversion
-ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects (this step assumes that at least a fraction of the cells in the query are in the same state than cells in the reference)
-iii) embedding of (corrected) query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
+The projection consists of 3 steps: 
+i) pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
+data normalization, and ortholog conversion.
+ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects
+(this step assumes that at least a fraction of the cells in the query are in the same state than cells in
+the reference)
+iii) embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
 }
 \details{
 See `load.reference.map()` to load or download a reference atlas.
