@@ -52,5 +52,6 @@ See \link{load.reference.map} to load or download a reference atlas.
 \examples{
 data(query_example_seurat)
 ref <- load.reference.map()
-Run.ProjecTILs(query_example_seurat, ref=ref)
+q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=T)
+plot.projection(ref=ref, query=q)
 }

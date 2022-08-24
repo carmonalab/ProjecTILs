@@ -11,7 +11,7 @@
 
 \item{y}{Second object to merge}
 
-\item{...}{More parameters to \code{merge} function}
+\item{...}{More parameters to \link{merge} function}
 }
 \value{
 A merged Seurat object

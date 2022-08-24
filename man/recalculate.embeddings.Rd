@@ -22,7 +22,7 @@ recalculate.embeddings(
 \arguments{
 \item{ref}{Reference map}
 
-\item{projected}{A projected object (or list of projected objects) generated using \code{make.projection}}
+\item{projected}{A projected object (or list of projected objects) generated using \link{make.projection}}
 
 \item{ref.assay}{Assay for reference object}
 

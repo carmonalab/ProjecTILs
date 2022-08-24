@@ -578,7 +578,9 @@ ScoreAnchors_local <- function(
   verbose = TRUE,
   k.score = 30
 ) {
-  assay <- assay %||% DefaultAssay(object = object)
+  if (is.null(assay)) {
+    assay <- DefaultAssay(object)
+  }
   anchor.df <- as.data.frame(x = GetIntegrationData(object = object, integration.name = integration.name, slot = 'anchors'))
   neighbors <- GetIntegrationData(object = object, integration.name = integration.name, slot = "neighbors")
   offset <- length(x = neighbors$cells1)

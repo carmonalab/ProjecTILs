@@ -156,7 +156,7 @@ read.sc.query <- function(filename, type=c("10x","hdf5","raw","raw.log2"), proje
 #'     (by default package object \code{Hs2Mm.convert.table})
 #' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
-#' @param ncores Number of cores for parallel execution (requires \code{BiocParallel})
+#' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
 #' @examples
 #' data(query_example_seurat)
@@ -371,7 +371,7 @@ plot.projection= function(ref, query=NULL, labels.col="functional.cluster",
 #' @return Barplot of predicted state composition
 #' @examples
 #' plot.statepred.composition(query_example.seurat)
-#' @import reshape2
+#' @importFrom reshape2 melt
 #' @import ggplot2
 #' @export plot.statepred.composition
 plot.statepred.composition = function(ref, query, labels.col="functional.cluster",cols=NULL, metric=c("Count","Percent")) {
@@ -1091,7 +1091,7 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
 #'
 #' @param x First object to merge
 #' @param y Second object to merge
-#' @param ... More parameters to \code{merge} function
+#' @param ... More parameters to \link{merge} function
 #' @return A merged Seurat object
 #' @examples 
 #' seurat.merged <- merge.Seurat.embeddings(obj.1, obj.2)  
@@ -1129,7 +1129,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #' Given a reference object and a (list of) projected objects, recalculate low-dim embeddings accounting for the projected cells
 #'
 #' @param ref Reference map
-#' @param projected A projected object (or list of projected objects) generated using \code{make.projection}
+#' @param projected A projected object (or list of projected objects) generated using \link{make.projection}
 #' @param ref.assay Assay for reference object
 #' @param proj.assay Assay for projected object(s)
 #' @param ndim Number of dimensions for recalculating dimensionality reductions
@@ -1317,7 +1317,8 @@ compute_silhouette <- function(ref, query=NULL,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' Run.ProjecTILs(query_example_seurat, ref=ref)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=T)
+#' plot.projection(ref=ref, query=q)
 #' @export Run.ProjecTILs
 Run.ProjecTILs <- function(query, ref=NULL,
                            reduction="pca",
@@ -1331,5 +1332,53 @@ Run.ProjecTILs <- function(query, ref=NULL,
                                reduction=reduction,
                                ndim=ndim, k=k,
                                labels.col = labels.col)
+}
+
+#' Annotate query dataset using a reference object
+#'
+#' Apply label transfer to annotate a query dataset with the cell types of a reference object.
+#' Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim embeddings of
+#' the query object (PCA, UMAP) are not modified.
+#' 
+#' See \link{load.reference.map} to load or download a reference atlas,
+#' see \link{Run.ProjecTILs} to embed the query in the same space of the reference
+#'
+#' @param query Query data, either as single Seurat object or as a list of Seurat object
+#' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
+#' @param reduction The dimensionality reduction used to assign cell type labels
+#' @param ndim The number of dimensions used for cell type classification
+#' @param k Number of neighbors for cell type classification
+#' @param labels.col The metadata field with label annotations of the reference, which will
+#' be transfered to the query dataset
+#' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
+#' @return The query object with an additional metadata column containing predicted cell labels
+#' @examples
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
+#' q <- ProjecTILs.classifier(query_example_seurat, ref=ref)
+#' table(q$functional.cluster, useNA="ifany")
+#' @export ProjecTILs.classifier
+ProjecTILs.classifier <- function(query, ref=NULL,
+                           reduction="pca",
+                           ndim=10, k=20,
+                           labels.col="functional.cluster",
+                           ...) {
+  #Run projection
+  q <- make.projection(query=query, ref=ref, fast.mode = T, ...)
+  
+  #Cell type classification
+  q <- cellstate.predict(ref=ref, query=q,
+                    reduction=reduction,
+                    ndim=ndim, k=k,
+                    labels.col = labels.col)
+  
+  #Transfer labels to original query object
+  labs <- q@meta.data[,labels.col]
+  names(labs) <- rownames(q@meta.data)
+  
+  query@meta.data[,labels.col] <- NA
+  query@meta.data[names(labs),labels.col] <- labs
+  
+  query
 }
 
