@@ -8,7 +8,7 @@ cellstate.predict(
   ref,
   query,
   reduction = "pca",
-  ndim = 10,
+  ndim = NULL,
   k = 20,
   labels.col = "functional.cluster"
 )

@@ -235,11 +235,22 @@ make.projection <- function(query, ref=NULL,
     X = 1:length(query.list), 
     BPPARAM =  param,
     FUN = function(i) {
-         projection.helper(query=query.list[[i]], ref=ref, filter.cells=filter.cells, query.assay=query.assay,
-            direct.projection=direct.projection, fast.mode=fast.mode, k.anchor=STACAS.k.anchor, k.weight=STACAS.k.weight,
-            anchor.coverage=STACAS.anchor.coverage, correction.scale=STACAS.correction.scale, remove.thr=0, alpha=0.5,
-            ncores=ncores, ortholog_table=ortholog_table,skip.normalize=skip.normalize, id=names(query.list)[i],
-            scGate_model=scGate_model)
+         projection.helper(query=query.list[[i]], ref=ref,
+                           filter.cells=filter.cells,
+                           query.assay=query.assay,
+                           direct.projection=direct.projection,
+                           fast.mode=fast.mode,
+                           k.anchor=STACAS.k.anchor,
+                           k.weight=STACAS.k.weight,
+                           anchor.coverage=STACAS.anchor.coverage,
+                           correction.scale=STACAS.correction.scale,
+                           remove.thr=0,
+                           alpha=0.5,
+                           ncores=ncores,
+                           ortholog_table=ortholog_table,
+                           skip.normalize=skip.normalize,
+                           id=names(query.list)[i],
+                           scGate_model=scGate_model)
       }
   )
       
@@ -273,14 +284,29 @@ make.projection <- function(query, ref=NULL,
 #' table(q$functional.cluster)
 #' @import Seurat
 #' @export cellstate.predict
-cellstate.predict = function(ref, query, reduction="pca", ndim=10, k=20, labels.col="functional.cluster") {
+cellstate.predict = function(ref, query,
+                             reduction="pca",
+                             ndim=NULL,
+                             k=20,
+                             labels.col="functional.cluster") {
+  
+  if (is.null(ndim)) {
+    if (!is.null(ref@misc$umap_object$data)) {
+      ndim <- ncol(ref@misc$umap_object$data)
+    } else {
+      stop("Please specify ndim parameter.")
+    }
+  }  
+  
+  pca.dim=dim(ref@misc$umap_object$data)[2]
+  
   tdim <- dim(ref@reductions[[reduction]]@cell.embeddings)[2]
   if (ndim > tdim) {
      warning(sprintf("Number of dimensions ndim=%i is larger than the dimensions in reduction %s - Using only first %i dimensions",ndim,reduction,tdim))
      ndim = tdim
   }
   labels <- ref[[labels.col]][,1]
-
+  
   ref.space <- ref@reductions[[reduction]]@cell.embeddings[,1:ndim]
   query.space <- query@reductions[[reduction]]@cell.embeddings[,1:ndim]
 
@@ -1354,7 +1380,7 @@ compute_silhouette <- function(ref, query=NULL,
 Run.ProjecTILs <- function(query, ref=NULL,
                            filter.cells = TRUE,
                            reduction="pca",
-                           ndim=10, k=20,
+                           ndim=NULL, k=20,
                            labels.col="functional.cluster", ...) {
     #Run projection
     query <- make.projection(query=query, ref=ref, filter.cells=filter.cells, ...)
@@ -1397,7 +1423,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 ProjecTILs.classifier <- function(query, ref=NULL,
                            filter.cells = TRUE,
                            reduction="pca",
-                           ndim=10, k=20,
+                           ndim=NULL, k=20,
                            labels.col="functional.cluster",
                            ...) {
   

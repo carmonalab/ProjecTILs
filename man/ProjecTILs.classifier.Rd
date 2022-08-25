@@ -9,7 +9,7 @@ ProjecTILs.classifier(
   ref = NULL,
   filter.cells = TRUE,
   reduction = "pca",
-  ndim = 10,
+  ndim = NULL,
   k = 20,
   labels.col = "functional.cluster",
   ...
