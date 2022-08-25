@@ -8,6 +8,7 @@ Run.ProjecTILs(
   query,
   ref = NULL,
   filter.cells = TRUE,
+  split.by = NULL,
   reduction = "pca",
   ndim = NULL,
   k = 20,
@@ -22,6 +23,8 @@ Run.ProjecTILs(
 
 \item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 been previously subset to cell types represented in the reference.}
+
+\item{split.by}{Grouping variable to split the query object (e.g. if the object contains multiple samples)}
 
 \item{reduction}{The dimensionality reduction used to assign cell type labels}
 

@@ -1365,6 +1365,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 #'     been previously subset to cell types represented in the reference.
+#' @param split.by Grouping variable to split the query object (e.g. if the object contains multiple samples)    
 #' @param reduction The dimensionality reduction used to assign cell type labels
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
@@ -1379,17 +1380,33 @@ compute_silhouette <- function(ref, query=NULL,
 #' @export Run.ProjecTILs
 Run.ProjecTILs <- function(query, ref=NULL,
                            filter.cells = TRUE,
+                           split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
                            labels.col="functional.cluster", ...) {
+    
+    if (!is.null(split.by)) {
+        if (!split.by %in% colnames(query[[]])) {
+            stop(sprintf("No grouping variable %s available in metadata", split.by))
+        }
+        query <- SplitObject(query, split.by = split.by)
+    }
+    
     #Run projection
     query <- make.projection(query=query, ref=ref, filter.cells=filter.cells, ...)
     
+    if(!is.list(query)) {
+        query <- list(query=query)
+    }
     #Cell type classification
-    cellstate.predict(ref=ref, query=query,
-                               reduction=reduction,
-                               ndim=ndim, k=k,
-                               labels.col = labels.col)
+    query <- lapply(query, function(x) {
+        cellstate.predict(ref=ref, query=x,
+                          reduction=reduction,
+                          ndim=ndim, k=k,
+                          labels.col = labels.col)
+    })
+    #Merge embeddings
+    Reduce(merge.Seurat.embeddings, query)
 }
 
 #' Annotate query dataset using a reference object
@@ -1406,6 +1423,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 #'     been previously subset to cell types represented in the reference.
+#' @param split.by Grouping variable to split the query object (e.g. if the object contains multiple samples)  
 #' @param reduction The dimensionality reduction used to assign cell type labels
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
@@ -1422,6 +1440,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @export ProjecTILs.classifier
 ProjecTILs.classifier <- function(query, ref=NULL,
                            filter.cells = TRUE,
+                           split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
                            labels.col="functional.cluster",
@@ -1430,15 +1449,33 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   fast.mode <- TRUE
   #only needed if we want to predict labels based on UMAP neighbors
   if (reduction=="umap") { fast.mode <- FALSE }
+  
+  if (!is.null(split.by)) {
+      if (!split.by %in% colnames(query[[]])) {
+          stop(sprintf("No grouping variable %s available in metadata", split.by))
+      }
+      q <- SplitObject(query, split.by = split.by)
+  } else {
+      q <- query
+  }
   #Run projection
-  q <- make.projection(query=query, ref=ref, filter.cells=filter.cells,
+  q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
                        fast.mode = fast.mode, ...)
   
+  if(!is.list(q)) {
+      q <- list(query=q)
+  }
+  
   #Cell type classification
-  q <- cellstate.predict(ref=ref, query=q,
-                    reduction=reduction,
-                    ndim=ndim, k=k,
-                    labels.col = labels.col)
+  q <- lapply(q, function(x) {
+      cellstate.predict(ref=ref, query=x,
+                        reduction=reduction,
+                        ndim=ndim, k=k,
+                        labels.col = labels.col)
+  })
+  
+  #Merge embeddings
+  q <- Reduce(merge.Seurat.embeddings, q)
   
   #Transfer labels to original query object
   labs <- q@meta.data[,labels.col]
