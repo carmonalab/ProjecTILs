@@ -17,7 +17,7 @@ ProjecTILs.classifier(
 )
 }
 \arguments{
-\item{query}{Query data, either as single Seurat object or as a list of Seurat object}
+\item{query}{Query data stored in a Seurat object}
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 

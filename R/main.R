@@ -1406,7 +1406,10 @@ Run.ProjecTILs <- function(query, ref=NULL,
                           labels.col = labels.col)
     })
     #Merge embeddings
-    Reduce(merge.Seurat.embeddings, query)
+    if (length(query)==1 || !is.null(split.by)) {
+       query <- Reduce(merge.Seurat.embeddings, query)
+    }
+    query
 }
 
 #' Annotate query dataset using a reference object
@@ -1419,7 +1422,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' 
 #' See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 #'
-#' @param query Query data, either as single Seurat object or as a list of Seurat object
+#' @param query Query data stored in a Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 #'     been previously subset to cell types represented in the reference.
@@ -1449,6 +1452,10 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   fast.mode <- TRUE
   #only needed if we want to predict labels based on UMAP neighbors
   if (reduction=="umap") { fast.mode <- FALSE }
+  
+  if(is.list(query)) {
+     stop("Query must be a single Seurat object")
+  }
   
   if (!is.null(split.by)) {
       if (!split.by %in% colnames(query[[]])) {
