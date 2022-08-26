@@ -8,7 +8,7 @@
 
 In contrast to other methods, ProjecTILs allows not only accurately embedding new scRNA-seq data into a reference without altering its structure, but also characterizing previously unknown cell states that “deviate” from the reference. ProjecTILs accurately predicts the effects of cell perturbations and identifies gene programs that are altered in different conditions and tissues.
 
-![ProjecTILs_pipeline](https://github.com/carmonalab/ProjecTILs/blob/dev/docs/Pipeline_projecTILs.png?raw=true)
+![CSI_toolkit](https://github.com/carmonalab/ProjecTILs/blob/dev/docs/CSI_Toolkit.png?raw=true)
 
 `ProjecTILs` comes with ready-to-use [reference T cell atlases](#reference-atlases) for cancer and viral infection, and can be also used with custom, user-generated references (see [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs.demo/build_ref_atlas.html))
 
@@ -42,13 +42,15 @@ make.projection(query_example_seurat)
 On your first run, the `make.projection` call will download the reference TIL atlas used as default map. This may take some time depending on your connection, but it is only necessary on the first run.
 
 
-### Data projection TUTORIAL
+### Data projection DEMO
 
 Find a step-by-step tutorial for `ProjecTILs` at: [ProjecTILs tutorial](https://carmonalab.github.io/ProjecTILs.demo/tutorial.html)
 
 To run the code of the tutorial on your machine, download the demo repository: [ProjecTILs tutorial repo](https://github.com/carmonalab/ProjecTILs.demo) or obtain a [Docker image](https://hub.docker.com/repository/docker/mandrea1/projectils_demo) with all dependencies pre-installed.
 
-For real-life applications, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
+### ProjecTILs CASE STUDIES
+
+For real-life applications on public datasets, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
 
 ### Documentation
 
@@ -85,8 +87,6 @@ You can now explore our atlases interactively and project your data through the 
 data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
 query.projected.list <- make.projection(data.seurat.list)
 ```
-
-
 
 
 ### Citation
