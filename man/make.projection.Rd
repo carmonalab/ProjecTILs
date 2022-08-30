@@ -15,7 +15,7 @@ make.projection(
   STACAS.k.anchor = 5,
   STACAS.k.weight = "max",
   skip.normalize = FALSE,
-  fast.mode = FALSE,
+  fast.umap.predict = FALSE,
   ortholog_table = NULL,
   scGate_model = NULL,
   ncores = 1
@@ -46,7 +46,7 @@ Default is "max", which disables local anchor weighting.}
 \item{skip.normalize}{By default, log-normalize the count data.
 If you have already normalized your data, you can skip normalization.}
 
-\item{fast.mode}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+\item{fast.umap.predict}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
 
 \item{ortholog_table}{Dataframe for conversion between ortholog genes

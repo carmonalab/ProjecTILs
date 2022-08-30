@@ -93,7 +93,7 @@ apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
 }
 
 #dispatch to UMAP prediction method (complete of fast)
-make.umap.predict <- function(ref.umap, fast.mode=FALSE, ...) {
+make.umap.predict <- function(ref.umap, fast.umap.predict=FALSE, ...) {
   
   if (class(ref.umap) == "umap") {
     nproj <- make.umap.predict.2(ref.umap=ref.umap,

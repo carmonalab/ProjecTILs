@@ -165,7 +165,7 @@ read.sc.query <- function(filename,
 #'     (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes
 #'     (by default package object \code{Hs2Mm.convert.table})
-#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+#' @param fast.umap.predict Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
@@ -186,7 +186,7 @@ make.projection <- function(query, ref=NULL,
                             STACAS.k.anchor=5,
                             STACAS.k.weight="max",
                             skip.normalize=FALSE,
-                            fast.mode=FALSE,
+                            fast.umap.predict=FALSE,
                             ortholog_table=NULL,
                             scGate_model=NULL,
                             ncores=1) {
@@ -239,7 +239,7 @@ make.projection <- function(query, ref=NULL,
                            filter.cells=filter.cells,
                            query.assay=query.assay,
                            direct.projection=direct.projection,
-                           fast.mode=fast.mode,
+                           fast.umap.predict=fast.umap.predict,
                            k.anchor=STACAS.k.anchor,
                            k.weight=STACAS.k.weight,
                            anchor.coverage=STACAS.anchor.coverage,
@@ -353,7 +353,7 @@ cellstate.predict = function(ref, query,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @import Seurat
 #' @import ggplot2
@@ -1060,11 +1060,13 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 }
 
 
-# Function make.reference
 #' Make a ProjecTILs reference
 #'
-#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings (e.g. UMAP) in the reference atlas by
-#' setting `recalculate.umap=FALSE`, or let the method apply the `umap` package. 
+#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
+#' (e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
+#' the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
+#' 'predict' functionalities of these methods for embedding of new points; skipping recalculation will 
+#' make the projection use an approximation for UMAP embedding of the query.
 #'
 #' @param ref Seurat object with reference atlas
 #' @param assay The data slot where to pull the expression data
@@ -1081,9 +1083,10 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' @param seed Random seed
 #' @return A reference atlas compatible with ProjecTILs
 #' @examples 
-#' custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
+#' custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
 #' #Add a color palette for your atlas
-#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D",
+#'     "#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 #' @importFrom stats prcomp
 #' @importFrom uwot umap
 #' @export make.reference
@@ -1318,7 +1321,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' combined <- compute_silhouette(ref, query=q)
 #' @importFrom pracma distmat
 #' @export compute_silhouette
@@ -1412,7 +1415,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @export Run.ProjecTILs
 Run.ProjecTILs <- function(query, ref=NULL,
@@ -1486,9 +1489,9 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            labels.col="functional.cluster",
                            ...) {
   
-  fast.mode <- TRUE
+  fast.umap.predict <- TRUE
   #only needed if we want to predict labels based on UMAP neighbors
-  if (reduction=="umap") { fast.mode <- FALSE }
+  if (reduction=="umap") { fast.umap.predict <- FALSE }
   
   if(is.list(query)) {
      stop("Query must be a single Seurat object")
@@ -1504,7 +1507,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   }
   #Run projection
   q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
-                       fast.mode = fast.mode, ...)
+                       fast.umap.predict = fast.umap.predict, ...)
   
   if(!is.list(q)) {
       q <- list(query=q)

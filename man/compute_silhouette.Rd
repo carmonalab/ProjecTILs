@@ -39,6 +39,6 @@ to reference cells with the same cell labels.
 \examples{
 data(query_example_seurat)
 ref <- load.reference.map()
-q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 combined <- compute_silhouette(ref, query=q)
 }
