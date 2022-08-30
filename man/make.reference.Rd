@@ -10,6 +10,10 @@ make.reference(
   atlas.name = "custom_reference",
   annotation.column = "functional.cluster",
   recalculate.umap = FALSE,
+  umap.method = c("uwot", "umap"),
+  metric = "cosine",
+  min_dist = 0.3,
+  n_neighbors = 30,
   ndim = 20,
   dimred = "umap",
   nfeatures = 1000,
@@ -27,7 +31,15 @@ make.reference(
 
 \item{recalculate.umap}{If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.}
 
-\item{ndim}{Number of dimensions for PCA to be passed to the `umap` method}
+\item{umap.method}{Which method to use for calculating the umap reduction}
+
+\item{metric}{Distance metric to use to find nearest neighbors for UMAP}
+
+\item{min_dist}{Effective minimum distance between UMAP embedded points}
+
+\item{n_neighbors}{Size of local neighborhood for UMAP}
+
+\item{ndim}{Number of PCA dimensions}
 
 \item{dimred}{Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`}
 

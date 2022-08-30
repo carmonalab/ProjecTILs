@@ -1071,7 +1071,11 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' @param atlas.name An optional name for your reference
 #' @param annotation.column The metadata column with the cluster annotations for this atlas
 #' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.
-#' @param ndim Number of dimensions for PCA to be passed to the `umap` method
+#' @param umap.method Which method to use for calculating the umap reduction
+#' @param metric Distance metric to use to find nearest neighbors for UMAP
+#' @param min_dist Effective minimum distance between UMAP embedded points
+#' @param n_neighbors Size of local neighborhood for UMAP
+#' @param ndim Number of PCA dimensions
 #' @param dimred Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`
 #' @param nfeatures Number of variable features (only calculated if not already present)
 #' @param seed Random seed
@@ -1081,16 +1085,30 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' #Add a color palette for your atlas
 #' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 #' @importFrom stats prcomp
+#' @importFrom uwot umap
 #' @export make.reference
 #' 
-make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annotation.column="functional.cluster",
-                           recalculate.umap=FALSE, ndim=20, dimred="umap", nfeatures=1000, seed=123) {
+make.reference <- function(ref,
+                           assay=NULL,
+                           atlas.name="custom_reference",
+                           annotation.column="functional.cluster",
+                           recalculate.umap=FALSE,
+                           umap.method=c("uwot","umap"),
+                           metric="cosine",
+                           min_dist=0.3,
+                           n_neighbors = 30,
+                           ndim=20,
+                           dimred="umap",
+                           nfeatures=1000,
+                           seed=123) {
   if (is.null(assay)) {
     assay=DefaultAssay(ref)
   }
   if (is.null(ref@assays[[assay]])) {
     stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
   }
+  
+  
   if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
     varfeat <- ref@assays[[assay]]@var.features
   } else {
@@ -1118,12 +1136,31 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
     }
   } else {
     
-    #generate UMAP embeddings
-    ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed)
-
-    #Save UMAP object
-    ref@misc$umap_object <- ref.umap
-    ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    umap.method = umap.method[1]
+    ref.pca <- ref@misc$pca_object
+    
+    if (umap.method == "umap") {
+      #generate UMAP embeddings
+      ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed,
+                             n.neighbors=n_neighbors, min.dist=min_dist,
+                             metric=metric)
+      
+      #Save UMAP object
+      ref@misc$umap_object <- ref.umap
+      ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    } else if (umap.method == "uwot") {
+      #generate UMAP embeddings
+      ref.umap <- run.umap.uwot(ref.pca, ndim=ndim, seed=seed,
+                             n.neighbors=n_neighbors, min.dist=min_dist,
+                             metric=metric)
+      
+      ref.umap$data <- ref.pca$x
+      #Save UMAP object
+      ref@misc$umap_object <- ref.umap
+      ref@reductions$umap@cell.embeddings <- ref.umap$embedding
+    } else {
+      stop("Unsupported UMAP method.")
+    }
   }
   
   #store in integrated assay, to be understood by ProjecTILs

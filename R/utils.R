@@ -237,9 +237,14 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         query <- RunPCA(query, features = genes4integration,verbose = F)
         
         proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
-            anchor.features = genes4integration, dims = 1:pca.dim,
-            assay=c("integrated",query.assay), k.anchor=k.anchor, remove.thr=remove.thr,
-            anchor.coverage=anchor.coverage, correction.scale=correction.scale, alpha=alpha)
+            anchor.features = genes4integration,
+            dims = 1:pca.dim,
+            assay=c("integrated",query.assay),
+            k.anchor=k.anchor,
+            remove.thr=remove.thr,
+            anchor.coverage=anchor.coverage,
+            correction.scale=correction.scale,
+            alpha=alpha)
         
 
         #Use all anchors for re-weighting - essentially disables local weighting
@@ -268,11 +273,15 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")
-        query.pca.proj <- apply.pca.obj.2(projected, pca.obj=ref@misc$pca_object, query.assay="integrated")
+        query.pca.proj <- apply.pca.obj.2(projected,
+                                          pca.obj=ref@misc$pca_object,
+                                          query.assay="integrated")
         projected[["pca"]] <- CreateDimReducObject(embeddings = query.pca.proj, key = "PC_", assay = "integrated")
         
         cat("\nProjecting corrected query onto Reference UMAP space\n")
-        query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj, pca.query.emb=query.pca.proj, fast.mode=fast.mode)
+        query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj,
+                                             pca.query.emb=query.pca.proj,
+                                             fast.mode=fast.mode)
         projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
         
         DefaultAssay(projected) <- "integrated"
