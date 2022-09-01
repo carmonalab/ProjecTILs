@@ -1290,7 +1290,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
     ref.umap$data <- ref.pca$x
     #Save UMAP object
     merged@misc$umap_object <- ref.umap
-    Embeddings(merged, reduction="umap") <- ref.umap$embedding
+    merged@@reductions$umap@cell.embeddings <- ref.umap$embedding
     
   } else if (umap.method=="umap") {
     message("Recalculating UMAP embeddings using 'umap' package...")
@@ -1301,7 +1301,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
                            seed=seed, metric=metric)
     #Save UMAP object
     merged@misc$umap_object <- ref.umap
-    Embeddings(merged, reduction="umap") <- ref.umap$layout
+    merged@@reductions$umap@cell.embeddings <- ref.umap$layout
     
   } else {
     stop("UMAP method not supported.")
