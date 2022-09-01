@@ -1241,7 +1241,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
                                    ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
                                    resol=0.4, k.param=15, metric="cosine",
-                                   umap.method=c('uwot','umap'),seed=123){ 
+                                   umap.method=c('uwot','umap'), seed=123){ 
   
   if (is.null(ref) | is.null(projected)) {
     stop("Please provide a reference and a projected object (or list of projected objects)")
@@ -1309,8 +1309,9 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   
   #Did any new clusters arise after adding projected data?
   DefaultAssay(merged) <- "integrated"
-  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim, k.param = k.param)
-  merged <- FindClusters(merged, resolution = resol)
+  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim,
+                          k.param = k.param, verbose=FALSE)
+  merged <- FindClusters(merged, resolution = resol, verbose=FALSE)
   
   tab <- table(merged$seurat_clusters, merged$ref_or_query)
   

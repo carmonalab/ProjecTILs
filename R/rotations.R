@@ -25,6 +25,8 @@ run.umap.uwot <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, mi
   if (is.null(ndim)) {
     ndim <- ncol(pca.obj$x)
   }
+  
+  set.seed(seed)
   ref.umap <- uwot::umap(pca.obj$x[,1:ndim],
              metric=metric,
              min_dist=min.dist,
