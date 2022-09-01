@@ -1227,6 +1227,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #' @param ndim Number of dimensions for recalculating dimensionality reductions
 #' @param n.neighbors Number of neighbors for UMAP algorithm
 #' @param min.dist Tightness parameter for UMAP embedding
+#' @param metric Distance metric to use to find nearest neighbors for UMAP
 #' @param recalc.pca Whether to recalculate the PCA embeddings with the combined reference and projected data
 #' @param umap.method Which method should be used to calculate UMAP embeddings
 #' @param resol Resolution for unsupervised clustering
@@ -1239,7 +1240,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 
 recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
                                    ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
-                                   resol=0.4, k.param=15,
+                                   resol=0.4, k.param=15, metric="cosine",
                                    umap.method=c('uwot','umap'),seed=123){ 
   
   if (is.null(ref) | is.null(projected)) {
@@ -1271,23 +1272,39 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   merged@misc <- ref@misc
   merged@misc$pca_object$x <- merged@reductions$pca@cell.embeddings
   
-  if (umap.method=="uwot") {  #use Seurat default UWOT method
-    if (recalc.pca) {
-      merged <- ScaleData(merged)
-      merged <- RunPCA(merged, npcs = ndim)
-    }
-    merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
-                       n.neighbors=n.neighbors, min.dist=min.dist)
-  } else { #use 'umap' package
-    if (recalc.pca) {
-      merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
-    }
+  if (recalc.pca) {
+    message("Recalculating PCA embeddings...")
+    merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
+  }
+  
+  ref.pca <- merged@misc$pca_object
+  
+  if (umap.method=="uwot") {  
+    message("Recalculating UMAP embeddings using uwot...")
     
-    message("Recalculating UMAP embeddings...")
-    ref.umap <- run.umap.2(merged@misc$pca_object, ndim=ndim, n.neighbors = n.neighbors, min.dist=min.dist, seed=seed)
+    ref.umap <- run.umap.uwot(ref.pca, ndim=ndim,
+                              n.neighbors = n.neighbors,
+                              min.dist=min.dist,
+                              seed=seed, metric=metric)
+    
+    ref.umap$data <- ref.pca$x
     #Save UMAP object
     merged@misc$umap_object <- ref.umap
-    merged@reductions$umap@cell.embeddings <- ref.umap$layout
+    Embeddings(merged, reduction="umap") <- ref.umap$embedding
+    
+  } else if (umap.method=="umap") {
+    message("Recalculating UMAP embeddings using 'umap' package...")
+    
+    ref.umap <- run.umap.2(ref.pca, ndim=ndim,
+                           n.neighbors = n.neighbors,
+                           min.dist=min.dist,
+                           seed=seed, metric=metric)
+    #Save UMAP object
+    merged@misc$umap_object <- ref.umap
+    Embeddings(merged, reduction="umap") <- ref.umap$layout
+    
+  } else {
+    stop("UMAP method not supported.")
   }
   
   #Did any new clusters arise after adding projected data?
