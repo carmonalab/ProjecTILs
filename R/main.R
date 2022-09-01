@@ -1171,9 +1171,12 @@ make.reference <- function(ref,
   DefaultAssay(ref) <- "integrated"
   
   if (!annotation.column == "functional.cluster") {
-     ref$functional.cluster <- ref@meta.data[,annotation.column]
+    ref$functional.cluster <- ref@meta.data[,annotation.column]
   }
+  Idents(ref) <- "functional.cluster"
+  
   ref@misc$projecTILs=atlas.name
+  
   return(ref)
 }
 
@@ -1319,7 +1322,6 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
   freq[freq<0] <- 0
   merged$newclusters <- freq[merged$seurat_clusters]
-  
   return(merged)
 }
 

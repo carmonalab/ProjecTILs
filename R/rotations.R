@@ -25,7 +25,7 @@ run.umap.uwot <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, mi
   if (is.null(ndim)) {
     ndim <- ncol(pca.obj$x)
   }
-  
+
   set.seed(seed)
   ref.umap <- uwot::umap(pca.obj$x[,1:ndim],
              metric=metric,
@@ -103,8 +103,8 @@ make.umap.predict <- function(ref.umap, fast.umap.predict=FALSE, ...) {
   } else if (!is.null(ref.umap$embedding)) {
     nproj <- make.umap.predict.2(ref.umap=ref.umap,
                                  method="uwot", ...)
-  } else
-  { #no UMAP model available. Use fast mode
+  } else {
+    warning("No UMAP-predict model available. Using fast.umap.predict approximation.")
     nproj <- make.umap.predict.weighted.mean(ref.umap=ref.umap, ...)
   }
   return(nproj)
