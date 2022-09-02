@@ -41,6 +41,6 @@ Plots the UMAP representation of the reference map, together with the projected 
 \examples{
 data(query_example_seurat)
 ref <- load.reference.map()
-q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 plot.projection(ref=ref, query=q)
 }

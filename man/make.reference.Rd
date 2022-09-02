@@ -10,6 +10,10 @@ make.reference(
   atlas.name = "custom_reference",
   annotation.column = "functional.cluster",
   recalculate.umap = FALSE,
+  umap.method = c("uwot", "umap"),
+  metric = "cosine",
+  min_dist = 0.3,
+  n_neighbors = 30,
   ndim = 20,
   dimred = "umap",
   nfeatures = 1000,
@@ -27,7 +31,15 @@ make.reference(
 
 \item{recalculate.umap}{If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.}
 
-\item{ndim}{Number of dimensions for PCA to be passed to the `umap` method}
+\item{umap.method}{Which method to use for calculating the umap reduction}
+
+\item{metric}{Distance metric to use to find nearest neighbors for UMAP}
+
+\item{min_dist}{Effective minimum distance between UMAP embedded points}
+
+\item{n_neighbors}{Size of local neighborhood for UMAP}
+
+\item{ndim}{Number of PCA dimensions}
 
 \item{dimred}{Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`}
 
@@ -39,11 +51,15 @@ make.reference(
 A reference atlas compatible with ProjecTILs
 }
 \description{
-Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings (e.g. UMAP) in the reference atlas by
-setting `recalculate.umap=FALSE`, or let the method apply the `umap` package.
+Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
+(e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
+the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
+'predict' functionalities of these methods for embedding of new points; skipping recalculation will 
+make the projection use an approximation for UMAP embedding of the query.
 }
 \examples{
-custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
+custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
 #Add a color palette for your atlas
-custom_reference@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+custom_reference@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D",
+    "#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 }

@@ -15,6 +15,7 @@ recalculate.embeddings(
   recalc.pca = FALSE,
   resol = 0.4,
   k.param = 15,
+  metric = "cosine",
   umap.method = c("uwot", "umap"),
   seed = 123
 )
@@ -39,6 +40,8 @@ recalculate.embeddings(
 \item{resol}{Resolution for unsupervised clustering}
 
 \item{k.param}{Number of nearest neighbors for clustering}
+
+\item{metric}{Distance metric to use to find nearest neighbors for UMAP}
 
 \item{umap.method}{Which method should be used to calculate UMAP embeddings}
 

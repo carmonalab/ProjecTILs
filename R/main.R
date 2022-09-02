@@ -165,7 +165,7 @@ read.sc.query <- function(filename,
 #'     (if NULL use the model stored in \code{ref@@misc$scGate})
 #' @param ortholog_table Dataframe for conversion between ortholog genes
 #'     (by default package object \code{Hs2Mm.convert.table})
-#' @param fast.mode Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+#' @param fast.umap.predict Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
@@ -186,7 +186,7 @@ make.projection <- function(query, ref=NULL,
                             STACAS.k.anchor=5,
                             STACAS.k.weight="max",
                             skip.normalize=FALSE,
-                            fast.mode=FALSE,
+                            fast.umap.predict=FALSE,
                             ortholog_table=NULL,
                             scGate_model=NULL,
                             ncores=1) {
@@ -239,7 +239,7 @@ make.projection <- function(query, ref=NULL,
                            filter.cells=filter.cells,
                            query.assay=query.assay,
                            direct.projection=direct.projection,
-                           fast.mode=fast.mode,
+                           fast.umap.predict=fast.umap.predict,
                            k.anchor=STACAS.k.anchor,
                            k.weight=STACAS.k.weight,
                            anchor.coverage=STACAS.anchor.coverage,
@@ -353,7 +353,7 @@ cellstate.predict = function(ref, query,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @import Seurat
 #' @import ggplot2
@@ -1060,37 +1060,58 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 }
 
 
-# Function make.reference
 #' Make a ProjecTILs reference
 #'
-#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings (e.g. UMAP) in the reference atlas by
-#' setting `recalculate.umap=FALSE`, or let the method apply the `umap` package. 
+#' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
+#' (e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
+#' the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
+#' 'predict' functionalities of these methods for embedding of new points; skipping recalculation will 
+#' make the projection use an approximation for UMAP embedding of the query.
 #'
 #' @param ref Seurat object with reference atlas
 #' @param assay The data slot where to pull the expression data
 #' @param atlas.name An optional name for your reference
 #' @param annotation.column The metadata column with the cluster annotations for this atlas
 #' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.
-#' @param ndim Number of dimensions for PCA to be passed to the `umap` method
+#' @param umap.method Which method to use for calculating the umap reduction
+#' @param metric Distance metric to use to find nearest neighbors for UMAP
+#' @param min_dist Effective minimum distance between UMAP embedded points
+#' @param n_neighbors Size of local neighborhood for UMAP
+#' @param ndim Number of PCA dimensions
 #' @param dimred Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`
 #' @param nfeatures Number of variable features (only calculated if not already present)
 #' @param seed Random seed
 #' @return A reference atlas compatible with ProjecTILs
 #' @examples 
-#' custom_reference <- ProjecTILs::make.reference(myref, assay="integrated")  
+#' custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
 #' #Add a color palette for your atlas
-#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D","#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
+#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D",
+#'     "#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 #' @importFrom stats prcomp
+#' @importFrom uwot umap
 #' @export make.reference
 #' 
-make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annotation.column="functional.cluster",
-                           recalculate.umap=FALSE, ndim=20, dimred="umap", nfeatures=1000, seed=123) {
+make.reference <- function(ref,
+                           assay=NULL,
+                           atlas.name="custom_reference",
+                           annotation.column="functional.cluster",
+                           recalculate.umap=FALSE,
+                           umap.method=c("uwot","umap"),
+                           metric="cosine",
+                           min_dist=0.3,
+                           n_neighbors = 30,
+                           ndim=20,
+                           dimred="umap",
+                           nfeatures=1000,
+                           seed=123) {
   if (is.null(assay)) {
     assay=DefaultAssay(ref)
   }
   if (is.null(ref@assays[[assay]])) {
     stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
   }
+  
+  
   if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
     varfeat <- ref@assays[[assay]]@var.features
   } else {
@@ -1118,12 +1139,31 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
     }
   } else {
     
-    #generate UMAP embeddings
-    ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed)
-
-    #Save UMAP object
-    ref@misc$umap_object <- ref.umap
-    ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    umap.method = umap.method[1]
+    ref.pca <- ref@misc$pca_object
+    
+    if (umap.method == "umap") {
+      #generate UMAP embeddings
+      ref.umap <- run.umap.2(ref.pca, ndim=ndim, seed=seed,
+                             n.neighbors=n_neighbors, min.dist=min_dist,
+                             metric=metric)
+      
+      #Save UMAP object
+      ref@misc$umap_object <- ref.umap
+      ref@reductions$umap@cell.embeddings <- ref.umap$layout
+    } else if (umap.method == "uwot") {
+      #generate UMAP embeddings
+      ref.umap <- run.umap.uwot(ref.pca, ndim=ndim, seed=seed,
+                             n.neighbors=n_neighbors, min.dist=min_dist,
+                             metric=metric)
+      
+      ref.umap$data <- ref.pca$x
+      #Save UMAP object
+      ref@misc$umap_object <- ref.umap
+      ref@reductions$umap@cell.embeddings <- ref.umap$embedding
+    } else {
+      stop("Unsupported UMAP method.")
+    }
   }
   
   #store in integrated assay, to be understood by ProjecTILs
@@ -1131,9 +1171,14 @@ make.reference <- function(ref, assay=NULL, atlas.name="custom_reference", annot
   DefaultAssay(ref) <- "integrated"
   
   if (!annotation.column == "functional.cluster") {
-     ref$functional.cluster <- ref@meta.data[,annotation.column]
+    ref$functional.cluster <- ref@meta.data[,annotation.column]
   }
+  ref$functional.cluster <- factor(ref$functional.cluster)
+  
+  Idents(ref) <- "functional.cluster"
+  
   ref@misc$projecTILs=atlas.name
+  
   return(ref)
 }
 
@@ -1187,6 +1232,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 #' @param ndim Number of dimensions for recalculating dimensionality reductions
 #' @param n.neighbors Number of neighbors for UMAP algorithm
 #' @param min.dist Tightness parameter for UMAP embedding
+#' @param metric Distance metric to use to find nearest neighbors for UMAP
 #' @param recalc.pca Whether to recalculate the PCA embeddings with the combined reference and projected data
 #' @param umap.method Which method should be used to calculate UMAP embeddings
 #' @param resol Resolution for unsupervised clustering
@@ -1199,8 +1245,8 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 
 recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
                                    ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
-                                   resol=0.4, k.param=15,
-                                   umap.method=c('uwot','umap'),seed=123){ 
+                                   resol=0.4, k.param=15, metric="cosine",
+                                   umap.method=c('uwot','umap'), seed=123){ 
   
   if (is.null(ref) | is.null(projected)) {
     stop("Please provide a reference and a projected object (or list of projected objects)")
@@ -1231,29 +1277,46 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   merged@misc <- ref@misc
   merged@misc$pca_object$x <- merged@reductions$pca@cell.embeddings
   
-  if (umap.method=="uwot") {  #use Seurat default UWOT method
-    if (recalc.pca) {
-      merged <- ScaleData(merged)
-      merged <- RunPCA(merged, npcs = ndim)
-    }
-    merged <-  RunUMAP(merged, reduction = "pca", dims = 1:ndim, seed.use=seed,
-                       n.neighbors=n.neighbors, min.dist=min.dist)
-  } else { #use 'umap' package
-    if (recalc.pca) {
-      merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
-    }
+  if (recalc.pca) {
+    message("Recalculating PCA embeddings...")
+    merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
+  }
+  
+  ref.pca <- merged@misc$pca_object
+  
+  if (umap.method=="uwot") {  
+    message("Recalculating UMAP embeddings using uwot...")
     
-    message("Recalculating UMAP embeddings...")
-    ref.umap <- run.umap.2(merged@misc$pca_object, ndim=ndim, n.neighbors = n.neighbors, min.dist=min.dist, seed=seed)
+    ref.umap <- run.umap.uwot(ref.pca, ndim=ndim,
+                              n.neighbors = n.neighbors,
+                              min.dist=min.dist,
+                              seed=seed, metric=metric)
+    
+    ref.umap$data <- ref.pca$x
+    #Save UMAP object
+    merged@misc$umap_object <- ref.umap
+    merged@reductions$umap@cell.embeddings <- ref.umap$embedding
+    
+  } else if (umap.method=="umap") {
+    message("Recalculating UMAP embeddings using 'umap' package...")
+    
+    ref.umap <- run.umap.2(ref.pca, ndim=ndim,
+                           n.neighbors = n.neighbors,
+                           min.dist=min.dist,
+                           seed=seed, metric=metric)
     #Save UMAP object
     merged@misc$umap_object <- ref.umap
     merged@reductions$umap@cell.embeddings <- ref.umap$layout
+    
+  } else {
+    stop("UMAP method not supported.")
   }
   
   #Did any new clusters arise after adding projected data?
   DefaultAssay(merged) <- "integrated"
-  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim, k.param = k.param)
-  merged <- FindClusters(merged, resolution = resol)
+  merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim,
+                          k.param = k.param, verbose=FALSE)
+  merged <- FindClusters(merged, resolution = resol, verbose=FALSE)
   
   tab <- table(merged$seurat_clusters, merged$ref_or_query)
   
@@ -1261,7 +1324,6 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
   freq[freq<0] <- 0
   merged$newclusters <- freq[merged$seurat_clusters]
-  
   return(merged)
 }
 
@@ -1281,7 +1343,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' combined <- compute_silhouette(ref, query=q)
 #' @importFrom pracma distmat
 #' @export compute_silhouette
@@ -1375,7 +1437,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
-#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.mode=TRUE)
+#' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @export Run.ProjecTILs
 Run.ProjecTILs <- function(query, ref=NULL,
@@ -1449,9 +1511,9 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            labels.col="functional.cluster",
                            ...) {
   
-  fast.mode <- TRUE
+  fast.umap.predict <- TRUE
   #only needed if we want to predict labels based on UMAP neighbors
-  if (reduction=="umap") { fast.mode <- FALSE }
+  if (reduction=="umap") { fast.umap.predict <- FALSE }
   
   if(is.list(query)) {
      stop("Query must be a single Seurat object")
@@ -1467,7 +1529,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   }
   #Run projection
   q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
-                       fast.mode = fast.mode, ...)
+                       fast.umap.predict = fast.umap.predict, ...)
   
   if(!is.list(q)) {
       q <- list(query=q)
