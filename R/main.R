@@ -461,7 +461,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
     tb.m <- reshape2::melt(tb)
     colnames(tb.m) <- c("Cell_state","Perc_cells")
     p <- ggplot(tb.m, aes(x=Cell_state, y=Perc_cells, fill=Cell_state)) + geom_bar(stat="identity") +
-      scale_fill_manual(values=cols_use) +
+      theme_bw() + scale_fill_manual(values=cols_use) +
       theme(axis.text.x=element_blank(), legend.position="left")
   } else if (metric=="count") {
     tb.m <- reshape2::melt(tb)
@@ -470,7 +470,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
       theme_bw() + scale_fill_manual(values=cols_use) +
       theme(axis.text.x=element_blank(), legend.position="left")
   } else {
-    stop("Unknown metric specified (Must be either Count or Percent")
+    stop("Unknown metric specified (Must be either 'count' or 'percent')")
   }
   
   return(p)
