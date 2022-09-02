@@ -21,7 +21,7 @@ If you prefer to avoid installing R packages, you can run `ProjecTILs` in Docker
 ### Package Installation
 
 To install `ProjecTILs` directly from its Git repository, run the following code from within R or RStudio:
-```
+```r
 install.packages("remotes")
 library(remotes)
 
@@ -32,11 +32,11 @@ remotes::install_github("carmonalab/ProjecTILs")
 ### Test the package
 
 Load sample data and test your installation:
-```
+```r
 library(ProjecTILs)
 data(query_example_seurat)
 
-make.projection(query_example_seurat)
+Run.ProjecTILs(query_example_seurat)
 ```
 
 On your first run, the `make.projection` call will download the reference TIL atlas used as default map. This may take some time depending on your connection, but it is only necessary on the first run.
@@ -83,7 +83,7 @@ You can now explore our atlases interactively and project your data through the 
 ```Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")```
 
 * For analyzing datasets composed of multiple batches (e.g. different subjects, technologies), we recommend projecting each batch separately, by providing ProjecTILs a list of Seurat objects as input, e.g.:
-```
+```r
 data.seurat.list <- SplitObject(data.seurat, split.by = "batch")
 query.projected.list <- make.projection(data.seurat.list)
 ```

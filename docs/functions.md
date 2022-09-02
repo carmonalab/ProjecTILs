@@ -4,6 +4,10 @@
 
 * `read.sc.query`   Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts, etc.) are supported - see type parameter for details 
 
+* `Run.ProjecTILs`	A wrapper for `make.projection` and `cellstate.predict` (see below). It returns the query embedded in the PCA and UMAP space of the reference, and predict cell state labels for the query cells.
+
+* `ProjecTILs.classifier`	Similarly to `Run.ProjecTILs`, it perform reference projection and cell state prediction. However, the query embeddings are left intact and only cell state labels are returned. Useful if you wish to use ProjecTILs as a classifier and annotate your data in their native space.
+
 * `make.projection`   Project a single-cell RNA-seq dataset onto a reference map of cellular states.
 
 * `plot.projection`   Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
@@ -21,6 +25,11 @@
 * `find.discriminant.genes` Performs differential expression analysis between a projected query and a control (either the reference map or a control sample), for
 a selected reference subtype. Useful to detect whether specific cell states over/under-express genes between conditions or with respect to the reference.
 
+* `make.reference`	Converts a Seurat object into a custom reference map for ProjecTILs.
 
-Find more information, syntax and examples using the R help function e.g. `?make.projection`
+* `recalculate.embeddings` After projection of query data into a reference, you may want to recalculate the low-dimensional embeddings accounting for the new data. The resulting object can be used as a new reference. 
+
+* `compute_silhouette` Given a projected object and its reference, calculate silhouette coefficient for query cells with respect to reference cells with the same cell labels.
+
+Find more information, syntax and examples using the R help function e.g. `?Run.ProjecTILs`
 
