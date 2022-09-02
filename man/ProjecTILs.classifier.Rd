@@ -47,8 +47,7 @@ Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim em
 the query object (PCA, UMAP) are not modified.
 }
 \details{
-See \link{load.reference.map} to load or download a reference atlas.
-
+See \link{load.reference.map} to load or download a reference atlas. 
 See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 }
 \examples{

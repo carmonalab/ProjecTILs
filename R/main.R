@@ -138,14 +138,17 @@ read.sc.query <- function(filename,
 #' (i.e. a curated and annotated scRNA-seq dataset). 
 #' To project multiple datasets, submit a list of Seurat objects with the query parameter.
 #' The projection consists of 3 steps: 
-#' i) pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
-#' data normalization, and ortholog conversion.
-#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects
+#' \itemize{
+#'  \item{pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
+#' data normalization, and ortholog conversion.}
+#'  \item{batch-effect correction: uses built-in STACAS algorithm to detect and correct for batch effects
 #' (this step assumes that at least a fraction of the cells in the query are in the same state than cells in
-#' the reference)
-#' iii) embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
+#' the reference)}
+#'  \item{embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.}
+#' }
 #' 
-#' See `load.reference.map()` to load or download a reference atlas.
+#' See \link{load.reference.map} to load or download a reference atlas. See
+#' also \link{ProjecTILs.classifier} to use ProjecTILs as a cell type classifier.
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
@@ -1412,16 +1415,18 @@ compute_silhouette <- function(ref, query=NULL,
 #' (i.e. a curated and annotated scRNA-seq dataset). 
 #' To project multiple datasets, submit a list of Seurat objects with the query parameter.
 #' The projection consists of 3 steps: 
-#' i) pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
-#' data normalization, and ortholog conversion.
-#' ii) batch-effect correction, that uses built-in STACAS algorithm to detect and correct for batch effects
+#' \itemize{
+#'  \item{pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
+#' data normalization, and ortholog conversion.}
+#'  \item{batch-effect correction: uses built-in STACAS algorithm to detect and correct for batch effects
 #' (this step assumes that at least a fraction of the cells in the query are in the same state than cells in
-#' the reference)
-#' iii) embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.
-#' 
+#' the reference)}
+#'  \item{embedding of corrected query data in the reduced-dimensionality spaces (PCA and UMAP) of the reference map.}
+#' }
 #' This function acts as a wrapper for \link{make.projection} and \link{cellstate.predict}
 #' 
-#' See \link{load.reference.map} to load or download a reference atlas.
+#' See \link{load.reference.map} to load or download a reference atlas. See
+#' also \link{ProjecTILs.classifier} to use ProjecTILs as a cell type classifier.
 #'
 #' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
@@ -1480,8 +1485,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim embeddings of
 #' the query object (PCA, UMAP) are not modified.
 #' 
-#' See \link{load.reference.map} to load or download a reference atlas.
-#' 
+#' See \link{load.reference.map} to load or download a reference atlas. 
 #' See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 #'
 #' @param query Query data stored in a Seurat object

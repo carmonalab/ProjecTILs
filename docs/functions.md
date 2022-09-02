@@ -29,6 +29,8 @@ a selected reference subtype. Useful to detect whether specific cell states over
 
 * `recalculate.embeddings` After projection of query data into a reference, you may want to recalculate the low-dimensional embeddings accounting for the new data. The resulting object can be used as a new reference. 
 
+* `merge.Seurat.embeddings` Given two Seurat objects, merge counts and data as well as dim reductions (PCA, UMAP, ICA, etc.)
+
 * `compute_silhouette` Given a projected object and its reference, calculate silhouette coefficient for query cells with respect to reference cells with the same cell labels.
 
 Find more information, syntax and examples using the R help function e.g. `?Run.ProjecTILs`
