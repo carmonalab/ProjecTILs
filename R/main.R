@@ -1173,6 +1173,8 @@ make.reference <- function(ref,
   if (!annotation.column == "functional.cluster") {
     ref$functional.cluster <- ref@meta.data[,annotation.column]
   }
+  ref$functional.cluster <- factor(ref$functional.cluster)
+  
   Idents(ref) <- "functional.cluster"
   
   ref@misc$projecTILs=atlas.name
