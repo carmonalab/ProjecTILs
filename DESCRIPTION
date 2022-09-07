@@ -14,7 +14,7 @@ Imports:
     umap,
     Matrix,
     BiocParallel,
-    gridExtra,
+    patchwork,
     reshape2,
     ggplot2,
     scales,

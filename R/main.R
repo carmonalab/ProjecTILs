@@ -2,7 +2,9 @@
 #'
 #' Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).
 #'
-#' @param ref Reference Atlas Seurat object (by default downloads a mouse reference TIL atlas). Otherwise provide a custom reference atlas.
+#' @param ref Reference atlas as a Seurat object (by default downloads a mouse reference TIL atlas).
+#'     To use a custom reference atlas, provide a .rds object or a URL to a .rds object, storing a Seurat object
+#'     prepared using \link{make.reference}
 #' @examples
 #' load.reference.map()
 #' @export load.reference.map
@@ -17,14 +19,25 @@ load.reference.map <- function(ref="referenceTIL") {
 
     } else {
       print(paste0(refFileName," not found; downloading reference TIL map from the server..."))
-      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, it didn't work.")})
+      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, download failed.")})
       tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
     }
     tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")}   )
 
   } else {
+    if (grepl("^[ftp|http]", ref, perl = T)) {
+      refUrl <- ref
+      refFileName <- paste0(getwd(),"/custom_reference.rds")
+      print(sprintf("Trying to download custom reference from %s...", refUrl))
+      
+      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, download failed.")}) 
+    } else if (file.exists(ref)) {
+      refFileName <- ref
+    } else {
+      stop("Provide ref is not a valid reference or a valid URL.")
+    }
     print("Loading Custom Reference Atlas...")
-    tryCatch(ref <- readRDS(ref), error = function(e){ stop(paste("Reference object",ref,"is invalid"))})
+    tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",ref,"is invalid"))})
     tryCatch(print(paste0("Loaded Custom Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")})
   }
   return(ref)
@@ -482,30 +495,34 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 # Function plot.states.radar
 #' Show expression level of key genes
 #'
-#' Makes a radar plot of the expression level of a set of genes. It can be useful to compare the gene expression profile of different cell
-#' states in the reference atlas vs. a projected set.
+#' Makes a radar plot of the expression level of a set of genes. It can be useful to compare
+#' the gene expression profile of different cell states in the reference atlas vs. a projected set.
 #'
 #' @param ref Reference Atlas
 #' @param query Query data, either as a Seurat object or as a list of Seurat objects
-#' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
-#' @param genes4radar Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")
+#' @param labels.col The metadata field used to annotate the clusters
+#' @param genes4radar Which genes to use for plotting
+#' @param meta4radar Which metadata columns (numeric) to use for plotting. If not NULL, \code{genes4radar} are ignored
 #' @param min.cells Only display cell states with a minimum number of cells
 #' @param cols Custom color palette for samples in radar plot
 #' @param ref.assay The assay to pull the reference expression data
 #' @param query.assay The assay to pull the query expression data
-#' @param return Return the combined grobs instead of printing it to the default device
+#' @param return Return the combined plots instead of printing them to the default device (deprecated)
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
 #' @examples
 #' plot.states.radar(ref)
 #' @import ggplot2
 #' @import scales
-#' @importFrom gridExtra arrangeGrob
+#' @importFrom patchwork wrap_plots plot_annotation
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL,
                              labels.col="functional.cluster",
-                             ref.assay='RNA', query.assay='RNA', 
-                             genes4radar=NULL, min.cells=50, cols=NULL,
+                             ref.assay='RNA', query.assay='RNA',
+                             genes4radar=c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb",
+                                              "Gzmk","Pdcd1","Havcr2","Tox","Mki67"),
+                             meta4radar=NULL,
+                             min.cells=50, cols=NULL,
                              return=FALSE, return.as.list=FALSE) {
   
   #Make sure query is a list
@@ -513,15 +530,43 @@ plot.states.radar = function(ref, query=NULL,
     query <- list(Query=query)
   }
   
-  #Set genes
-  if (is.null(genes4radar)) {
-    genes4radar <- c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox","Mki67")
-    int <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
-    if (length(int) ==0) {
-       genes4radar <- toupper(genes4radar)
+  #Whether to use gene expression or metadata
+  if (!is.null(meta4radar)) {
+    refmat <- t(ref[[]])
+    feat.use <- intersect(meta4radar, row.names(refmat))
+    if (length(feat.use)==0) {
+      stop("None of the provided meta columns were found - check option 'meta4radar'")
+    }
+    feat.missing <- setdiff(meta4radar, feat.use)
+    if (length(feat.missing)>0) {
+      to.print <- paste(feat.missing, sep=",", collapse = ",")
+      warning(sprintf("Some metadata columns were not found:\n%s", to.print))
+    }
+  } else {
+    refmat <- ref@assays[[ref.assay]]@data
+
+    #Check gene names/feature names
+    feat.use <- intersect(genes4radar, row.names(refmat))
+    #If overlap is zero, first check whether wrong species was used (upper case to human)
+    if (length(feat.use)==0) {
+      genes4radar <- toupper(genes4radar)
+      feat.use <- intersect(genes4radar, row.names(refmat))
+      if (length(feat.use)==0) {
+        stop("None of the provided genes were found - check option 'genes4radar'")
+      }
+    }
+    feat.missing <- setdiff(genes4radar, feat.use)
+    if (length(feat.missing)>0) {
+      to.print <- paste(feat.missing, sep=",", collapse = ",")
+      warning(sprintf("Some gene symbols were not found:\n%s", to.print))
     }
   }
   
+  order <- match(feat.use, row.names(refmat))
+  
+  rr <- as.matrix(refmat[order,])
+  rr <- matrix(as.numeric(rr), ncol=ncol(rr))
+
   #Set colors
   ncolors <- 1+length(query)
   if (ncolors==1) {
@@ -541,20 +586,7 @@ plot.states.radar = function(ref, query=NULL,
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  #Check gene names
-  genes.use <- intersect(genes4radar, row.names(ref@assays[[ref.assay]]@data))
-  if (length(genes.use)==0) {
-    stop("None of the provided genes were found - check option 'genes4radar'")
-  }
-  genes.missing <- setdiff(genes4radar, genes.use)
-  if (length(genes.missing)>0) {
-    to.print <- paste(genes.missing, sep=",", collapse = ",")
-    warning(sprintf("Some gene symbols were not found:\n%s", to.print))
-  }
-  
-  order <- match(genes.use, row.names(ref@assays[[ref.assay]]@data))
-  rr <- ref@assays[[ref.assay]]@data[order,]
-  
+
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
   nstates <- length(states_all)
@@ -575,15 +607,23 @@ plot.states.radar = function(ref, query=NULL,
          stop(paste(message1, message2, sep="\n"))
       }
       labels.q[[i]] <- query[[i]][[labels.col]][,1]
-      order <- match(genes.use, row.names(query[[i]]@assays[[query.assay]]@data))
-      qq[[i]] <- as.matrix(query[[i]]@assays[[query.assay]]@data[order,])
+      
+      if (!is.null(meta4radar)) {
+        qmat <- t(query[[i]][[]])
+      } else {
+        qmat <- query[[i]]@assays[[query.assay]]@data
+      }
+      order <- match(feat.use, row.names(qmat))
+      
+      qq[[i]] <- as.matrix(qmat[order,])
+      qq[[i]] <- matrix(as.numeric(qq[[i]]), ncol=ncol(qq[[i]]))
     }
   }
   
   #Get raw expression means, to normalize by gene
-  m <- matrix(, nrow = length(states_all), ncol = length(genes.use))
+  m <- matrix(, nrow = length(states_all), ncol = length(feat.use))
   rownames(m) <- states_all
-  colnames(m) <- genes.use
+  colnames(m) <- feat.use
   for (i in 1:length(states_all)) {
     s <- states_all[i]
     m[i,] <- apply(rr[, labels == s], MARGIN=1, mean)
@@ -620,7 +660,7 @@ plot.states.radar = function(ref, query=NULL,
     
     levs <- unique(this.df$Dataset)
     this.df$Dataset <- factor(this.df$Dataset, levels=levs)
-    this.df$Gene <- factor(this.df$Gene, levels=genes.use)
+    this.df$Gene <- factor(this.df$Gene, levels=feat.use)
     
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
       geom_point(size=2) +
@@ -631,7 +671,7 @@ plot.states.radar = function(ref, query=NULL,
       scale_colour_manual(values= radar.colors) +
       theme_light() +
       theme(axis.text.x=element_blank()) +
-      annotate(geom="text", x=seq(1,length(genes.use)), y=ymax-0.05*ymax, label=genes.use, size=3) +
+      annotate(geom="text", x=seq(1,length(feat.use)), y=ymax-0.05*ymax, label=feat.use, size=3) +
       coord_polar()
     
   }
@@ -639,12 +679,8 @@ plot.states.radar = function(ref, query=NULL,
   if (return.as.list) {
     return(pll)
   } else {
-    g <- do.call("arrangeGrob", c(pll, ncol=3, top=paste0("Radar plots for ", labels.col)))
-    if(return){
-      return(g)
-    } else{
-      return(plot(g))
-    }
+    g <- wrap_plots(pll) + plot_annotation(paste0("Radar plots for ", labels.col))
+    return(g)
   }
 }
 

@@ -10,7 +10,9 @@
   labels.col = "functional.cluster",
   ref.assay = "RNA",
   query.assay = "RNA",
-  genes4radar = NULL,
+  genes4radar = c("Foxp3", "Cd4", "Cd8a", "Tcf7", "Ccr7", "Gzmb", "Gzmk", "Pdcd1",
+    "Havcr2", "Tox", "Mki67"),
+  meta4radar = NULL,
   min.cells = 50,
   cols = NULL,
   return = FALSE,
@@ -22,19 +24,21 @@
 
 \item{query}{Query data, either as a Seurat object or as a list of Seurat objects}
 
-\item{labels.col}{The metadata field used to annotate the clusters (default: functional.cluster)}
+\item{labels.col}{The metadata field used to annotate the clusters}
 
 \item{ref.assay}{The assay to pull the reference expression data}
 
 \item{query.assay}{The assay to pull the query expression data}
 
-\item{genes4radar}{Which genes to use for plotting (default: c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb","Gzmk","Pdcd1","Havcr2","Tox,"Mki67")}
+\item{genes4radar}{Which genes to use for plotting}
+
+\item{meta4radar}{Which metadata columns (numeric) to use for plotting. If not NULL, \code{genes4radar} are ignored}
 
 \item{min.cells}{Only display cell states with a minimum number of cells}
 
 \item{cols}{Custom color palette for samples in radar plot}
 
-\item{return}{Return the combined grobs instead of printing it to the default device}
+\item{return}{Return the combined plots instead of printing them to the default device (deprecated)}
 
 \item{return.as.list}{Return plots in a list, instead of combining them in a single plot}
 }
@@ -42,8 +46,8 @@
 Radar plot of gene expression of key genes by cell subtype
 }
 \description{
-Makes a radar plot of the expression level of a set of genes. It can be useful to compare the gene expression profile of different cell
-states in the reference atlas vs. a projected set.
+Makes a radar plot of the expression level of a set of genes. It can be useful to compare
+the gene expression profile of different cell states in the reference atlas vs. a projected set.
 }
 \examples{
 plot.states.radar(ref)
