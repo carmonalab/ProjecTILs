@@ -510,7 +510,9 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param return Return the combined plots instead of printing them to the default device (deprecated)
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
+#' @usage plot.states.radar(ref)
 #' @examples
+#' ref <- load.reference.map()
 #' plot.states.radar(ref)
 #' @import ggplot2
 #' @import scales
