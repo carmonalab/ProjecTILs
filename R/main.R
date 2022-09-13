@@ -1113,7 +1113,8 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' @param assay The data slot where to pull the expression data
 #' @param atlas.name An optional name for your reference
 #' @param annotation.column The metadata column with the cluster annotations for this atlas
-#' @param recalculate.umap If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.
+#' @param recalculate.umap If TRUE, run the `umap` or `uwot` algorithm to generate embeddings.
+#'   Otherwise use the embeddings stored in the `dimred` slot.
 #' @param umap.method Which method to use for calculating the umap reduction
 #' @param metric Distance metric to use to find nearest neighbors for UMAP
 #' @param min_dist Effective minimum distance between UMAP embedded points
@@ -1137,7 +1138,7 @@ make.reference <- function(ref,
                            atlas.name="custom_reference",
                            annotation.column="functional.cluster",
                            recalculate.umap=FALSE,
-                           umap.method=c("uwot","umap"),
+                           umap.method=c("umap","uwot"),
                            metric="cosine",
                            min_dist=0.3,
                            n_neighbors = 30,
@@ -1193,6 +1194,7 @@ make.reference <- function(ref,
       ref@misc$umap_object <- ref.umap
       ref@reductions$umap@cell.embeddings <- ref.umap$layout
     } else if (umap.method == "uwot") {
+      warning("There are known issues with saving a loading uwot models. If you plan to save your reference as an .rds file, please use umap.method='umap'")
       #generate UMAP embeddings
       ref.umap <- run.umap.uwot(ref.pca, ndim=ndim, seed=seed,
                              n.neighbors=n_neighbors, min.dist=min_dist,
@@ -1287,7 +1289,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
 recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.assay="integrated",
                                    ndim=NULL, n.neighbors=20, min.dist=0.3, recalc.pca=FALSE,
                                    resol=0.4, k.param=15, metric="cosine",
-                                   umap.method=c('uwot','umap'), seed=123){ 
+                                   umap.method=c('umap','uwot'), seed=123){ 
   
   if (is.null(ref) | is.null(projected)) {
     stop("Please provide a reference and a projected object (or list of projected objects)")
@@ -1327,6 +1329,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   
   if (umap.method=="uwot") {  
     message("Recalculating UMAP embeddings using uwot...")
+    warning("There are known issues with saving a loading uwot models. If you plan to save your reference as an .rds file, please use umap.method='umap'")
     
     ref.umap <- run.umap.uwot(ref.pca, ndim=ndim,
                               n.neighbors = n.neighbors,

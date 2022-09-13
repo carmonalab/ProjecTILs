@@ -16,7 +16,7 @@ recalculate.embeddings(
   resol = 0.4,
   k.param = 15,
   metric = "cosine",
-  umap.method = c("uwot", "umap"),
+  umap.method = c("umap", "uwot"),
   seed = 123
 )
 }

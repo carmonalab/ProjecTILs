@@ -10,7 +10,7 @@ make.reference(
   atlas.name = "custom_reference",
   annotation.column = "functional.cluster",
   recalculate.umap = FALSE,
-  umap.method = c("uwot", "umap"),
+  umap.method = c("umap", "uwot"),
   metric = "cosine",
   min_dist = 0.3,
   n_neighbors = 30,
@@ -29,7 +29,8 @@ make.reference(
 
 \item{annotation.column}{The metadata column with the cluster annotations for this atlas}
 
-\item{recalculate.umap}{If TRUE, run the `umap` algorithm to generate embeddings. Otherwise use the embeddings stored in the `dimred` slot.}
+\item{recalculate.umap}{If TRUE, run the `umap` or `uwot` algorithm to generate embeddings.
+Otherwise use the embeddings stored in the `dimred` slot.}
 
 \item{umap.method}{Which method to use for calculating the umap reduction}
 
