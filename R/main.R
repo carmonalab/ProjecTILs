@@ -531,6 +531,10 @@ plot.states.radar = function(ref, query=NULL,
   if(!is.null(query) & !is.list(query)) {
     query <- list(Query=query)
   }
+  #Check assays exist
+  if (!ref.assay %in% Assays(ref)) {
+    stop(sprintf("Assay %s not found in reference object. Please check ref.assay parameter", ref.assay))
+  }
   
   #Whether to use gene expression or metadata
   if (!is.null(meta4radar)) {
@@ -613,6 +617,9 @@ plot.states.radar = function(ref, query=NULL,
       if (!is.null(meta4radar)) {
         qmat <- t(query[[i]][[]])
       } else {
+        if (!query.assay %in% Assays(query[[i]])) {
+          stop(sprintf("Assay %s not found in query object. Please check ref.assay parameter", query.assay))
+        }
         qmat <- query[[i]]@assays[[query.assay]]@data
       }
       order <- match(feat.use, row.names(qmat))
@@ -628,15 +635,15 @@ plot.states.radar = function(ref, query=NULL,
   colnames(m) <- feat.use
   for (i in 1:length(states_all)) {
     s <- states_all[i]
-    m[i,] <- apply(rr[, labels == s], MARGIN=1, mean)
+    m[i,] <- apply(rr[, labels == s], MARGIN=1, function(x){mean(x, na.rm=T)})
   }
-  normfacs <- apply(m, MARGIN=2, function(x) {max(c(1,x))})
+  normfacs <- apply(m, MARGIN=2, function(x) {max(c(1,x), na.rm=T)})
   
   pll <- list()
   for (j in 1:length(states_all)) {
     s <- states_all[j]
     
-    this.mean <- apply(rr[, labels == s], MARGIN=1, mean)
+    this.mean <- apply(rr[, labels == s], MARGIN=1, function(x){mean(x, na.rm=T)})
     this.mean <- this.mean/normfacs
     
     this.df <- data.frame(t(rbind(names(this.mean), this.mean, "Reference")))
@@ -647,7 +654,7 @@ plot.states.radar = function(ref, query=NULL,
     while (i <= length(query)) {
       m <- as.matrix(qq[[i]][, labels.q[[i]] == s])
       if (dim(m)[2] >= min.cells) {
-        q.mean <- apply(m, MARGIN=1, mean)
+        q.mean <- apply(m, MARGIN=1, function(x){mean(x, na.rm=T)})
         q.mean <- q.mean/normfacs
         q.df <- data.frame(t(rbind(names(q.mean), q.mean, names(query)[[i]])))
         colnames(q.df) <- c("Gene","Expression","Dataset")
