@@ -652,8 +652,9 @@ plot.states.radar = function(ref, query=NULL,
     
     i <- 1
     while (i <= length(query)) {
-      m <- as.matrix(qq[[i]][, labels.q[[i]] == s])
-      if (dim(m)[2] >= min.cells) {
+      ll <- labels.q[[i]]
+      m <- as.matrix(qq[[i]][, !is.na(ll) & ll == s])
+      if (ncol(m) >= min.cells) {
         q.mean <- apply(m, MARGIN=1, function(x){mean(x, na.rm=T)})
         q.mean <- q.mean/normfacs
         q.df <- data.frame(t(rbind(names(q.mean), q.mean, names(query)[[i]])))
