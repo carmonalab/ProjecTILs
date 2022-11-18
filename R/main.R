@@ -1160,7 +1160,7 @@ make.reference <- function(ref,
   if (is.null(ref@assays[[assay]])) {
     stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
   }
-  
+  DefaultAssay(ref) <- assay
   
   if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
     varfeat <- ref@assays[[assay]]@var.features
