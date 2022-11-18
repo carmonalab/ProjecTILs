@@ -1128,15 +1128,21 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' @param min_dist Effective minimum distance between UMAP embedded points
 #' @param n_neighbors Size of local neighborhood for UMAP
 #' @param ndim Number of PCA dimensions
-#' @param dimred Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`
+#' @param dimred Use the pre-calculated embeddings stored at `Embeddings(ref, dimred)`
 #' @param nfeatures Number of variable features (only calculated if not already present)
+#' @param color.palette A (named) vector of colors for the reference plotting functions.
+#'     One color for each cell type in 'functional.cluster'
+#' @param scGate.model.human A human \link[scGate]{scGate} model to purify the cell types represented in the
+#'     map. For example, if the map contains CD4 T cell subtype, specify an scGate model for CD4 T cells.
+#' @param scGate.model.human A mouse \link[scGate]{scGate} model to purify the cell types represented in the
+#'     map.
+#' @param store.markers Whether to store the top differentially expressed genes in `ref@@misc$gene.panel`     
+#' @param n.markers Store the top `n.markers` for each subtype given by differential
+#'     expression analysis
 #' @param seed Random seed
 #' @return A reference atlas compatible with ProjecTILs
 #' @examples 
 #' custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
-#' #Add a color palette for your atlas
-#' custom_reference@@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D",
-#'     "#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 #' @importFrom stats prcomp
 #' @importFrom uwot umap
 #' @export make.reference
@@ -1153,6 +1159,11 @@ make.reference <- function(ref,
                            ndim=20,
                            dimred="umap",
                            nfeatures=1000,
+                           color.palette=NULL,
+                           scGate.model.human=NULL,
+                           scGate.model.mouse=NULL,
+                           store.markers=FALSE,
+                           n.markers=10,
                            seed=123) {
   if (is.null(assay)) {
     assay=DefaultAssay(ref)
@@ -1217,18 +1228,66 @@ make.reference <- function(ref,
     }
   }
   
-  #store in integrated assay, to be understood by ProjecTILs
-  names(ref@assays)[names(ref@assays)==assay] = "integrated"
-  DefaultAssay(ref) <- "integrated"
-  
   if (!annotation.column == "functional.cluster") {
     ref$functional.cluster <- ref@meta.data[,annotation.column]
   }
   ref$functional.cluster <- factor(ref$functional.cluster)
+  levs <- levels(ref$functional.cluster)
   
+  #Reference name
+  ref@misc$projecTILs=atlas.name
+  
+  #Add color palette
+  if (!is.null(color.palette)) {
+    if (length(color.palette) != length(levs)) {
+      stop("Length of color palette must match number of cell types")
+    }
+    if (!is.null(names(color.palette))) {
+      d <- setdiff(names(color.palette), levels(ref$functional.cluster))
+      if (length(d)>0) {
+        stop("Names of color palette do not match annotation levels")
+      }
+    } else {
+      names(color.palette) <- levs
+    }
+  } else {
+    color.palette <- rainbow(n=length(levs))
+    names(color.palette) <- levs
+  }
+  ref@misc$atlas.palette <- color.palette
+  
+  #Add scGate models
+  ref@misc$scGate <- list()
+  if (!is.null(scGate.model.human)) {
+    ref@misc$scGate$human <- scGate.model.human
+  }
+  if (!is.null(scGate.model.mouse)) {
+    ref@misc$scGate$mouse <- scGate.model.mouse
+  }
+  
+  #Add DEGs
   Idents(ref) <- "functional.cluster"
   
-  ref@misc$projecTILs=atlas.name
+  if (store.markers) {
+    DefaultAssay(ref) <- "RNA"
+    
+    cluster.markers <- FindAllMarkers(ref, only.pos = T, min.pct = 0.1, min.diff.pct=0.1, 
+                                      logfc.threshold = 0.25, max.cells.per.ident = 500,
+                                      test.use="wilcox",base=exp(1), verbose=F)
+    
+    all <- cluster.markers |> dplyr::group_by(cluster) |>
+      dplyr::top_n(n = n.markers, wt = abs(avg_logFC))
+    
+    markers <- list()
+    for (i in levels(ref@active.ident)) {
+      markers[[i]] <- subset(all, cluster==i)$gene
+    }  
+    ref@misc$gene.panel <- markers
+  }
+  
+  #Store in integrated assay, to be understood by ProjecTILs
+  names(ref@assays)[names(ref@assays)==assay] = "integrated"
+  DefaultAssay(ref) <- "integrated"
   
   return(ref)
 }

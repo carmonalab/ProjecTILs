@@ -17,6 +17,11 @@ make.reference(
   ndim = 20,
   dimred = "umap",
   nfeatures = 1000,
+  color.palette = NULL,
+  scGate.model.human = NULL,
+  scGate.model.mouse = NULL,
+  store.markers = FALSE,
+  n.markers = 10,
   seed = 123
 )
 }
@@ -42,9 +47,20 @@ Otherwise use the embeddings stored in the `dimred` slot.}
 
 \item{ndim}{Number of PCA dimensions}
 
-\item{dimred}{Use the pre-calculated embeddings stored at `ref@reductions[[dimred]]`}
+\item{dimred}{Use the pre-calculated embeddings stored at `Embeddings(ref, dimred)`}
 
 \item{nfeatures}{Number of variable features (only calculated if not already present)}
+
+\item{color.palette}{A (named) vector of colors for the reference plotting functions.
+One color for each cell type in 'functional.cluster'}
+
+\item{scGate.model.human}{A mouse \link[scGate]{scGate} model to purify the cell types represented in the
+map.}
+
+\item{store.markers}{Whether to store the top differentially expressed genes in `ref@misc$gene.panel`}
+
+\item{n.markers}{Store the top `n.markers` for each subtype given by differential
+expression analysis}
 
 \item{seed}{Random seed}
 }
@@ -60,7 +76,4 @@ make the projection use an approximation for UMAP embedding of the query.
 }
 \examples{
 custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
-#Add a color palette for your atlas
-custom_reference@misc$atlas.palette <- c("#edbe2a","#A58AFF","#53B400","#F8766D",
-    "#00B6EB","#d1cfcc","#FF0000","#87f6a5","#e812dd")
 }
