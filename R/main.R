@@ -1303,7 +1303,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
     stop("Please provide a reference and a projected object (or list of projected objects)")
   }
   
-  if (is.list(projected)) {
+  if (is.list(projected) | is.vector(projected)) {
     projected <- Reduce(f=merge.Seurat.embeddings, x=projected)
   } 
   projected$ref_or_query <- "query"
@@ -1365,7 +1365,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   }
   
   #Did any new clusters arise after adding projected data?
-  DefaultAssay(merged) <- "integrated"
+  DefaultAssay(merged) <- ref.assay
   merged <- FindNeighbors(merged, reduction = "pca", dims = 1:ndim,
                           k.param = k.param, verbose=FALSE)
   merged <- FindClusters(merged, resolution = resol, verbose=FALSE)
@@ -1376,6 +1376,8 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
   freq[freq<0] <- 0
   merged$newclusters <- freq[merged$seurat_clusters]
+  
+  Idents(merged) <- "functional.cluster"
   return(merged)
 }
 
