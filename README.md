@@ -32,9 +32,10 @@ remotes::install_github("carmonalab/ProjecTILs")
 Load sample data and test your installation:
 ```r
 library(ProjecTILs)
+ref <- load.reference.map()
 data(query_example_seurat)
 
-Run.ProjecTILs(query_example_seurat)
+Run.ProjecTILs(query_example_seurat, ref=ref)
 ```
 
 Unless you provide a reference map, on your first run, the `Run.ProjecTILs` call will download a default reference map (mouse tumor-infiltrating T cells).
