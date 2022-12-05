@@ -35,11 +35,10 @@ library(ProjecTILs)
 ref <- load.reference.map()
 data(query_example_seurat)
 
-Run.ProjecTILs(query_example_seurat, ref=ref)
+query.projected <- Run.ProjecTILs(query_example_seurat, ref=ref)
 ```
 
-Unless you provide a reference map, on your first run, the `Run.ProjecTILs` call will download a default reference map (mouse tumor-infiltrating T cells).
-
+By default, `load.reference.map()` downloads and loads a reference for mouse tumor-infiltrating T cells. Read below where to find other references or how to build your own reference map.
 
 ### Data projection DEMO
 
