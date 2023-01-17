@@ -20,15 +20,17 @@ Imports:
     scales,
     pracma,
     UCell,
-    scGate
+    scGate,
+    pheatmap,
+    RColorBrewer,
 Suggests:
     fastICA,
     EnhancedVolcano,
-    plotly
+    plotly,
 biocViews:
 BugReports: https://github.com/carmonalab/ProjecTILs/issues
 URL: https://github.com/carmonalab/ProjecTILs
 License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
