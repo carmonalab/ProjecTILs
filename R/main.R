@@ -1676,3 +1676,173 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   query
 }
 
+
+#' Plot a averaged expression heatmap from a Seurat object
+#'
+#' This function allows to plot a averaged expression heatmap starting from a Seurat object,
+#' split by possibly any metadata present in the starting Seurat object
+#'
+#' The function first loads the pheatmap package, sets a seed for reproducibility, and selects the first element of the "method" parameter as the clustering method to be used
+#' It then selects the wanted metadata from the data set, removing any missing values if the "remove.NA.meta" parameter is set to TRUE. <- 
+#' Next, the function filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable. It then calculates the mean expression of the selected genes by the "metaSubset" variable.
+#' The function then reorders the data frame if the "order.by" parameter is not null, and sets up the colors for the heatmap.
+#' Finally, the function creates the heatmap using the pheatmap package, with the "method", "scale", "flip", "cluster_genes", "cluster_samples", and "show_samplenames" parameters controlling various aspects of the heatmap.
+#'
+#' @param data A Seurat object to be used for the heatmap
+#' @param assay A string indicating the assay type, default is "RNA"
+#' @param genes A vector of genes to be used in the heatmap
+#' @param ref A ProjecTILs reference Seurat object to define the order of functional.cluster
+#' @param scale A string indicating the scale of the heatmap, default is "row"
+#' @param method A string or vector of strings indicating the clustering method to be used, default is "ward.D2"
+#' @param brewer.palette A string indicating the color palette to be used, default is "RdBu"
+#' @param cluster.col A string indicating the column name of the functional cluster to be used
+#' @param metadata A vector of metadata to be used in the heatmap
+#' @param order.by A string indicating the column name to reorder the heatmap
+#' @param flip A boolean indicating if the heatmap should be flipped, default is FALSE
+#' @param show_samplenames A boolean indicating whether the heatmap should display the sample names or not, default is FALSE
+#' @param cluster_genes A boolean indicating if genes should be clustered, default is FALSE
+#' @param cluster_samples A boolean indicating if samples should be clustered, default is FALSE
+#' @param min.cells A value defining the minimum number of cells a sample should have to be kept, default is 10
+#' @param remove.NA.meta A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE
+#' @param palette A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".
+#' @return A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
+#' @import pheatmap
+#' @import RColorBrewer
+#' @examples
+#' library(Seurat)
+#' ref <- load.reference.map()
+#' make.heatmap(pbmc_small, assay = "RNA", genes = c("MS4A1", "CD79A"), ref = ref, cluster.col = "functional.cluster", metadata = c("patient", "tissue"), order.by = "patient")
+#' @export make.heatmap
+make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
+                         method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
+                         cluster.col = "functional.cluster", metadata, order.by = NULL, flip=FALSE,
+                         cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
+                         show_samplenames = FALSE, remove.NA.meta = TRUE, 
+                         palette = NULL) {
+  
+  # Loads the pheatmap package and sets a seed for reproducibility.
+  require(pheatmap)
+  set.seed(123)
+  
+  
+  # Select clustering method to be used
+  method = method[1]
+  
+  
+  # Select wanted metadata
+  meta.sub <- data@meta.data[,which(colnames(data@meta.data) %in% cluster.col)]
+  meta.sub <- cbind(meta.sub, data@meta.data[,metadata])
+  
+  # Transform "NA" into true NAs
+  require(dplyr)
+  meta.sub[meta.sub=="NA"] = NA
+  # Remove NAs from metadata
+  if(remove.NA.meta == TRUE){
+    meta.sub <- meta.sub %>% drop_na()
+  }
+  
+  # Filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable.
+  data$metaSubset <- factor(apply(meta.sub,1,paste,collapse=" "))
+  
+  t <- table(data$metaSubset)
+  accept <- names(t)[t>min.cells]
+  
+  data <- subset(data, subset=metaSubset %in% accept)
+  
+  
+  # Calculate mean expression by cluster
+  m <- c()
+  for( g in unique(genes)){
+    m[[g]] <- tapply(data@assays[[assay]][g,],data$metaSubset, mean)
+  }
+  m <- as.data.frame(m)
+  
+  m <- m[accept,]
+  
+  
+  # Compute metadata for the annotation colors
+  m.subset <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[1]])))
+  m.meta <- list()
+  for (i in 1:length(metadata)){
+    m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[i+1]])))
+  }
+  names(m.meta) <-  metadata
+  m.meta <- as.data.frame(m.meta)
+  
+
+  # Reorder dataframe m by columns if specified
+  if (!is.null(order.by)) {
+    position.metadata <- match(order.by,  metadata)
+    m <- cbind(m, m.subset, m.meta) 
+    
+    # Define the levels of functional.cluster if ref is given
+    if (!is.null(ref)) {
+      m$m.subset <- factor(m$m.subset, levels = levels(ref$functional.cluster))
+    }
+    
+    m <- m |> arrange(m.subset, get(order.by))
+    m <- m[1:(length(m)-length(metadata)-1)]
+    
+    # Reappend good annotation order
+    m.subset <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[1]])))
+    m.meta <- list()
+    for (i in 1:length(metadata)){
+      m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[i+1]])))
+    }
+    names(m.meta) <-  metadata
+  }
+
+  
+  # Setup color palette list
+  breaksList = seq(-2, 2, by = 0.1)
+  require(RColorBrewer)
+  color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaksList))
+  
+  palettes.default <-  c("Paired","Set2","Accent","Dark2","Set1","Set3")
+  if (is.null(palette)) {
+    palette <- list()
+    palette[["Subtype"]] <- colorRampPalette(brewer.pal(n=8, name="Set1"))(length(unique(unlist(m.subset))))
+    names(palette[["Subtype"]]) <- c(unique(m.subset))
+    for (i in 1:length(metadata)){
+      meta <- metadata[i]
+      palette[[meta]] <- colorRampPalette(brewer.pal(n=6, name=palettes.default[i]))(length(unique(m.meta[[meta]])))
+      names(palette[[meta]]) <- levels(m.meta[[meta]])
+    }
+  }
+  
+  # Define the colors of functional.cluster if ref is given
+  if (!is.null(ref)) {
+    palette[["Subtype"]] <- ref@misc$atlas.palette
+  }
+  
+  # Compute annotation dataframe
+  annotation_col = data.frame(
+    Subtype = m.subset
+  )
+  annotation_col <- cbind(annotation_col, m.meta)
+  rownames(annotation_col) = rownames(m)
+  
+  # Plot heatmap
+  if (flip) { 
+    h <- pheatmap::pheatmap(m, cluster_rows = cluster_samples,
+                            cluster_cols = cluster_genes,scale = scale,
+                            breaks = breaksList, color=color, 
+                            annotation_row = annotation_col, 
+                            show_rownames = show_samplenames,
+                            border_color = NA,
+                            annotation_colors = palette, 
+                            fontsize_row=6,fontsize = 7, 
+                            clustering_method=method)
+  } else {
+    h <- pheatmap::pheatmap(t(m),cluster_rows = cluster_genes,
+                            cluster_cols = cluster_samples,scale = scale,
+                            breaks = breaksList, color=color, 
+                            annotation_col = annotation_col, 
+                            show_colnames = show_samplenames,
+                            border_color = NA,
+                            annotation_colors = palette, 
+                            fontsize_row=6,fontsize = 7, 
+                            clustering_method=method)
+  }
+  return(h)
+}
