@@ -1708,6 +1708,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @return A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
 #' @import pheatmap
 #' @import RColorBrewer
+#' @import purrr
 #' @examples
 #' library(Seurat)
 #' ref <- load.reference.map()
@@ -1751,6 +1752,7 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   
   # Calculate mean expression by cluster
+  require(purrr)
   m <- c()
   genes.removed <- c()
   for( g in unique(genes)){
