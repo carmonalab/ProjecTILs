@@ -1752,9 +1752,19 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   # Calculate mean expression by cluster
   m <- c()
+  genes.removed <- c()
   for( g in unique(genes)){
-    m[[g]] <- tapply(data@assays[[assay]][g,],data$metaSubset, mean)
+    if(g %in% rownames(data@assays[[assay]])){
+      m[[g]] <- tapply(data@assays[[assay]][g,],data$metaSubset, mean)
+    }
+    else{
+      genes.removed <- c(genes.removed, g)
+    }
   }
+  if(!is_empty(genes.removed)){
+    cat("These genes were not found in the assay and were excluded from plotting:", genes.removed)
+  }
+  
   m <- as.data.frame(m)
   
   m <- m[accept,]
