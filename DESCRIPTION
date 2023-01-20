@@ -23,6 +23,7 @@ Imports:
     scGate,
     pheatmap,
     RColorBrewer,
+    purrr,
 Suggests:
     fastICA,
     EnhancedVolcano,
