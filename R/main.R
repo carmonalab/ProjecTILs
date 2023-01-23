@@ -1711,12 +1711,12 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @import purrr
 #' @examples
 #' library(Seurat)
-#' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38906121")
+#' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 #' make.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
 #' @export make.heatmap
 make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
                          method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
-                         cluster.col = "functional.cluster", metadata, order.by = NULL, flip=FALSE,
+                         cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, flip=FALSE,
                          cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
                          show_samplenames = FALSE, remove.NA.meta = TRUE, 
                          palette = NULL) {
@@ -1728,11 +1728,17 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   # Select clustering method to be used
   method = method[1]
+
   
-  
-  # Select wanted metadata
-  meta.sub <- data@meta.data[,which(colnames(data@meta.data) %in% cluster.col)]
-  meta.sub <- cbind(meta.sub, data@meta.data[,metadata])
+  # Select desired metadata
+  if (is.null(metadata)) {
+    stop("Must at least provide one metadata")
+  } else {
+    meta.sub <-
+      data@meta.data[, which(colnames(data@meta.data) %in% cluster.col), drop = F]
+    meta.sub <-
+      cbind(meta.sub, data@meta.data[, metadata, drop = F])
+  }
   
   # Transform "NA" into true NAs
   require(dplyr)
@@ -1781,29 +1787,33 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   names(m.meta) <-  metadata
   m.meta <- as.data.frame(m.meta)
   
-
-  # Reorder dataframe m by columns if specified
-  if (!is.null(order.by)) {
-    position.metadata <- match(order.by,  metadata)
-    m <- cbind(m, m.subset, m.meta) 
-    
-    # Define the levels of functional.cluster if ref is given
-    if (!is.null(ref)) {
-      m$m.subset <- factor(m$m.subset, levels = levels(ref$functional.cluster))
-    }
-    
-    m <- m |> arrange(m.subset, get(order.by))
-    m <- m[1:(length(m)-length(metadata)-1)]
+  # Reorder dataframe if "ref" is defined
+  m <- cbind(m, m.subset, m.meta) 
+  if (!is.null(ref)) {
+    m$m.subset <- factor(m$m.subset, levels = levels(ref$functional.cluster))
+    m <- m |> arrange(m.subset)
     
     # Reappend good annotation order
-    m.subset <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[1]])))
+    m.subset <-
+      factor(unlist(lapply(strsplit(rownames(m), "!", perl = T), function(x)
+        x[[1]])))
+  }
+  
+  # Reorder dataframe if "order.by" is defined
+  if (!is.null(order.by)) {
+    m <- m |> arrange(m.subset, get(order.by))
+  
+    # Reappend good annotation order for metadata
     m.meta <- list()
-    for (i in 1:length(metadata)){
-      m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[i+1]])))
+    for (i in 1:length(metadata)) {
+      m.meta[[i]] <-
+        factor(unlist(lapply(strsplit(rownames(m), "!", perl = T), function(x)
+          x[[i + 1]])))
     }
     names(m.meta) <-  metadata
   }
-
+  m <- m[1:(length(m) - length(metadata) - 1)]
+  
   
   # Setup color palette list
   breaksList = seq(-2, 2, by = 0.1)
