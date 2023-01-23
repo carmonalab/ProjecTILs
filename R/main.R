@@ -1743,7 +1743,7 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   }
   
   # Filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable.
-  data$metaSubset <- factor(apply(meta.sub,1,paste,collapse=" "))
+  data$metaSubset <- factor(apply(meta.sub,1,paste,collapse="!"))
   
   t <- table(data$metaSubset)
   accept <- names(t)[t>min.cells]
@@ -1773,10 +1773,10 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   
   # Compute metadata for the annotation colors
-  m.subset <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[1]])))
+  m.subset <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[1]])))
   m.meta <- list()
   for (i in 1:length(metadata)){
-    m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[i+1]])))
+    m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[i+1]])))
   }
   names(m.meta) <-  metadata
   m.meta <- as.data.frame(m.meta)
@@ -1796,10 +1796,10 @@ make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
     m <- m[1:(length(m)-length(metadata)-1)]
     
     # Reappend good annotation order
-    m.subset <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[1]])))
+    m.subset <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[1]])))
     m.meta <- list()
     for (i in 1:length(metadata)){
-      m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m)," ",perl = T),function(x) x[[i+1]])))
+      m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[i+1]])))
     }
     names(m.meta) <-  metadata
   }
