@@ -1712,9 +1712,9 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @examples
 #' library(Seurat)
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
-#' make.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
-#' @export make.heatmap
-make.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
+#' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
+#' @export celltype.heatmap
+celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
                          method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
                          cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, flip=FALSE,
                          cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,

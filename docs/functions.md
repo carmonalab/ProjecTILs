@@ -10,7 +10,7 @@
 
 * `make.projection`   Project a single-cell RNA-seq dataset onto a reference map of cellular states.
 
-* `make.heatmap`   Generate a averaged gene expression heatmap from a Seurat object
+* `celltype.heatmap`   Generate a averaged gene expression heatmap from a Seurat object
 
 * `plot.projection`   Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
 
