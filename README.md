@@ -89,7 +89,7 @@ Currently available atlases:
 
 ### Custom Reference Maps
 
-If you wish to use your own **custom reference atlas**, follow this vignette to prepare it in a format that can be understood by ProjecTILs: [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs.demo/build_ref_atlas.html)
+If you wish to use your own **custom reference atlas**, we recommend to use [STACAS](https://github.com/carmonalab/STACAS) for single-cell data integration. Here is an example: [Building a custom reference atlas for ProjecTILs](https://carmonalab.github.io/ProjecTILs.demo/build_ref_atlas.html). 
 
 ### Updating of reference map to include new cell states
 
