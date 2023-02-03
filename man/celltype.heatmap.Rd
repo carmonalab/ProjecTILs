@@ -72,6 +72,7 @@ It then selects the wanted metadata from the data set, removing any missing valu
 Next, the function filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable. It then calculates the mean expression of the selected genes by the "metaSubset" variable.
 The function then reorders the data frame if the "order.by" parameter is not null, and sets up the colors for the heatmap.
 Finally, the function creates the heatmap using the pheatmap package, with the "method", "scale", "flip", "cluster_genes", "cluster_samples", and "show_samplenames" parameters controlling various aspects of the heatmap.
+A detailed tutorial can be found here: https://carmonalab.github.io/ProjecTILs.demo/Heatmap_stratification_tutorial.html
 }
 \examples{
 library(Seurat)
