@@ -245,8 +245,12 @@ make.projection <- function(query, ref=NULL,
   rm(query)
   
   #Parallelize (ncores>1)
+  if (ncores > length(query.list)) {
+    ncores <- length(query.list)
+  }
   param <- BiocParallel::MulticoreParam(workers=ncores)
   
+  #Projection over list of datasets
   projected.list <- BiocParallel::bplapply(
     X = 1:length(query.list), 
     BPPARAM =  param,
@@ -976,7 +980,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
                alpha=0.6,
                alpha_stroke=0.6,
                size=~size,
-               colors=cols ) %>% plotly::layout(
+               colors=cols ) |> plotly::layout(
                                   title = sprintf("Projection of query on reference map + dimension %s", extra.dim),
                                   scene = list(
                                      xaxis = list(title = "UMAP_1"),
@@ -1151,6 +1155,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
 #' @importFrom stats prcomp
 #' @importFrom uwot umap
+#' @importFrom dplyr group_by top_n
 #' @export make.reference
 #' 
 make.reference <- function(ref,
@@ -1614,6 +1619,10 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field with label annotations of the reference, which will
 #' be transfered to the query dataset
+#' @param overwrite Replace any existing labels in \code{labels.col} with new labels.
+#'     This may be useful for predicting cell types using multiple reference maps; run
+#'     this function with \code{overwrite=FALSE} to combine existing labels
+#'     with new labels from a second reference map.
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return The query object with an additional metadata column containing predicted cell labels.
 #' If cells are filtered prior to projection, they will be labeled as 'NA'
@@ -1629,6 +1638,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
                            labels.col="functional.cluster",
+                           overwrite=TRUE,
                            ...) {
   
   fast.umap.predict <- TRUE
@@ -1637,6 +1647,11 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   
   if(is.list(query)) {
      stop("Query must be a single Seurat object")
+  }
+  
+  current.labs <- NULL
+  if (labels.col %in% colnames(query[[]])) {
+    current.labs <- query[[labels.col]]
   }
   
   if (!is.null(split.by)) {
@@ -1667,11 +1682,17 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   q <- Reduce(merge.Seurat.embeddings, q)
   
   #Transfer labels to original query object
-  labs <- q@meta.data[,labels.col]
-  names(labs) <- rownames(q@meta.data)
+  labs <- q[[labels.col]]
+  
+  if (overwrite) {
+    new.labs <- labs[[labels.col]]
+    names(new.labs) <- rownames(labs)
+  } else {
+    new.labs <- combine_labels(current.labs, labs)
+  }
   
   query@meta.data[,labels.col] <- NA
-  query@meta.data[names(labs),labels.col] <- labs
+  query@meta.data[names(new.labs),labels.col] <- new.labs
   
   query
 }
@@ -1707,8 +1728,8 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @param palette A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".
 #' @return A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
 #' @import pheatmap
+#' @importFrom tidyr drop_na
 #' @import RColorBrewer
-#' @import purrr
 #' @examples
 #' library(Seurat)
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
@@ -1721,10 +1742,7 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
                          show_samplenames = FALSE, remove.NA.meta = TRUE, 
                          palette = NULL) {
   
-  # Loads the pheatmap package and sets a seed for reproducibility.
-  require(pheatmap)
   set.seed(123)
-  
   
   # Select clustering method to be used
   method = method[1]
@@ -1741,11 +1759,10 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   }
   
   # Transform "NA" into true NAs
-  require(dplyr)
   meta.sub[meta.sub=="NA"] = NA
   # Remove NAs from metadata
   if(remove.NA.meta == TRUE){
-    meta.sub <- meta.sub %>% drop_na()
+    meta.sub <- meta.sub |> drop_na()
   }
   
   # Filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable.
@@ -1756,9 +1773,7 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   data <- subset(data, subset=metaSubset %in% accept)
   
-  
   # Calculate mean expression by cluster
-  require(purrr)
   m <- c()
   genes.removed <- c()
   for( g in unique(genes)){
@@ -1769,14 +1784,13 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
       genes.removed <- c(genes.removed, g)
     }
   }
-  if(!is_empty(genes.removed)){
+  if(length(genes.removed)>0){
     cat("These genes were not found in the assay and were excluded from plotting:", genes.removed)
   }
   
   m <- as.data.frame(m)
   
   m <- m[accept,]
-  
   
   # Compute metadata for the annotation colors
   m.subset <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[1]])))
