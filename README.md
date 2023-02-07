@@ -86,7 +86,7 @@ Currently available atlases:
 
 -   **human CD4+ TIL atlas**: consists of 12,631 high-quality single-cell transcriptomes from 20 samples covering 9 tumor types. Generated from the collection of datasets by [Zheng et al. Science 2021](https://www.science.org/doi/10.1126/science.abe6474). Available at: <https://doi.org/10.6084/m9.figshare.21981536.v1> and interactively at: <https://spica.unil.ch/refs/CD4T_human>
 
--   **human blood and tumor-infiltrating DC atlas**: consists of 18,753 high-quality single-cell transcriptomes from 11 studies covering 5 tumor types and healthy patient for blood. Generated from the collection of datasets by [Gerhard et al. JEM, 2020](https://pubmed.ncbi.nlm.nih.gov/33601412/) and [Villani et al. Science 2017](https://pubmed.ncbi.nlm.nih.gov/28428369/) for the blood samples. Available at: <https://doi.org/10.6084/m9.figshare.21996971.v1> and interactively at: <https://spica.unil.ch/refs/DC_human>
+-   **human blood and tumor-infiltrating DC atlas**: consists of 18,753 high-quality single-cell transcriptomes from 11 studies covering 5 tumor types and healthy patient for blood. Generated from the collection of datasets by [Gerhard et al. JEM, 2020](https://pubmed.ncbi.nlm.nih.gov/33601412/) and [Villani et al. Science 2017](https://pubmed.ncbi.nlm.nih.gov/28428369/) for the blood samples. Available at: <https://doi.org/10.6084/m9.figshare.22040801.v1> and interactively at: <https://spica.unil.ch/refs/DC_human>
 
 -   **mouse TIL atlas**: consists of 16,803 single-cell transcriptomes from 25 samples (B16 melanoma and MC38 colon adenocarcinoma tumors) from six different studies. Available at: <https://doi.org/10.6084/m9.figshare.12478571> and interactively at: <https://spica.unil.ch/refs/TIL>
 
