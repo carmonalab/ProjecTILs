@@ -18,7 +18,8 @@ make.projection(
   fast.umap.predict = FALSE,
   ortholog_table = NULL,
   scGate_model = NULL,
-  ncores = 1
+  ncores = 1,
+  progressbar = TRUE
 )
 }
 \arguments{
@@ -56,6 +57,8 @@ PCA space to assign UMAP coordinates (credits to Changsheng Li for the implement
 (if NULL use the model stored in \code{ref@misc$scGate})}
 
 \item{ncores}{Number of cores for parallel execution (requires \link{BiocParallel})}
+
+\item{progressbar}{Whether to show a progress bar for projection process or not (requires \link{BiocParallel})}
 }
 \value{
 An augmented Seurat object with projected UMAP coordinates on the reference map
