@@ -531,11 +531,6 @@ plot.states.radar = function(ref, query=NULL,
                              min.cells=50, cols=NULL,
                              return=FALSE, return.as.list=FALSE) {
   
-  #Make sure data was normalized
-  if(!"NormalizeData.RNA" %in% Command(query)) {
-    warning(sprintf("RNA assay was not normalized in this object"))
-  }
-  
   #Make sure query is a list
   if(!is.null(query) & !is.list(query)) {
     query <- list(Query=query)
