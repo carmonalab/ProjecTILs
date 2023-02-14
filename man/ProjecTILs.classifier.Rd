@@ -13,6 +13,7 @@ ProjecTILs.classifier(
   ndim = NULL,
   k = 20,
   labels.col = "functional.cluster",
+  overwrite = TRUE,
   ...
 )
 }
@@ -34,6 +35,11 @@ been previously subset to cell types represented in the reference.}
 
 \item{labels.col}{The metadata field with label annotations of the reference, which will
 be transfered to the query dataset}
+
+\item{overwrite}{Replace any existing labels in \code{labels.col} with new labels.
+This may be useful for predicting cell types using multiple reference maps; run
+this function with \code{overwrite=FALSE} to combine existing labels
+with new labels from a second reference map.}
 
 \item{...}{Additional parameters to \link[ProjecTILs]{make.projection}}
 }

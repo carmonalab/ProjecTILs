@@ -2,7 +2,10 @@
 filterCells <- function(query.object, species="mouse", gating.model=NULL){
   
   data(cell.cycle.obj)
-  query.object <- suppressWarnings(scGate(data=query.object, model = gating.model, verbose=FALSE, assay=DefaultAssay(query.object),
+  query.object <- suppressWarnings(scGate(data=query.object,
+                                          model = gating.model,
+                                          verbose=FALSE,
+                                          assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]]))
   ncells <- ncol(query.object)
   
@@ -375,3 +378,40 @@ silhouette_2sets <- function(dist, labs.x, labs.y) {
   }  
   res
 } 
+
+#Combine labels from two runs of the classifier to return a consensus label
+combine_labels <- function(labs1, labs2) {
+  
+  #No prior labels
+  if (is.null(labs1)) {
+    consensus <- labs2[,1]
+    names(consensus) <- rownames(labs2)
+    return(consensus)
+  } else if (is.null(labs2)) {
+    consensus <- labs1[,1]
+    names(consensus) <- rownames(labs1)
+    return(consensus)
+  }  
+  
+  #Combine labels
+  comb <- as.data.frame(labs1)
+  comb[,"l2"] <- NA 
+  colnames(comb) <- c("l1","l2")
+  
+  comb[rownames(labs2),"l2"] <- labs2
+  
+  consensus <- apply(comb, 1, function(x) {
+    if (is.na(x[["l1"]]) & is.na(x[["l2"]])) {
+      NA
+    } else if (is.na(x[["l1"]]) & !is.na(x[["l2"]])) {
+      x[["l2"]]
+    } else if (is.na(x[["l2"]]) & !is.na(x[["l1"]])) {
+      x[["l1"]]
+    } else if (x[["l1"]] == x[["l2"]]) {
+      x[["l1"]]  
+    } else {
+      NA
+    }
+  })
+  return(consensus)   
+}
