@@ -184,6 +184,7 @@ read.sc.query <- function(filename,
 #' @param fast.umap.predict Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
 #' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
+#' @param progressbar Whether to show a progress bar for projection process or not (requires \link{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
 #' @examples
 #' data(query_example_seurat)
@@ -205,7 +206,8 @@ make.projection <- function(query, ref=NULL,
                             fast.umap.predict=FALSE,
                             ortholog_table=NULL,
                             scGate_model=NULL,
-                            ncores=1) {
+                            ncores=1,
+                            progressbar = TRUE) {
    
   
   if(is.null(ref)){
@@ -248,7 +250,7 @@ make.projection <- function(query, ref=NULL,
   if (ncores > length(query.list)) {
     ncores <- length(query.list)
   }
-  param <- BiocParallel::MulticoreParam(workers=ncores)
+  param <- BiocParallel::MulticoreParam(workers=ncores, progressbar = progressbar)
   
   #Projection over list of datasets
   projected.list <- BiocParallel::bplapply(
