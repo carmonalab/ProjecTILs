@@ -4,12 +4,14 @@
 \alias{merge.Seurat.embeddings}
 \title{Merge Seurat objects, including reductions (e.g. PCA, UMAP, ICA)}
 \usage{
-\method{merge}{Seurat.embeddings}(x = NULL, y = NULL, ...)
+\method{merge}{Seurat.embeddings}(x = NULL, y = NULL, merge.dr = NULL, ...)
 }
 \arguments{
 \item{x}{First object to merge}
 
 \item{y}{Second object to merge}
+
+\item{merge.dr}{Which reductions to merge. By default merges all reductions shared by the two objects.}
 
 \item{...}{More parameters to \link{merge} function}
 }

@@ -1304,6 +1304,7 @@ make.reference <- function(ref,
 #'
 #' @param x First object to merge
 #' @param y Second object to merge
+#' @param merge.dr Which reductions to merge. By default merges all reductions shared by the two objects.
 #' @param ... More parameters to \link{merge} function
 #' @return A merged Seurat object
 #' @examples 
@@ -1313,27 +1314,14 @@ make.reference <- function(ref,
 #' @import Seurat
 #' @export merge.Seurat.embeddings
 
-merge.Seurat.embeddings <- function(x=NULL, y=NULL, ...)
-{  
-  #first regular Seurat merge, inheriting parameters
-  m <- merge(x, y, ...)
-  #preserve reductions (PCA, UMAP, ...)
-  
-  reds <- intersect(names(x@reductions), names(y@reductions))
-  for (r in reds) {
-    message(sprintf("Merging %s embeddings...", r))
-    
-    m@reductions[[r]] <- x@reductions[[r]]
-    if (dim(y@reductions[[r]]@cell.embeddings)[1]>0) {
-      m@reductions[[r]]@cell.embeddings <- rbind(m@reductions[[r]]@cell.embeddings, y@reductions[[r]]@cell.embeddings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings)[1]>0) {
-      m@reductions[[r]]@feature.loadings <- rbind(m@reductions[[r]]@feature.loadings, y@reductions[[r]]@feature.loadings)
-    }
-    if (dim(y@reductions[[r]]@feature.loadings.projected)[1]>0) {
-      m@reductions[[r]]@feature.loadings.projected <- rbind(m@reductions[[r]]@feature.loadings.projected, y@reductions[[r]]@feature.loadings.projected)
-    }
+merge.Seurat.embeddings <- function(x=NULL, y=NULL, merge.dr=NULL, ...)
+{ 
+  if (is.null(merge.dr)) {  #merge all shared reductions, by default
+    merge.dr <- intersect(names(x@reductions), names(y@reductions))
   }
+  #Use Seurat merge function, inheriting parameters
+  m <- merge(x, y, merge.dr=merge.dr, ...)
+
   return(m)
 }
 
