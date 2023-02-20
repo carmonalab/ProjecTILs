@@ -371,6 +371,8 @@ cellstate.predict = function(ref, query,
 #' @param pointsize Point size for cells in projected query
 #' @param ref.alpha Transparency parameter for reference cells
 #' @param ref.size Adjust point size for reference cells
+#' @param ... Additional parameters for \code{DimPlot}, e.g. raster=T to
+#'    limit image size
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' data(query_example_seurat)
@@ -385,7 +387,7 @@ cellstate.predict = function(ref, query,
 
 plot.projection = function(ref, query=NULL, labels.col="functional.cluster",
                           cols=NULL, linesize=1, pointsize=1,
-                          ref.alpha=0.3, ref.size=NULL) {
+                          ref.alpha=0.3, ref.size=NULL, ...) {
   
   labels <- ref[[labels.col]][,1]
   
@@ -414,11 +416,11 @@ plot.projection = function(ref, query=NULL, labels.col="functional.cluster",
   
   if (is.null(query)) {
     p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col, 
-                 repel = TRUE, pt.size=ref.size, cols=cols_use) +
+                 repel = TRUE, pt.size=ref.size, cols=cols_use, ...) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
     p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col,
-                 repel = TRUE, pt.size=ref.size, cols=cols_use) +
+                 repel = TRUE, pt.size=ref.size, cols=cols_use, ...) +
       geom_point(data.frame(query@reductions$umap@cell.embeddings), 
                  mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
       geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), 

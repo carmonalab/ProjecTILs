@@ -12,7 +12,8 @@
   linesize = 1,
   pointsize = 1,
   ref.alpha = 0.3,
-  ref.size = NULL
+  ref.size = NULL,
+  ...
 )
 }
 \arguments{
@@ -31,6 +32,9 @@
 \item{ref.alpha}{Transparency parameter for reference cells}
 
 \item{ref.size}{Adjust point size for reference cells}
+
+\item{...}{Additional parameters for \code{DimPlot}, e.g. raster=T to
+limit image size}
 }
 \value{
 UMAP plot of reference map with projected query set in the same space
