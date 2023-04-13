@@ -1869,3 +1869,69 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   }
   return(h)
 }
+
+#' Gene expression markers shared by multiple groups of cells
+#'
+#' This function expands \link[Seurat]{FindAllMarkers} to find markers that are differentially expressed across multiple
+#' datasets or samples. Given a Seurat object with identity classes (for example annotated clusters) and a grouping
+#' variable (for example a Sample ID), it calculate differentially expressed genes (DEGs) individually for each sample. 
+#' Then it determines the fraction of samples for which the gene was found to be differentially expressed.
+#' 
+#' This function can be useful to find marker genes that are specific for individual cell types, and that are found
+#' to be so consistently across multiple samples.
+#'
+#' @param object A Seurat object
+#' @param split.by A metadata column name - the data will be split by this column to calculate \link[Seurat]{FindAllMarkers}
+#'     separately for each data split
+#' @param only.pos Only return positive markers (TRUE by default)   
+#' @param min.cells.group Minimum number of cells in the group - if lower the group is skipped
+#' @param min.freq Only return markers which are differentially expressed in at least this fraction of datasets.
+#' @param ... Additional paramters to \link[Seurat]{FindAllMarkers}
+#' @return A list of marker genes for each identity class (typically clusters), with an associated numerical value.
+#'     This value represents the fraction of datasets for which the marker was found to be differentially expressed.
+#' @importFrom dplyr filter select
+#' @examples
+#' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
+#' Idents(ref) <- "functional.cluster"
+#' FindAllMarkers.bygroup(ref, split.by = "Sample", min.cells.group=30, min.freq=0.8)
+#' @export FindAllMarkers.bygroup
+
+FindAllMarkers.bygroup <- function(object,
+                                   split.by = NULL,
+                                   only.pos = TRUE,
+                                   min.cells.group = 10,
+                                   min.freq = 0.5,
+                                   ...) {
+  if (is.null(split.by)) {
+    stop("Please provide a grouping variable with 'split.by' parameter")
+  }
+  obj.list <- SplitObject(object, split.by = split.by)
+  ids <- names(table(Idents(object)))
+  meta <- object[[]]
+  
+  deg <- lapply(obj.list, function(x){
+    FindAllMarkers(x, only.pos = only.pos,
+                   min.cells.group = min.cells.group, ...)
+  })
+  
+  genes <- lapply(ids, function(i) {
+    
+    #count groups with at least min cells
+    cells <- Idents(object) == i
+    t <- table(meta[cells, split.by])
+    max.c <- sum(t>=min.cells.group)
+    
+    #count occurrences
+    this <- lapply(deg, function(x) {
+      dplyr::filter(x, cluster==i) |> select(gene)
+    })
+    freqs <- table(unlist(this)) / max.c
+    
+    #minimum frequency
+    freqs <- freqs[freqs >= min.freq]
+    sort(freqs, decreasing = T)
+  })
+  names(genes) <- ids
+  
+  genes
+}
