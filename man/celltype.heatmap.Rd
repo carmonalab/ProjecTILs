@@ -12,6 +12,8 @@ celltype.heatmap(
   scale = "row",
   method = c("ward.D2", "ward.D", "average"),
   brewer.palette = "RdBu",
+  palette_reverse = F,
+  palette = NULL,
   cluster.col = "functional.cluster",
   metadata = NULL,
   order.by = NULL,
@@ -21,7 +23,8 @@ celltype.heatmap(
   min.cells = 10,
   show_samplenames = FALSE,
   remove.NA.meta = TRUE,
-  palette = NULL
+  breaks = seq(-2, 2, by = 0.1),
+  ...
 )
 }
 \arguments{
@@ -38,6 +41,10 @@ celltype.heatmap(
 \item{method}{A string or vector of strings indicating the clustering method to be used, default is "ward.D2"}
 
 \item{brewer.palette}{A string indicating the color palette to be used, default is "RdBu"}
+
+\item{palette_reverse}{A boolean indicating if color palette should be reversed, default is FALSE}
+
+\item{palette}{A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".}
 
 \item{cluster.col}{A string indicating the column name of the functional cluster to be used}
 
@@ -56,8 +63,6 @@ celltype.heatmap(
 \item{show_samplenames}{A boolean indicating whether the heatmap should display the sample names or not, default is FALSE}
 
 \item{remove.NA.meta}{A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE}
-
-\item{palette}{A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".}
 }
 \value{
 A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.

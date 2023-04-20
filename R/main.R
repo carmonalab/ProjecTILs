@@ -1703,6 +1703,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @param scale A string indicating the scale of the heatmap, default is "row"
 #' @param method A string or vector of strings indicating the clustering method to be used, default is "ward.D2"
 #' @param brewer.palette A string indicating the color palette to be used, default is "RdBu"
+#' @param palette_reverse A boolean indicating if color palette should be reversed, default is FALSE
 #' @param cluster.col A string indicating the column name of the functional cluster to be used
 #' @param metadata A vector of metadata to be used in the heatmap
 #' @param order.by A string indicating the column name to reorder the heatmap
@@ -1723,11 +1724,11 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
 #' @export celltype.heatmap
 celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
-                         method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
+                         method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu", palette_reverse=F, palette = NULL,
                          cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, flip=FALSE,
                          cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
-                         show_samplenames = FALSE, remove.NA.meta = TRUE, 
-                         palette = NULL) {
+                         show_samplenames = FALSE, remove.NA.meta = TRUE, breaks = seq(-2, 2, by = 0.1), ...
+                         ) {
   
   set.seed(123)
   
@@ -1817,9 +1818,14 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   
   
   # Setup color palette list
-  breaksList = seq(-2, 2, by = 0.1)
+  
   require(RColorBrewer)
-  color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaksList))
+  
+  if(palette_reverse){
+    color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaks))
+  } else{
+    color = colorRampPalette(brewer.pal(n = 7, name = brewer.palette))(length(breaks))  
+  }
   
   palettes.default <-  c("Paired","Set2","Accent","Dark2","Set1","Set3")
   if (is.null(palette)) {
@@ -1849,23 +1855,23 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   if (flip) { 
     h <- pheatmap::pheatmap(m, cluster_rows = cluster_samples,
                             cluster_cols = cluster_genes,scale = scale,
-                            breaks = breaksList, color=color, 
+                            breaks = breaks, color=color, 
                             annotation_row = annotation_col, 
                             show_rownames = show_samplenames,
                             border_color = NA,
                             annotation_colors = palette, 
                             fontsize_row=6,fontsize = 7, 
-                            clustering_method=method)
+                            clustering_method=method, ...)
   } else {
     h <- pheatmap::pheatmap(t(m),cluster_rows = cluster_genes,
                             cluster_cols = cluster_samples,scale = scale,
-                            breaks = breaksList, color=color, 
+                            breaks = breaks, color=color, 
                             annotation_col = annotation_col, 
                             show_colnames = show_samplenames,
                             border_color = NA,
                             annotation_colors = palette, 
                             fontsize_row=6,fontsize = 7, 
-                            clustering_method=method)
+                            clustering_method=method, ... )
   }
   return(h)
 }
