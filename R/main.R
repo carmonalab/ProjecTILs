@@ -1905,10 +1905,10 @@ FindAllMarkers.bygroup <- function(object,
   if (is.null(split.by)) {
     stop("Please provide a grouping variable with 'split.by' parameter")
   }
-  obj.list <- SplitObject(object, split.by = split.by)
   ids <- names(table(Idents(object)))
   meta <- object[[]]
   
+  obj.list <- SplitObject(object, split.by = split.by)
   deg <- lapply(obj.list, function(x){
     FindAllMarkers(x, only.pos = only.pos,
                    min.cells.group = min.cells.group, ...)
