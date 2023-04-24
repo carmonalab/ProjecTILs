@@ -191,6 +191,7 @@ read.sc.query <- function(filename,
 #' ref <- load.reference.map()
 #' make.projection(query_example_seurat, ref=ref)
 #' @import Seurat
+#' @importFrom STACAS FindAnchors.STACAS IntegrateData.STACAS
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
 #' @export make.projection
@@ -523,7 +524,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' ref <- load.reference.map()
 #' plot.states.radar(ref)
 #' @import ggplot2
-#' @import scales
+#' @importFrom scales hue_pal
 #' @importFrom patchwork wrap_plots plot_annotation
 #' @export plot.states.radar
 plot.states.radar = function(ref, query=NULL,
