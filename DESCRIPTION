@@ -1,7 +1,7 @@
 Package: ProjecTILs
 Type: Package
 Title: Reference-based analysis of scRNA-seq data
-Version: 3.0.5
+Version: 3.1.0
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta', email = 'massimo.andreatta@unil.ch', role = c('aut','cre'), comment = c(ORCID = '0000-0002-8036-2647')),
   person(given = 'Paul', family = 'Gueguen', email = 'paul.gueguen@unil.ch', role = c('aut'), comment = c(ORCID = '0000-0003-2930-6073')),
@@ -20,6 +20,7 @@ Imports:
     ggplot2,
     scales,
     pracma,
+    STACAS,
     UCell,
     scGate,
     pheatmap,

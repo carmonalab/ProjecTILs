@@ -119,9 +119,12 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
 
 #Helper for projecting individual data sets
 projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NULL, 
-                              direct.projection=FALSE, fast.umap.predict=FALSE, ortholog_table=NULL,
-                              k.weight=100, k.anchor=5, skip.normalize=FALSE, id="query1",
-                              anchor.coverage=1, correction.scale=100, alpha=0.5, remove.thr=0,
+                              direct.projection=FALSE, fast.umap.predict=FALSE,
+                              ortholog_table=NULL,
+                              STACAS.k.weight=100, STACAS.k.anchor=5,
+                              STACAS.anchor.coverage=1, STACAS.correction.scale=100,
+                              skip.normalize=FALSE, id="query1",
+                              alpha=0.5, remove.thr=0,
                               scGate_model=NULL, ncores=ncores) {
   
   retry.direct <- FALSE
@@ -169,7 +172,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     query <- filterCells(query, species=species.query$species, gating.model=scGate_model)
   }
   if (is.null(query)) {
-    message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))   #Update text
+    message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))
     return(NULL)
   }
   
@@ -236,36 +239,23 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         
         print(paste0("Aligning ", id, " to reference map for batch-correction..."))
         
-        if (dim(ref@assays$integrated@scale.data)[2]==0) {
-          ref <- ScaleData(ref, do.center=FALSE, do.scale=FALSE, features = genes4integration)
-        }
-        query <- ScaleData(query, do.center=FALSE, do.scale=FALSE, features = genes4integration)
+        proj.anchors <- FindAnchors.STACAS(object.list = list(ref, query),
+                           assay = c("integrated", query.assay),
+                           anchor.features = genes4integration,
+                           dims = 1:pca.dim,
+                           k.anchor = STACAS.k.anchor,
+                           alpha = alpha,
+                           anchor.coverage = STACAS.anchor.coverage,
+                           correction.scale = STACAS.correction.scale,
+                           verbose = FALSE)
         
-        ref <- RunPCA(ref, features = genes4integration,verbose = F)
-        query <- RunPCA(query, features = genes4integration,verbose = F)
+        #always integrate query into reference
+        tree <- matrix(c(-1,-2), nrow=1, ncol=2)
         
-        proj.anchors <- FindIntegrationAnchors_local(object.list = c(ref, query),
-            anchor.features = genes4integration,
-            dims = 1:pca.dim,
-            assay=c("integrated",query.assay),
-            k.anchor=k.anchor,
-            remove.thr=remove.thr,
-            anchor.coverage=anchor.coverage,
-            correction.scale=correction.scale,
-            alpha=alpha)
-        
-
-        #Use all anchors for re-weighting - essentially disables local weighting
-        if (k.weight == "max") {
-          k.weight <- length(unique(proj.anchors@anchors$cell2))
-        }
-        
-        #Do integration
-        all.genes <- intersect(row.names(ref), row.names(query))
-        proj.integrated <- IntegrateData(anchorset = proj.anchors, dims = 1:pca.dim,
-                                         features.to.integrate = all.genes,
-                                         k.weight = k.weight,
-                                         preserve.order = T, verbose=F)
+        proj.integrated <- IntegrateData.STACAS(proj.anchors, k.weight = STACAS.k.weight,
+                             dims=1:pca.dim, sample.tree = tree,
+                             features.to.integrate = genes4integration,
+                             verbose = FALSE)
         
         #Subset query data from integrated space
         cells_query <- colnames(query)
@@ -273,11 +263,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         
         projected@meta.data <- query.metadata
         
-        #Add anchor score to metadata
-        aa <- proj.anchors@anchors
-        aa.score <- aggregate(data=aa, x=aa$score, by=list(qcell = aa$cell2), FUN = mean)
-        projected@meta.data[,"anchor.score"] <- 0
-        projected@meta.data[aa.score$qcell, "anchor.score"] <- aa.score$x
+        rm(proj.anchors)
         
         #Make PCA and UMAP projections
         cat("\nProjecting corrected query onto Reference PCA space\n")
