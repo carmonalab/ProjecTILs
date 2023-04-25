@@ -24,7 +24,7 @@ To install `ProjecTILs` directly from its Git repository, run the following code
 install.packages("remotes")
 library(remotes)
 
-remotes::install_github("carmonalab/scGate")
+remotes::install_github("carmonalab/STACAS")
 remotes::install_github("carmonalab/ProjecTILs")
 ```
 
