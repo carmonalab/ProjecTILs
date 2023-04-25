@@ -62,6 +62,7 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @examples
 #' fname <- "./sample_data"
 #' querydata <- read.sc.query(fname, type="10x")
+#' @importFrom Matrix readMM
 #' @export read.sc.query
 
 read.sc.query <- function(filename,
