@@ -1182,7 +1182,11 @@ make.reference <- function(ref,
   if (is.null(ref@assays[[assay]])) {
     stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
   }
-  DefaultAssay(ref) <- assay
+  #make a copy of default assay
+  if (assay != "integrated") {
+    ref[["integrated"]] <- ref[[assay]]
+  }
+  DefaultAssay(ref) <- "integrated"
   
   if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
     varfeat <- ref@assays[[assay]]@var.features
@@ -1296,8 +1300,6 @@ make.reference <- function(ref,
     ref@misc$gene.panel <- markers
   }
   
-  #Store in integrated assay, to be understood by ProjecTILs
-  names(ref@assays)[names(ref@assays)==assay] = "integrated"
   DefaultAssay(ref) <- "integrated"
   
   return(ref)
