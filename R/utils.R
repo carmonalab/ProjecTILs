@@ -20,7 +20,8 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL){
   print(message)
   
   if (ncells.keep == 0) {
-    stop("Stopping. All cells were removed by cell filter!")
+    warning("Stopping. All cells were removed by cell filter!")
+    return(NULL)
   }
   
   #Parse metadata columns
