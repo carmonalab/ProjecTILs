@@ -1656,35 +1656,50 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
                        fast.umap.predict = fast.umap.predict, ...)
   
-  if(!is.list(q)) {
+  if (!is.null(q)) {
+    
+    if(!is.list(q)) {
       q <- list(query=q)
-  }
-  
-  #Cell type classification
-  q <- lapply(q, function(x) {
-      cellstate.predict(ref=ref, query=x,
-                        reduction=reduction,
-                        ndim=ndim, k=k,
-                        labels.col = labels.col)
-  })
-  
-  #Merge embeddings
-  q <- Reduce(merge.Seurat.embeddings, q)
-  
-  #Transfer labels to original query object
-  labs <- q[[labels.col]]
-  
-  if (overwrite) {
-    new.labs <- labs[[labels.col]]
-    names(new.labs) <- rownames(labs)
+    }
+    
+    #Cell type classification
+    q <- lapply(q, function(x) {
+      
+      cellstate.predict(
+        ref = ref,
+        query = x,
+        reduction = reduction,
+        ndim = ndim,
+        k = k,
+        labels.col = labels.col
+      )
+      
+    })
+    
+    #Merge embeddings
+    q <- Reduce(merge.Seurat.embeddings, q)
+    
+    #Transfer labels to original query object
+    labs <- q[[labels.col]]
+    
+    if (overwrite) {
+      new.labs <- labs[[labels.col]]
+      names(new.labs) <- rownames(labs)
+    } else {
+      new.labs <- combine_labels(current.labs, labs)
+    }
+    
+    query@meta.data[,labels.col] <- NA
+    query@meta.data[names(new.labs),labels.col] <- new.labs
+    
   } else {
-    new.labs <- combine_labels(current.labs, labs)
+    if(overwrite) {
+      query@meta.data[,labels.col] <- NA
+    }
   }
-  
-  query@meta.data[,labels.col] <- NA
-  query@meta.data[names(new.labs),labels.col] <- new.labs
   
   query
+  
 }
 
 
