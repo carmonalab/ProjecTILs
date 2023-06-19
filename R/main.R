@@ -192,6 +192,7 @@ read.sc.query <- function(filename,
 #' ref <- load.reference.map()
 #' make.projection(query_example_seurat, ref=ref)
 #' @import Seurat
+#' @import SeuratObject
 #' @importFrom STACAS FindAnchors.STACAS IntegrateData.STACAS
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
@@ -211,6 +212,10 @@ make.projection <- function(query, ref=NULL,
                             ncores=1,
                             progressbar = TRUE) {
    
+  
+  if (is.null(query)) {
+    return(NULL)
+  }
   
   if(is.null(ref)){
     print("Loading Default Reference Atlas...")
@@ -313,6 +318,10 @@ cellstate.predict = function(ref, query,
                              ndim=NULL,
                              k=20,
                              labels.col="functional.cluster") {
+  
+  if (is.null(query)) {
+    return(NULL)
+  }
   
   if (is.null(ndim)) {
     if (!is.null(ref@misc$umap_object$data)) {
@@ -1670,6 +1679,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   })
   
   #Merge embeddings
+  q[sapply(q, is.null)] <- NULL
   q <- Reduce(merge.Seurat.embeddings, q)
   
   #Transfer labels to original query object
