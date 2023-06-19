@@ -62,6 +62,7 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @examples
 #' fname <- "./sample_data"
 #' querydata <- read.sc.query(fname, type="10x")
+#' @importFrom Matrix readMM
 #' @export read.sc.query
 
 read.sc.query <- function(filename,
@@ -191,6 +192,7 @@ read.sc.query <- function(filename,
 #' ref <- load.reference.map()
 #' make.projection(query_example_seurat, ref=ref)
 #' @import Seurat
+#' @import SeuratObject
 #' @importFrom STACAS FindAnchors.STACAS IntegrateData.STACAS
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
@@ -210,6 +212,10 @@ make.projection <- function(query, ref=NULL,
                             ncores=1,
                             progressbar = TRUE) {
    
+  
+  if (is.null(query)) {
+    return(NULL)
+  }
   
   if(is.null(ref)){
     print("Loading Default Reference Atlas...")
@@ -312,6 +318,10 @@ cellstate.predict = function(ref, query,
                              ndim=NULL,
                              k=20,
                              labels.col="functional.cluster") {
+  
+  if (is.null(query)) {
+    return(NULL)
+  }
   
   if (is.null(ndim)) {
     if (!is.null(ref@misc$umap_object$data)) {
@@ -1656,50 +1666,36 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
                        fast.umap.predict = fast.umap.predict, ...)
   
-  if (!is.null(q)) {
-    
-    if(!is.list(q)) {
+  if(!is.list(q)) {
       q <- list(query=q)
-    }
-    
-    #Cell type classification
-    q <- lapply(q, function(x) {
-      
-      cellstate.predict(
-        ref = ref,
-        query = x,
-        reduction = reduction,
-        ndim = ndim,
-        k = k,
-        labels.col = labels.col
-      )
-      
-    })
-    
-    #Merge embeddings
-    q <- Reduce(merge.Seurat.embeddings, q)
-    
-    #Transfer labels to original query object
-    labs <- q[[labels.col]]
-    
-    if (overwrite) {
-      new.labs <- labs[[labels.col]]
-      names(new.labs) <- rownames(labs)
-    } else {
-      new.labs <- combine_labels(current.labs, labs)
-    }
-    
-    query@meta.data[,labels.col] <- NA
-    query@meta.data[names(new.labs),labels.col] <- new.labs
-    
-  } else {
-    if(overwrite) {
-      query@meta.data[,labels.col] <- NA
-    }
   }
   
-  query
+  #Cell type classification
+  q <- lapply(q, function(x) {
+      cellstate.predict(ref=ref, query=x,
+                        reduction=reduction,
+                        ndim=ndim, k=k,
+                        labels.col = labels.col)
+  })
   
+  #Merge embeddings
+  q[sapply(q, is.null)] <- NULL
+  q <- Reduce(merge.Seurat.embeddings, q)
+  
+  #Transfer labels to original query object
+  labs <- q[[labels.col]]
+  
+  if (overwrite) {
+    new.labs <- labs[[labels.col]]
+    names(new.labs) <- rownames(labs)
+  } else {
+    new.labs <- combine_labels(current.labs, labs)
+  }
+  
+  query@meta.data[,labels.col] <- NA
+  query@meta.data[names(new.labs),labels.col] <- new.labs
+  
+  query
 }
 
 

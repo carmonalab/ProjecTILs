@@ -1,29 +1,30 @@
 #Internal function to filter cells using scGate
 filterCells <- function(query.object, species="mouse", gating.model=NULL){
   
+  ncells <- ncol(query.object)
+  if (ncells <= 1) {
+    return(NULL)
+  }
+  
   data(cell.cycle.obj)
   query.object <- suppressWarnings(scGate(data=query.object,
                                           model = gating.model,
                                           verbose=FALSE,
                                           assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]]))
-  ncells <- ncol(query.object)
-  
+
   ncells.keep <- sum(query.object$is.pure == 'Pure')
-  if (ncells.keep > 0) {
-     query.object <- subset(query.object, subset=is.pure=='Pure') 
-  } else {
-     query.object <- NULL
-  }
+  
   message <- sprintf("%i out of %i ( %i%% ) non-pure cells removed. Use filter.cells=FALSE to avoid pre-filtering",
                      ncells - ncells.keep, ncells, round(100*(ncells-ncells.keep)/ncells))
   print(message)
   
-  if (ncells.keep == 0) {
-    warning("Stopping. All cells were removed by cell filter!")
+  if (ncells.keep <= 1) {
     return(NULL)
-  }
+  } 
   
+  query.object <- subset(query.object, subset=is.pure=='Pure') 
+
   #Parse metadata columns
   query.object$cycling.score <- query.object$cycling_UCell
   query.object$cycling.score.G1_S <- query.object$cycling_G1.S_UCell
