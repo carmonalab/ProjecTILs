@@ -10,7 +10,7 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL){
   }
   
   data(cell.cycle.obj)
-  query.object <- suppressWarnings(scGate(data=query.object,
+  query.object <- suppressWarnings(scGate::scGate(data=query.object,
                                           model = gating.model,
                                           verbose=FALSE,
                                           assay=DefaultAssay(query.object),

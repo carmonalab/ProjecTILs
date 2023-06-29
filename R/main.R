@@ -196,6 +196,7 @@ read.sc.query <- function(filename,
 #' @import Seurat
 #' @import SeuratObject
 #' @importFrom STACAS FindAnchors.STACAS IntegrateData.STACAS
+#' @importFrom scGate scGate
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
 #' @export make.projection
