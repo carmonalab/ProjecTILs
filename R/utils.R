@@ -5,6 +5,9 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL){
   if (ncells <= 1) {
     return(NULL)
   }
+  if (is.null(gating.model)) {
+    return(query.object)
+  }
   
   data(cell.cycle.obj)
   query.object <- suppressWarnings(scGate(data=query.object,
@@ -159,16 +162,13 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
   
   if(filter.cells){
-    require(scGate)
     message("Pre-filtering cells with scGate...")
-    
     if (is.null(scGate_model)) {  #read filter model from atlas
       if (!is.null(ref@misc$scGate[[species.query$species]])) {
         scGate_model <- ref@misc$scGate[[species.query$species]]
-      } else {   #if no model was specified, and no model was found in the atlas, use a default filter
-        message("No scGate model specified: using default filter for T cells")
-        models <- suppressMessages(scGate::get_scGateDB())
-        scGate_model <- models[[species.query$species]]$generic$Tcell  
+      } else {
+        scGate_model <- NULL
+        message("No scGate model specified: all cells will be projected")
       }
     }
     query <- filterCells(query, species=species.query$species, gating.model=scGate_model)

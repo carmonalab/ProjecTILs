@@ -12,7 +12,9 @@ To use a custom reference atlas, provide a .rds object or a URL to a .rds object
 prepared using \link{make.reference}}
 }
 \description{
-Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).
+Load or download the reference map for dataset projection.
+By the default it downloads a reference atlas of tumour-infiltrating
+lymphocytes (TILs) from mouse.
 }
 \examples{
 load.reference.map()

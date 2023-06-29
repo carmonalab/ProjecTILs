@@ -1,6 +1,8 @@
 #' Load Reference Atlas
 #'
-#' Load or download the reference map for dataset projection. By the default it downloads the reference atlas of tumour-infiltrating lymphocytes (TILs).
+#' Load or download the reference map for dataset projection.
+#' By the default it downloads a reference atlas of tumour-infiltrating
+#' lymphocytes (TILs) from mouse.
 #'
 #' @param ref Reference atlas as a Seurat object (by default downloads a mouse reference TIL atlas).
 #'     To use a custom reference atlas, provide a .rds object or a URL to a .rds object, storing a Seurat object
@@ -12,7 +14,7 @@ load.reference.map <- function(ref="referenceTIL") {
   if(identical(ref,"referenceTIL")){
     print("Loading Default Reference Atlas...")
     refFileName <- paste0(getwd(),"/ref_TILAtlas_mouse_v1.rds")
-    refUrl <- "https://ndownloader.figshare.com/files/23136746"
+    refUrl <- "https://ndownloader.figshare.com/files/41398167"
     if (file.exists(refFileName)){
       print(refFileName)
       tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
