@@ -28,8 +28,9 @@ separately for each data split}
 \item{...}{Additional paramters to \link[Seurat]{FindAllMarkers}}
 }
 \value{
-A list of marker genes for each identity class (typically clusters), with an associated numerical value.
-    This value represents the fraction of datasets for which the marker was found to be differentially expressed.
+A list of marker genes for each identity class (typically clusters), with two associated numerical values:
+    i) the fraction of datasets for which the marker was found to be differentially expressed; ii) the
+    average log-fold change for the genes across datasets
 }
 \description{
 This function expands \link[Seurat]{FindAllMarkers} to find markers that are differentially expressed across multiple

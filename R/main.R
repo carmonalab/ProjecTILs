@@ -1910,8 +1910,9 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
 #' @param min.cells.group Minimum number of cells in the group - if lower the group is skipped
 #' @param min.freq Only return markers which are differentially expressed in at least this fraction of datasets.
 #' @param ... Additional paramters to \link[Seurat]{FindAllMarkers}
-#' @return A list of marker genes for each identity class (typically clusters), with an associated numerical value.
-#'     This value represents the fraction of datasets for which the marker was found to be differentially expressed.
+#' @return A list of marker genes for each identity class (typically clusters), with two associated numerical values:
+#'     i) the fraction of datasets for which the marker was found to be differentially expressed; ii) the
+#'     average log-fold change for the genes across datasets
 #' @importFrom dplyr filter select
 #' @examples
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
@@ -1944,15 +1945,43 @@ FindAllMarkers.bygroup <- function(object,
     t <- table(meta[cells, split.by])
     max.c <- sum(t>=min.cells.group)
     
+    if (max.c == 0) {
+      return(NULL)
+    }
+    
     #count occurrences
-    this <- lapply(deg, function(x) {
-      dplyr::filter(x, cluster==i) |> select(gene)
+    fq <- lapply(deg, function(x) {
+      x[x$cluster==i, "gene"]
     })
-    freqs <- table(unlist(this)) / max.c
+    sums <- table(unlist(fq))
+    freqs <- sums / max.c
     
     #minimum frequency
+    sums <- sums[freqs >= min.freq]
     freqs <- freqs[freqs >= min.freq]
-    sort(freqs, decreasing = T)
+    if (length(freqs) == 0) {
+      return(NULL)
+    }
+    
+    fc <- lapply(deg, function(x) {
+      x[x$cluster==i & x$gene %in% names(freqs), c("gene","avg_log2FC")]
+    })
+    
+    avg.fc <- rep(0, length(freqs))
+    names(avg.fc) <- names(freqs)
+    
+    for (ds in names(fc)) {
+      avg.fc[fc[[ds]]$gene] <- avg.fc[fc[[ds]]$gene] + fc[[ds]]$avg_log2FC
+    }
+    avg.fc <- avg.fc/sums
+    
+    df <- data.frame(Gene = names(freqs), Freq=as.numeric(freqs))
+    df$avg.FC <- avg.fc
+    df$Gene <- as.character(df$Gene)
+    
+    df <- df[order(df$avg.FC, decreasing = T),]
+    
+    df
   })
   names(genes) <- ids
   
