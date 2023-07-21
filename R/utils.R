@@ -241,16 +241,28 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         
         print(paste0("Aligning ", id, " to reference map for batch-correction..."))
         
-        proj.anchors <- FindAnchors.STACAS(object.list = list(ref, query),
-                           assay = c("integrated", query.assay),
-                           anchor.features = genes4integration,
-                           dims = 1:pca.dim,
-                           k.anchor = STACAS.k.anchor,
-                           alpha = alpha,
-                           anchor.coverage = STACAS.anchor.coverage,
-                           correction.scale = STACAS.correction.scale,
-                           verbose = FALSE)
-        
+        #for compatibility with older versions of STACAS
+        is_x <- 'min.sample.size' %in% names(formals(FindAnchors.STACAS))
+          
+        if (is_x) {
+          proj.anchors <- FindAnchors.STACAS(object.list = list(ref, query),
+                                             assay = c("integrated", query.assay),
+                                             anchor.features = genes4integration,
+                                             dims = 1:pca.dim, alpha = alpha,
+                                             k.anchor = STACAS.k.anchor,
+                                             anchor.coverage = STACAS.anchor.coverage,
+                                             correction.scale = STACAS.correction.scale,
+                                             verbose = FALSE, min.sample.size = 1)
+        } else {
+          proj.anchors <- FindAnchors.STACAS(object.list = list(ref, query),
+                                             assay = c("integrated", query.assay),
+                                             anchor.features = genes4integration,
+                                             dims = 1:pca.dim, alpha = alpha,
+                                             k.anchor = STACAS.k.anchor,
+                                             anchor.coverage = STACAS.anchor.coverage,
+                                             correction.scale = STACAS.correction.scale,
+                                             verbose = FALSE)
+        }
         #always integrate query into reference
         tree <- matrix(c(-1,-2), nrow=1, ncol=2)
         
