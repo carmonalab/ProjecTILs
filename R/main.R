@@ -1929,14 +1929,20 @@ FindAllMarkers.bygroup <- function(object,
   if (is.null(split.by)) {
     stop("Please provide a grouping variable with 'split.by' parameter")
   }
+  
+  notNA <- colnames(object)[!is.na(Idents(object))]
+  object <- subset(object, cells=notNA)
+  
   ids <- names(table(Idents(object)))
   meta <- object[[]]
   
   obj.list <- SplitObject(object, split.by = split.by)
   deg <- lapply(obj.list, function(x){
-    FindAllMarkers(x, only.pos = only.pos,
-                   min.cells.group = min.cells.group, ...)
+    d <- suppressWarnings(FindAllMarkers(x, only.pos = only.pos,
+                   min.cells.group = min.cells.group, ...))
   })
+  degsize <- unlist(lapply(deg, nrow))
+  deg <- deg[degsize>0]
   
   genes <- lapply(ids, function(i) {
     
