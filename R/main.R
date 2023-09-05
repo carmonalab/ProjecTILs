@@ -306,6 +306,8 @@ make.projection <- function(query, ref=NULL,
 #' @param reduction The dimensionality reduction used to calculate pairwise distances. One of "pca" or "umap"
 #' @param ndim How many dimensions in the reduced space to be used for distance calculations
 #' @param k Number of neighbors to assign the cell type
+#' @param alpha Weight on internal label consistency (between 0 and 1)
+#' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param labels.col The metadata field of the reference to annotate the clusters (default: functional.cluster)
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
 #' @examples
@@ -315,11 +317,14 @@ make.projection <- function(query, ref=NULL,
 #' q <- cellstate.predict(ref, query=q)
 #' table(q$functional.cluster)
 #' @import Seurat
+#' @importFrom BiocNeighbors queryKNN AnnoyParam
 #' @export cellstate.predict
 cellstate.predict = function(ref, query,
                              reduction="pca",
                              ndim=NULL,
                              k=20,
+                             alpha=0.5,
+                             min.confidence=0.5,
                              labels.col="functional.cluster") {
   
   if (is.null(query)) {
@@ -334,14 +339,13 @@ cellstate.predict = function(ref, query,
     }
   }  
   
-  pca.dim=dim(ref@misc$umap_object$data)[2]
-  
-  tdim <- dim(ref@reductions[[reduction]]@cell.embeddings)[2]
+  tdim <- ncol(ref@reductions[[reduction]]@cell.embeddings)
   if (ndim > tdim) {
      warning(sprintf("Number of dimensions ndim=%i is larger than the dimensions in reduction %s - Using only first %i dimensions",ndim,reduction,tdim))
      ndim = tdim
   }
   labels <- ref[[labels.col]][,1]
+  levs <- levels(labels)
   
   ref.space <- ref@reductions[[reduction]]@cell.embeddings[,1:ndim]
   query.space <- query@reductions[[reduction]]@cell.embeddings[,1:ndim]
@@ -349,16 +353,30 @@ cellstate.predict = function(ref, query,
   pred.type <- rep("Unknown", dim(query.space)[1])
   pred.conf <- numeric(dim(query.space)[1])
 
-  #Use NN-search wrapper in Seurat
-  nn.method="rann"
-  nn.ranked <- Seurat:::NNHelper(data=ref.space, query=query.space, k = k, method = nn.method)
-
-  for (r in 1:dim(nn.ranked@nn.idx)[1]) {
-    top.k <- nn.ranked@nn.idx[r,]
-    scores <- sort(table(labels[top.k]), decreasing = T)/k
-    pred.type[r] <- names(scores)[1]
-    pred.conf[r] <- scores[1]
-  }
+  #Use NN-search implemented in BiocNeighbors
+  nn.toref <- queryKNN(ref.space, query.space, k=k, BNPARAM=AnnoyParam())
+  nn.self <- queryKNN(query.space, query.space, k=k+1, BNPARAM=AnnoyParam())
+  
+  #External kNN (to reference)
+  ext.nn <- apply(nn.toref$index, 1, function(x) {
+    top.k.lab <- factor(labels[x], levels=levs)
+    table(top.k.lab)/k
+  })
+  ext.top <- rownames(ext.nn)[apply(ext.nn, 2, which.max)]
+  
+  #Internal kNN (to query itself)
+  int.nn <- apply(nn.self$index, 1, function(x) {
+    top.k.lab <- factor(ext.top[x[-1]], levels=levs) #exclude self
+    table(top.k.lab)/k
+  })
+  
+  comb.nn <- (1-alpha)*ext.nn + alpha*int.nn
+  pred.type <- rownames(comb.nn)[apply(comb.nn, 2, which.max)]
+  pred.conf <- apply(comb.nn, 2, max)
+  
+  pred.type[pred.conf < min.confidence] <- NA
+  pred.conf[pred.conf < min.confidence] <- NA
+  
   pred <- as.data.frame(cbind(row.names(query.space), pred.type, pred.conf), stringsAsFactors = FALSE)
   row.names(pred) <- row.names(query.space)
   colnames(pred) <- c("id","pred.state","confidence")

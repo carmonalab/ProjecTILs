@@ -10,6 +10,8 @@ cellstate.predict(
   reduction = "pca",
   ndim = NULL,
   k = 20,
+  alpha = 0.5,
+  min.confidence = 0.5,
   labels.col = "functional.cluster"
 )
 }
@@ -23,6 +25,10 @@ cellstate.predict(
 \item{ndim}{How many dimensions in the reduced space to be used for distance calculations}
 
 \item{k}{Number of neighbors to assign the cell type}
+
+\item{alpha}{Weight on internal label consistency (between 0 and 1)}
+
+\item{min.confidence}{Minimum confidence score to return cell type labels (otherwise NA)}
 
 \item{labels.col}{The metadata field of the reference to annotate the clusters (default: functional.cluster)}
 }
