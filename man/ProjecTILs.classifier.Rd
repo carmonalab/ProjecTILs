@@ -34,7 +34,7 @@ been previously subset to cell types represented in the reference.}
 \item{k}{Number of neighbors for cell type classification}
 
 \item{labels.col}{The metadata field with label annotations of the reference, which will
-be transfered to the query dataset}
+be transferred to the query dataset}
 
 \item{overwrite}{Replace any existing labels in \code{labels.col} with new labels.
 This may be useful for predicting cell types using multiple reference maps; run
@@ -44,8 +44,9 @@ with new labels from a second reference map.}
 \item{...}{Additional parameters to \link[ProjecTILs]{make.projection}}
 }
 \value{
-The query object with an additional metadata column containing predicted cell labels.
-If cells are filtered prior to projection, they will be labeled as 'NA'
+The query object with a additional metadata columns containing predicted cell labels
+    and confidence scores for the predicted cell labels
+    #' If cells are filtered prior to projection, they will be labeled as 'NA'
 }
 \description{
 Apply label transfer to annotate a query dataset with the cell types of a reference object.

@@ -1621,14 +1621,15 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field with label annotations of the reference, which will
-#' be transfered to the query dataset
+#' be transferred to the query dataset
 #' @param overwrite Replace any existing labels in \code{labels.col} with new labels.
 #'     This may be useful for predicting cell types using multiple reference maps; run
 #'     this function with \code{overwrite=FALSE} to combine existing labels
 #'     with new labels from a second reference map.
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
-#' @return The query object with an additional metadata column containing predicted cell labels.
-#' If cells are filtered prior to projection, they will be labeled as 'NA'
+#' @return The query object with a additional metadata columns containing predicted cell labels
+#'     and confidence scores for the predicted cell labels
+#'     #' If cells are filtered prior to projection, they will be labeled as 'NA'
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
@@ -1651,10 +1652,11 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   if(is.list(query)) {
      stop("Query must be a single Seurat object")
   }
+  labels.col.conf <- paste0(labels.col, ".conf")
   
   current.labs <- NULL
   if (labels.col %in% colnames(query[[]])) {
-    current.labs <- query[[labels.col]]
+    current.labs <- query[[c(labels.col, labels.col.conf)]]
   }
   
   if (!is.null(split.by)) {
@@ -1686,17 +1688,19 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   q <- Reduce(merge.Seurat.embeddings, q)
   
   #Transfer labels to original query object
-  labs <- q[[labels.col]]
+  labs <- q[[c(labels.col,labels.col.conf)]]
   
   if (overwrite) {
-    new.labs <- labs[[labels.col]]
-    names(new.labs) <- rownames(labs)
+    new.labs <- labs
   } else {
-    new.labs <- combine_labels(current.labs, labs)
+    new.labs <- combine_labels_and_confidence(current.labs, labs,
+                                              labels.col, labels.col.conf)
   }
   
   query@meta.data[,labels.col] <- NA
-  query@meta.data[names(new.labs),labels.col] <- new.labs
+  query@meta.data[,labels.col.conf] <- NA
+  query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
+  query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
   
   query
 }

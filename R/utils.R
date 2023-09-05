@@ -379,17 +379,39 @@ silhouette_2sets <- function(dist, labs.x, labs.y) {
   res
 } 
 
+#Combine labels from two runs of the classifier to return a consensus label and confidence score
+combine_labels_and_confidence <- function(labs1, labs2,
+                                          labels.col = "functional.cluster",
+                                          labels.col.conf = "functional.cluster.conf") {
+  l1 <- labs1[[labels.col]]
+  names(l1) <- rownames(labs1)
+  l2 <- labs2[[labels.col]]
+  names(l2) <- rownames(labs2)
+  new.labs <- combine_labels(l1, l2)
+  
+  c1 <- labs1[[labels.col.conf]]
+  names(c1) <- rownames(labs1)
+  c2 <- labs2[[labels.col.conf]]
+  names(c2) <- rownames(labs2)
+  new.conf <- combine_confidence(c1, c2)
+  
+  new.conf[is.na(new.labs)] <- NA 
+  
+  comb <- as.data.frame(new.labs)
+  comb[,2] <- new.conf
+  colnames(comb) <- c(labels.col, labels.col.conf)
+  comb
+}
+
 #Combine labels from two runs of the classifier to return a consensus label
 combine_labels <- function(labs1, labs2) {
   
   #No prior labels
   if (is.null(labs1)) {
-    consensus <- labs2[,1]
-    names(consensus) <- rownames(labs2)
+    consensus <- labs2
     return(consensus)
   } else if (is.null(labs2)) {
-    consensus <- labs1[,1]
-    names(consensus) <- rownames(labs1)
+    consensus <- labs1
     return(consensus)
   }  
   
@@ -398,7 +420,7 @@ combine_labels <- function(labs1, labs2) {
   comb[,"l2"] <- NA 
   colnames(comb) <- c("l1","l2")
   
-  comb[rownames(labs2),"l2"] <- labs2
+  comb[names(labs2),"l2"] <- labs2
   
   consensus <- apply(comb, 1, function(x) {
     if (is.na(x[["l1"]]) & is.na(x[["l2"]])) {
@@ -415,3 +437,28 @@ combine_labels <- function(labs1, labs2) {
   })
   return(consensus)   
 }
+
+#Combine labels from two runs of the classifier to return a consensus label
+combine_confidence <- function(conf1, conf2) {
+  
+  #Combine labels
+  comb <- as.data.frame(conf1)
+  comb[,"l2"] <- NA 
+  colnames(comb) <- c("l1","l2")
+  
+  comb[names(conf2),"l2"] <- conf2
+  
+  consensus <- apply(comb, 1, function(x) {
+    if (is.na(x[["l1"]]) & is.na(x[["l2"]])) {
+      NA
+    } else if (is.na(x[["l1"]]) & !is.na(x[["l2"]])) {
+      x[["l2"]]
+    } else if (is.na(x[["l2"]]) & !is.na(x[["l1"]])) {
+      x[["l1"]]
+    } else {
+      (x[["l1"]] + x[["l2"]])/2
+    }
+  })
+  return(consensus)   
+}
+
