@@ -374,7 +374,7 @@ cellstate.predict = function(ref, query,
     (wgts %*% nn.w) / sum(nn.w)
     
   })
-  
+  rownames(comb.nn) <- row.names(ext.nn)
   pred.type <- rownames(comb.nn)[apply(comb.nn, 2, which.max)]
   pred.conf <- apply(comb.nn, 2, max)
   
