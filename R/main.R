@@ -1582,6 +1582,8 @@ compute_silhouette <- function(ref, query=NULL,
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field of the reference to annotate the clusters
+#' @param alpha Weight on internal label consistency (between 0 and 1)
+#' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
 #' @examples
@@ -1595,6 +1597,8 @@ Run.ProjecTILs <- function(query, ref=NULL,
                            split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
+                           alpha=0.5,
+                           min.confidence=0.5,
                            labels.col="functional.cluster", ...) {
     
     if (!is.null(split.by)) {
@@ -1615,6 +1619,8 @@ Run.ProjecTILs <- function(query, ref=NULL,
         cellstate.predict(ref=ref, query=x,
                           reduction=reduction,
                           ndim=ndim, k=k,
+                          alpha=alpha,
+                          min.confidence = min.confidence,
                           labels.col = labels.col)
     })
     #Merge embeddings
@@ -1643,6 +1649,8 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field with label annotations of the reference, which will
 #' be transferred to the query dataset
+#' @param alpha Weight on internal label consistency (between 0 and 1)
+#' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param overwrite Replace any existing labels in \code{labels.col} with new labels.
 #'     This may be useful for predicting cell types using multiple reference maps; run
 #'     this function with \code{overwrite=FALSE} to combine existing labels
@@ -1662,6 +1670,8 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
+                           alpha=0.5,
+                           min.confidence=0.5,
                            labels.col="functional.cluster",
                            overwrite=TRUE,
                            ...) {
@@ -1701,6 +1711,8 @@ ProjecTILs.classifier <- function(query, ref=NULL,
       cellstate.predict(ref=ref, query=x,
                         reduction=reduction,
                         ndim=ndim, k=k,
+                        alpha=alpha,
+                        min.confidence=min.confidence,
                         labels.col = labels.col)
   })
   

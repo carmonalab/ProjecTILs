@@ -12,6 +12,8 @@ ProjecTILs.classifier(
   reduction = "pca",
   ndim = NULL,
   k = 20,
+  alpha = 0.5,
+  min.confidence = 0.5,
   labels.col = "functional.cluster",
   overwrite = TRUE,
   ...
@@ -32,6 +34,10 @@ been previously subset to cell types represented in the reference.}
 \item{ndim}{The number of dimensions used for cell type classification}
 
 \item{k}{Number of neighbors for cell type classification}
+
+\item{alpha}{Weight on internal label consistency (between 0 and 1)}
+
+\item{min.confidence}{Minimum confidence score to return cell type labels (otherwise NA)}
 
 \item{labels.col}{The metadata field with label annotations of the reference, which will
 be transferred to the query dataset}
