@@ -349,25 +349,28 @@ cellstate.predict = function(ref, query,
   
   ref.space <- ref@reductions[[reduction]]@cell.embeddings[,1:ndim]
   query.space <- query@reductions[[reduction]]@cell.embeddings[,1:ndim]
+  querysize <- nrow(query.space)
 
   pred.type <- rep("Unknown", dim(query.space)[1])
   pred.conf <- numeric(dim(query.space)[1])
 
   #Use NN-search implemented in BiocNeighbors
   nn.toref <- queryKNN(ref.space, query.space, k=k, BNPARAM=AnnoyParam())
-  nn.self <- queryKNN(query.space, query.space, k=k+1, BNPARAM=AnnoyParam())
+  nn.self <- queryKNN(query.space, query.space, k=min(k,querysize), BNPARAM=AnnoyParam())
   
   #External kNN (to reference)
   ext.nn <- apply(nn.toref$index, 1, function(x) {
     top.k.lab <- factor(labels[x], levels=levs)
     table(top.k.lab)/k
   })
-  ext.top <- rownames(ext.nn)[apply(ext.nn, 2, which.max)]
-  
-  #Internal kNN (to query itself)
+
+  #Sum of confidence weights of internal neighbors
   int.nn <- apply(nn.self$index, 1, function(x) {
-    top.k.lab <- factor(ext.top[x[-1]], levels=levs) #exclude self
-    table(top.k.lab)/k
+    wgts <- vapply(x, FUN.VALUE=vector("numeric", length=length(levs)),
+                   FUN = function(y) {
+                     ext.nn[,y]
+                   })
+    apply(wgts, 1, sum)/k
   })
   
   comb.nn <- (1-alpha)*ext.nn + alpha*int.nn
