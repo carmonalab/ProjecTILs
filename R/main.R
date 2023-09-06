@@ -306,7 +306,7 @@ make.projection <- function(query, ref=NULL,
 #' @param reduction The dimensionality reduction used to calculate pairwise distances. One of "pca" or "umap"
 #' @param ndim How many dimensions in the reduced space to be used for distance calculations
 #' @param k Number of neighbors to assign the cell type
-#' @param gamma Weight on internal label consistency (between 0 and 1)
+#' @param nn.decay Weight decay for internal nearest neighbors (between 0 and 1)
 #' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param labels.col The metadata field of the reference to annotate the clusters (default: functional.cluster)
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
@@ -323,9 +323,8 @@ cellstate.predict = function(ref, query,
                              reduction="pca",
                              ndim=NULL,
                              k=20,
-                             gamma=1,
                              min.confidence=0.5,
-                             decay=0.1,
+                             nn.decay=0.1,
                              labels.col="functional.cluster") {
   
   if (is.null(query)) {
@@ -358,7 +357,7 @@ cellstate.predict = function(ref, query,
   #Use NN-search implemented in BiocNeighbors
   nn.toref <- queryKNN(ref.space, query.space, k=k, BNPARAM=AnnoyParam())
   nn.self <- queryKNN(query.space, query.space, k=min(k,querysize), BNPARAM=AnnoyParam())
-  nn.w <- (1-decay)^(seq(0, min(k,querysize)-1))
+  nn.w <- (1-nn.decay)^(seq(0, min(k,querysize)-1))
   
   #External kNN (to reference)
   ext.nn <- apply(nn.toref$index, 1, function(x) {
@@ -367,7 +366,7 @@ cellstate.predict = function(ref, query,
   })
 
   #Sum of confidence weights of internal neighbors
-  int.nn <- apply(nn.self$index, 1, function(x) {
+  comb.nn <- apply(nn.self$index, 1, function(x) {
     wgts <- vapply(x, FUN.VALUE=vector("numeric", length=length(levs)),
                    FUN = function(y) {
                      ext.nn[,y]
@@ -376,7 +375,6 @@ cellstate.predict = function(ref, query,
     
   })
   
-  comb.nn <- (1-gamma)*ext.nn + gamma*int.nn
   pred.type <- rownames(comb.nn)[apply(comb.nn, 2, which.max)]
   pred.conf <- apply(comb.nn, 2, max)
   
@@ -1585,7 +1583,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field of the reference to annotate the clusters
-#' @param gamma Weight on internal label consistency (between 0 and 1)
+#' @param nn.decay Weight decay for internal nearest neighbors (between 0 and 1)
 #' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
@@ -1600,7 +1598,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
                            split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
-                           gamma=1,
+                           nn.decay=0.1,
                            min.confidence=0.5,
                            labels.col="functional.cluster", ...) {
     
@@ -1622,7 +1620,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
         cellstate.predict(ref=ref, query=x,
                           reduction=reduction,
                           ndim=ndim, k=k,
-                          gamma=gamma,
+                          nn.decay=nn.decay,
                           min.confidence = min.confidence,
                           labels.col = labels.col)
     })
@@ -1652,7 +1650,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field with label annotations of the reference, which will
 #' be transferred to the query dataset
-#' @param gamma Weight on internal label consistency (between 0 and 1)
+#' @param nn.decay Weight decay for internal nearest neighbors (between 0 and 1)
 #' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param overwrite Replace any existing labels in \code{labels.col} with new labels.
 #'     This may be useful for predicting cell types using multiple reference maps; run
@@ -1673,7 +1671,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            split.by = NULL,
                            reduction="pca",
                            ndim=NULL, k=20,
-                           gamma=1,
+                           nn.decay=0.1,
                            min.confidence=0.5,
                            labels.col="functional.cluster",
                            overwrite=TRUE,
@@ -1714,7 +1712,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
       cellstate.predict(ref=ref, query=x,
                         reduction=reduction,
                         ndim=ndim, k=k,
-                        gamma=gamma,
+                        nn.decay=nn.decay,
                         min.confidence=min.confidence,
                         labels.col = labels.col)
   })

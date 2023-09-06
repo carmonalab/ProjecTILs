@@ -12,7 +12,7 @@ ProjecTILs.classifier(
   reduction = "pca",
   ndim = NULL,
   k = 20,
-  gamma = 1,
+  nn.decay = 0.1,
   min.confidence = 0.5,
   labels.col = "functional.cluster",
   overwrite = TRUE,
@@ -35,7 +35,7 @@ been previously subset to cell types represented in the reference.}
 
 \item{k}{Number of neighbors for cell type classification}
 
-\item{gamma}{Weight on internal label consistency (between 0 and 1)}
+\item{nn.decay}{Weight decay for internal nearest neighbors (between 0 and 1)}
 
 \item{min.confidence}{Minimum confidence score to return cell type labels (otherwise NA)}
 
