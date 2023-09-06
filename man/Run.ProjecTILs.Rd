@@ -12,7 +12,7 @@ Run.ProjecTILs(
   reduction = "pca",
   ndim = NULL,
   k = 20,
-  alpha = 0.5,
+  gamma = 1,
   min.confidence = 0.5,
   labels.col = "functional.cluster",
   ...
@@ -34,7 +34,7 @@ been previously subset to cell types represented in the reference.}
 
 \item{k}{Number of neighbors for cell type classification}
 
-\item{alpha}{Weight on internal label consistency (between 0 and 1)}
+\item{gamma}{Weight on internal label consistency (between 0 and 1)}
 
 \item{min.confidence}{Minimum confidence score to return cell type labels (otherwise NA)}
 
