@@ -21,6 +21,8 @@ plot.states.radar(ref)
 
 \item{meta4radar}{Which metadata columns (numeric) to use for plotting. If not NULL, \code{genes4radar} are ignored}
 
+\item{norm.factor}{Normalization factor for rescaling expression or metadata values}
+
 \item{min.cells}{Only display cell states with a minimum number of cells}
 
 \item{cols}{Custom color palette for samples in radar plot}

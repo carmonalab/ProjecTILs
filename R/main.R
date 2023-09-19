@@ -548,6 +548,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param genes4radar Which genes to use for plotting
 #' @param meta4radar Which metadata columns (numeric) to use for plotting. If not NULL, \code{genes4radar} are ignored
 #' @param min.cells Only display cell states with a minimum number of cells
+#' @param norm.factor Normalization factor for rescaling expression or metadata values
 #' @param cols Custom color palette for samples in radar plot
 #' @param ref.assay The assay to pull the reference expression data
 #' @param query.assay The assay to pull the query expression data
@@ -568,6 +569,7 @@ plot.states.radar = function(ref, query=NULL,
                              genes4radar=c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb",
                                               "Gzmk","Pdcd1","Havcr2","Tox","Mki67"),
                              meta4radar=NULL,
+                             norm.factor=1,
                              min.cells=50, cols=NULL,
                              return=FALSE, return.as.list=FALSE) {
   
@@ -682,7 +684,7 @@ plot.states.radar = function(ref, query=NULL,
     s <- states_all[i]
     m[i,] <- apply(rr[, labels == s], MARGIN=1, function(x){mean(x, na.rm=T)})
   }
-  normfacs <- apply(m, MARGIN=2, function(x) {max(c(1,x), na.rm=T)})
+  normfacs <- apply(m, MARGIN=2, function(x) {max(c(norm.factor,x), na.rm=T)})
   
   pll <- list()
   for (j in 1:length(states_all)) {
