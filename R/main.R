@@ -1944,7 +1944,8 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
 #' @param object A Seurat object
 #' @param split.by A metadata column name - the data will be split by this column to calculate \link[Seurat]{FindAllMarkers}
 #'     separately for each data split
-#' @param only.pos Only return positive markers (TRUE by default)   
+#' @param only.pos Only return positive markers (TRUE by default)
+#' @param features Genes to test. Default is to use all genes   
 #' @param min.cells.group Minimum number of cells in the group - if lower the group is skipped
 #' @param min.freq Only return markers which are differentially expressed in at least this fraction of datasets.
 #' @param ... Additional paramters to \link[Seurat]{FindAllMarkers}
@@ -1961,11 +1962,15 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
 FindAllMarkers.bygroup <- function(object,
                                    split.by = NULL,
                                    only.pos = TRUE,
+                                   features = NULL,
                                    min.cells.group = 10,
                                    min.freq = 0.5,
                                    ...) {
   if (is.null(split.by)) {
     stop("Please provide a grouping variable with 'split.by' parameter")
+  }
+  if (!is.null(features)) {
+    features <- intersect(features, rownames(object))
   }
   
   notNA <- colnames(object)[!is.na(Idents(object))]

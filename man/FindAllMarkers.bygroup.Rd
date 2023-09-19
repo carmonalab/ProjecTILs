@@ -8,6 +8,7 @@ FindAllMarkers.bygroup(
   object,
   split.by = NULL,
   only.pos = TRUE,
+  features = NULL,
   min.cells.group = 10,
   min.freq = 0.5,
   ...
@@ -20,6 +21,8 @@ FindAllMarkers.bygroup(
 separately for each data split}
 
 \item{only.pos}{Only return positive markers (TRUE by default)}
+
+\item{features}{Genes to test. Default is to use all genes}
 
 \item{min.cells.group}{Minimum number of cells in the group - if lower the group is skipped}
 
