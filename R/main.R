@@ -1702,15 +1702,15 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   } else if (!is.list(query)) {
     query.list <- list(query=query)
   }
- 
+  
   ncores <- min(ncores, length(query.list))
   param <- MulticoreParam(workers=ncores)
 
   pred.labels <- BiocParallel::bplapply(
-    X = query.list, 
+    X = 1:length(query.list), 
     BPPARAM =  param,
-    FUN = function(q) {
-      classifier.singleobject(query=q, ref=ref,
+    FUN = function(i) {
+      classifier.singleobject(query=query[[i]], ref=ref,
                               filter.cells = filter.cells,
                               reduction=reduction,
                               ndim=ndim, k=k,
@@ -1720,6 +1720,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                               overwrite=overwrite, ...)
     }
   )
+  names(pred.labels) <- names(query.list)
   
 #  pred.labels <- lapply(
 #    X = query.list, 
