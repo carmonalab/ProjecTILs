@@ -1689,8 +1689,10 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   if (is.list(query)) {
     query.list <- query
     input.is.list <- TRUE
-    split.by <- NULL
-    message("List of query objects provided. Ignoring 'split.by' argument")
+    if (!is.null(split.by)) {
+      split.by <- NULL
+      message("List of query objects provided. Ignoring 'split.by' argument")
+    }
   } else {
     input.is.list <- FALSE
   }
@@ -1731,8 +1733,8 @@ ProjecTILs.classifier <- function(query, ref=NULL,
       new.labs <- pred.labels[[i]]
       query[[i]]@meta.data[,labels.col] <- NA
       query[[i]]@meta.data[,labels.col.conf] <- NA
-      query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
-      query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
+      query[[i]]@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
+      query[[i]]@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
     })
   } else {
     pred.labels.bind <- Reduce(rbind, pred.labels)
