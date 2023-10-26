@@ -383,6 +383,12 @@ silhouette_2sets <- function(dist, labs.x, labs.y) {
 combine_labels_and_confidence <- function(labs1, labs2,
                                           labels.col = "functional.cluster",
                                           labels.col.conf = "functional.cluster.conf") {
+  if (is.null(labs1)) {
+    return(labs2)
+  }
+  if (is.null(labs2)) {
+    return(labs1)
+  }
   l1 <- labs1[[labels.col]]
   names(l1) <- rownames(labs1)
   l2 <- labs2[[labels.col]]

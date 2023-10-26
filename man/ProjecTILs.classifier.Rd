@@ -11,9 +11,9 @@ ProjecTILs.classifier(
   split.by = NULL,
   reduction = "pca",
   ndim = NULL,
-  k = 20,
+  k = 5,
   nn.decay = 0.1,
-  min.confidence = 0.5,
+  min.confidence = 0.2,
   labels.col = "functional.cluster",
   overwrite = TRUE,
   ...
