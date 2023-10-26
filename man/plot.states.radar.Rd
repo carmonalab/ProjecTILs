@@ -7,7 +7,7 @@
 plot.states.radar(ref)
 }
 \arguments{
-\item{ref}{Reference Atlas}
+\item{ref}{Reference object}
 
 \item{query}{Query data, either as a Seurat object or as a list of Seurat objects}
 

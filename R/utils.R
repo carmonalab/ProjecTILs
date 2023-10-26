@@ -468,3 +468,59 @@ combine_confidence <- function(conf1, conf2) {
   return(consensus)   
 }
 
+#Run ProjecTILs.classifier on a single object
+classifier.singleobject <- function(query, ref=NULL,
+                                    filter.cells = TRUE,
+                                    reduction="pca",
+                                    ndim=NULL, k=5,
+                                    nn.decay=0.1,
+                                    min.confidence=0.2,
+                                    labels.col="functional.cluster",
+                                    overwrite=TRUE,
+                                    ...) {
+  #UMAP emb. only needed if we want to predict labels based on UMAP neighbors
+  if (reduction=="umap") {
+    fast.umap.predict <- FALSE
+  } else {
+    fast.umap.predict <- TRUE
+  }
+  
+  if(is.list(query)) {
+    stop("Query must be a single Seurat object")
+  }
+  labels.col.conf <- paste0(labels.col, ".conf")
+  
+  current.labs <- NULL
+  if (labels.col %in% colnames(query[[]])) {
+    current.labs <- query[[c(labels.col, labels.col.conf)]]
+  }
+  
+  query <- make.projection(query=query, ref=ref, filter.cells=filter.cells,
+                       fast.umap.predict = fast.umap.predict, ...)
+  
+  query <- cellstate.predict(ref=ref, query=query,
+                          reduction=reduction,
+                          ndim=ndim, k=k,
+                          nn.decay=nn.decay,
+                          min.confidence=min.confidence,
+                          labels.col = labels.col)
+  
+  #Extract new labels and combine (or overwrite) old labels
+  labs <- query[[c(labels.col,labels.col.conf)]]
+  
+  if (overwrite) {
+    new.labs <- labs
+  } else {
+    new.labs <- combine_labels_and_confidence(current.labs, labs,
+                                              labels.col, labels.col.conf)
+  }
+  return(new.labs)
+ 
+#   query@meta.data[,labels.col] <- NA
+#  query@meta.data[,labels.col.conf] <- NA
+#  query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
+#  query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
+#  query
+}
+
+

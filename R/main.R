@@ -257,10 +257,8 @@ make.projection <- function(query, ref=NULL,
   rm(query)
   
   #Parallelize (ncores>1)
-  if (ncores > length(query.list)) {
-    ncores <- length(query.list)
-  }
-  param <- BiocParallel::MulticoreParam(workers=ncores, progressbar = progressbar)
+  ncores <- min(ncores, length(query.list))
+  param <- MulticoreParam(workers=ncores, progressbar = progressbar)
   
   #Projection over list of datasets
   projected.list <- BiocParallel::bplapply(
@@ -319,7 +317,7 @@ make.projection <- function(query, ref=NULL,
 #' @import Seurat
 #' @importFrom BiocNeighbors queryKNN AnnoyParam
 #' @export cellstate.predict
-cellstate.predict = function(ref, query,
+cellstate.predict <- function(ref, query,
                              reduction="pca",
                              ndim=NULL,
                              k=5,
@@ -399,7 +397,7 @@ cellstate.predict = function(ref, query,
 #'
 #' Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
 #'
-#' @param ref Reference Atlas
+#' @param ref Reference object
 #' @param query Seurat object with query data
 #' @param labels.col The metadata field to annotate the clusters (default: functional.cluster)
 #' @param cols Custom color palette for clusters
@@ -408,7 +406,7 @@ cellstate.predict = function(ref, query,
 #' @param ref.alpha Transparency parameter for reference cells
 #' @param ref.size Adjust point size for reference cells
 #' @param ... Additional parameters for \code{DimPlot}, e.g. raster=T to
-#'    limit image size
+#'    limit image size 
 #' @return UMAP plot of reference map with projected query set in the same space
 #' @examples
 #' data(query_example_seurat)
@@ -420,8 +418,8 @@ cellstate.predict = function(ref, query,
 #' @importFrom scales alpha
 #' @importFrom grDevices rainbow
 #' @export plot.projection
-
-plot.projection = function(ref, query=NULL, labels.col="functional.cluster",
+#'
+plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
                           cols=NULL, linesize=1, pointsize=1,
                           ref.alpha=0.3, ref.size=NULL, ...) {
   
@@ -471,18 +469,21 @@ plot.projection = function(ref, query=NULL, labels.col="functional.cluster",
 #'
 #' Makes a barplot of the frequency of cell states in a query object.
 #'
-#' @param ref Seurat object with the reference object
+#' @param ref Reference object
 #' @param query Seurat object with query data
 #' @param labels.col The metadata field used to annotate the clusters (default: functional.cluster)
 #' @param metric One of `Count` or `Percent`. `Count` plots the absolute number of cells, `Percent` the fraction on the total number of cells.
-#' @param cols Custom color palette for clusters
+#' @param cols Custom color palette for clusters 
 #' @return Barplot of predicted state composition
 #' @examples
 #' plot.statepred.composition(query_example.seurat)
 #' @importFrom reshape2 melt
 #' @import ggplot2
 #' @export plot.statepred.composition
-plot.statepred.composition = function(ref, query, labels.col="functional.cluster",cols=NULL, metric=c("Count","Percent")) {
+#'
+plot.statepred.composition <- function(ref, query,
+                                      labels.col="functional.cluster",cols=NULL,
+                                      metric=c("Count","Percent")) {
   
   metric <- tolower(metric[1])
   
@@ -542,7 +543,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' Makes a radar plot of the expression level of a set of genes. It can be useful to compare
 #' the gene expression profile of different cell states in the reference atlas vs. a projected set.
 #'
-#' @param ref Reference Atlas
+#' @param ref Reference object
 #' @param query Query data, either as a Seurat object or as a list of Seurat objects
 #' @param labels.col The metadata field used to annotate the clusters
 #' @param genes4radar Which genes to use for plotting
@@ -555,7 +556,7 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @param return Return the combined plots instead of printing them to the default device (deprecated)
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
-#' @usage plot.states.radar(ref)
+#' @usage plot.states.radar(ref) 
 #' @examples
 #' ref <- load.reference.map()
 #' plot.states.radar(ref)
@@ -563,14 +564,15 @@ plot.statepred.composition = function(ref, query, labels.col="functional.cluster
 #' @importFrom scales hue_pal
 #' @importFrom patchwork wrap_plots plot_annotation
 #' @export plot.states.radar
-plot.states.radar = function(ref, query=NULL,
+#' 
+plot.states.radar <- function(ref, query=NULL,
                              labels.col="functional.cluster",
                              ref.assay='RNA', query.assay='RNA',
                              genes4radar=c("Foxp3","Cd4","Cd8a","Tcf7","Ccr7","Gzmb",
                                               "Gzmk","Pdcd1","Havcr2","Tox","Mki67"),
                              meta4radar=NULL,
                              norm.factor=1,
-                             min.cells=50, cols=NULL,
+                             min.cells=20, cols=NULL,
                              return=FALSE, return.as.list=FALSE) {
   
   #Make sure query is a list
@@ -910,7 +912,7 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 #' Add an extra dimension to the reference map (it can be suggested by `find.discriminant.dimensions`), to explore additional axes of variability
 #' in a query dataset compared to the reference map.
 #'
-#' @param ref Seurat object with reference atlas
+#' @param ref Seurat object with reference object
 #' @param query Seurat object with query data
 #' @param query.control Optionally, you can compare your query with a control sample, instead of the reference
 #' @param query.assay The data slot to be used for enrichment analysis
@@ -925,8 +927,9 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 #' @examples
 #' plot.discriminant.3d(ref, query=query, extra.dim="ICA_19")
 #' plot.discriminant.3d(ref, query=treated.set, query.control=control.set, extra.dim="ICA_2")
+#' 
 #' @export plot.discriminant.3d
-
+#'
 plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RNA",
                                  labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
   
@@ -1595,6 +1598,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 #' plot.projection(ref=ref, query=q)
 #' @export Run.ProjecTILs
+#' 
 Run.ProjecTILs <- function(query, ref=NULL,
                            filter.cells = TRUE,
                            split.by = NULL,
@@ -1642,7 +1646,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' See \link{load.reference.map} to load or download a reference atlas. 
 #' See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 #'
-#' @param query Query data stored in a Seurat object
+#' @param query Query data, either as single Seurat object or as a list of Seurat object
 #' @param ref Reference Atlas - if NULL, downloads the default TIL reference atlas
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 #'     been previously subset to cell types represented in the reference.
@@ -1661,12 +1665,13 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return The query object with a additional metadata columns containing predicted cell labels
 #'     and confidence scores for the predicted cell labels
-#'     #' If cells are filtered prior to projection, they will be labeled as 'NA'
+#'     If cells were filtered prior to projection, they will be labeled as 'NA'
 #' @examples
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- ProjecTILs.classifier(query_example_seurat, ref=ref)
 #' table(q$functional.cluster, useNA="ifany")
+#' @importFrom BiocParallel MulticoreParam bplapply
 #' @export ProjecTILs.classifier
 ProjecTILs.classifier <- function(query, ref=NULL,
                            filter.cells = TRUE,
@@ -1677,67 +1682,76 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                            min.confidence=0.2,
                            labels.col="functional.cluster",
                            overwrite=TRUE,
+                           ncores=1,
                            ...) {
   
-  fast.umap.predict <- TRUE
-  #only needed if we want to predict labels based on UMAP neighbors
-  if (reduction=="umap") { fast.umap.predict <- FALSE }
-  
-  if(is.list(query)) {
-     stop("Query must be a single Seurat object")
-  }
-  labels.col.conf <- paste0(labels.col, ".conf")
-  
-  current.labs <- NULL
-  if (labels.col %in% colnames(query[[]])) {
-    current.labs <- query[[c(labels.col, labels.col.conf)]]
+  if (is.list(query)) {
+    query.list <- query
+    input.is.list <- TRUE
+    split.by <- NULL
+    message("List of query objects provided. Ignoring 'split.by' argument")
+  } else {
+    input.is.list <- FALSE
   }
   
   if (!is.null(split.by)) {
       if (!split.by %in% colnames(query[[]])) {
           stop(sprintf("No grouping variable %s available in metadata", split.by))
       }
-      q <- SplitObject(query, split.by = split.by)
+      query.list <- SplitObject(query, split.by = split.by)
+  } else if (!is.list(query)) {
+    query.list <- list(query=query)
+  }
+ 
+  ncores <- min(ncores, length(query.list))
+  param <- MulticoreParam(workers=ncores)
+
+  pred.labels <- BiocParallel::bplapply(
+    X = query.list, 
+    BPPARAM =  param,
+    FUN = function(q) {
+      classifier.singleobject(query=q, ref=ref,
+                              filter.cells = filter.cells,
+                              reduction=reduction,
+                              ndim=ndim, k=k,
+                              nn.decay=nn.decay,
+                              min.confidence=min.confidence,
+                              labels.col=labels.col,
+                              overwrite=overwrite, ...)
+    }
+  )
+  
+#  pred.labels <- lapply(
+#    X = query.list, 
+#    FUN = function(q) {
+#      classifier.singleobject(query=q, ref=ref,
+#                              filter.cells = filter.cells,
+#                              reduction=reduction,
+#                              ndim=ndim, k=k,
+#                              nn.decay=nn.decay,
+#                              min.confidence=min.confidence,
+#                              labels.col=labels.col,
+#    overwrite=overwrite, ...)
+#    }
+#  )
+  
+  #Add new labels to original 'query' object
+  labels.col.conf <- paste0(labels.col, ".conf")
+  if (input.is.list) {
+    query <- lapply(seq_along(query), function(i){
+      new.labs <- pred.labels[[i]]
+      query[[i]]@meta.data[,labels.col] <- NA
+      query[[i]]@meta.data[,labels.col.conf] <- NA
+      query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
+      query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
+    })
   } else {
-      q <- query
+    pred.labels.bind <- Reduce(rbind, pred.labels)
+    query@meta.data[,labels.col] <- NA
+    query@meta.data[,labels.col.conf] <- NA
+    query@meta.data[rownames(pred.labels.bind),labels.col] <- pred.labels.bind[[labels.col]]
+    query@meta.data[rownames(pred.labels.bind),labels.col.conf] <- pred.labels.bind[[labels.col.conf]]
   }
-  #Run projection
-  q <- make.projection(query=q, ref=ref, filter.cells=filter.cells,
-                       fast.umap.predict = fast.umap.predict, ...)
-  
-  if(!is.list(q)) {
-      q <- list(query=q)
-  }
-  
-  #Cell type classification
-  q <- lapply(q, function(x) {
-      cellstate.predict(ref=ref, query=x,
-                        reduction=reduction,
-                        ndim=ndim, k=k,
-                        nn.decay=nn.decay,
-                        min.confidence=min.confidence,
-                        labels.col = labels.col)
-  })
-  
-  #Merge embeddings
-  q[sapply(q, is.null)] <- NULL
-  q <- Reduce(merge.Seurat.embeddings, q)
-  
-  #Transfer labels to original query object
-  labs <- q[[c(labels.col,labels.col.conf)]]
-  
-  if (overwrite) {
-    new.labs <- labs
-  } else {
-    new.labs <- combine_labels_and_confidence(current.labs, labs,
-                                              labels.col, labels.col.conf)
-  }
-  
-  query@meta.data[,labels.col] <- NA
-  query@meta.data[,labels.col.conf] <- NA
-  query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
-  query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
-  
   query
 }
 

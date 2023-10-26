@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{ref}{Seurat object with reference atlas}
+\item{ref}{Seurat object with reference object}
 
 \item{query}{Seurat object with query data}
 
@@ -43,4 +43,5 @@ in a query dataset compared to the reference map.
 \examples{
 plot.discriminant.3d(ref, query=query, extra.dim="ICA_19")
 plot.discriminant.3d(ref, query=treated.set, query.control=control.set, extra.dim="ICA_2")
+
 }

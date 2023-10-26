@@ -17,7 +17,7 @@
 )
 }
 \arguments{
-\item{ref}{Reference Atlas}
+\item{ref}{Reference object}
 
 \item{query}{Seurat object with query data}
 

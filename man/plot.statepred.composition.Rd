@@ -13,7 +13,7 @@
 )
 }
 \arguments{
-\item{ref}{Seurat object with the reference object}
+\item{ref}{Reference object}
 
 \item{query}{Seurat object with query data}
 

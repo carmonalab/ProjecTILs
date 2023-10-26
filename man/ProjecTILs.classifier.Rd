@@ -16,11 +16,12 @@ ProjecTILs.classifier(
   min.confidence = 0.2,
   labels.col = "functional.cluster",
   overwrite = TRUE,
+  ncores = 1,
   ...
 )
 }
 \arguments{
-\item{query}{Query data stored in a Seurat object}
+\item{query}{Query data, either as single Seurat object or as a list of Seurat object}
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
@@ -52,7 +53,7 @@ with new labels from a second reference map.}
 \value{
 The query object with a additional metadata columns containing predicted cell labels
     and confidence scores for the predicted cell labels
-    #' If cells are filtered prior to projection, they will be labeled as 'NA'
+    If cells were filtered prior to projection, they will be labeled as 'NA'
 }
 \description{
 Apply label transfer to annotate a query dataset with the cell types of a reference object.
