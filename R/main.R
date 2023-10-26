@@ -1710,7 +1710,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
     X = 1:length(query.list), 
     BPPARAM =  param,
     FUN = function(i) {
-      classifier.singleobject(query=query[[i]], ref=ref,
+      classifier.singleobject(query=query.list[[i]], ref=ref,
                               filter.cells = filter.cells,
                               reduction=reduction,
                               ndim=ndim, k=k,

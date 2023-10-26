@@ -496,7 +496,7 @@ classifier.singleobject <- function(query, ref=NULL,
   }
   
   query <- make.projection(query=query, ref=ref, filter.cells=filter.cells,
-                       fast.umap.predict = fast.umap.predict, ...)
+                       fast.umap.predict = fast.umap.predict, ncores=1, ...)
   
   query <- cellstate.predict(ref=ref, query=query,
                           reduction=reduction,
@@ -515,12 +515,6 @@ classifier.singleobject <- function(query, ref=NULL,
                                               labels.col, labels.col.conf)
   }
   return(new.labs)
- 
-#   query@meta.data[,labels.col] <- NA
-#  query@meta.data[,labels.col.conf] <- NA
-#  query@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
-#  query@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
-#  query
 }
 
 
