@@ -1662,6 +1662,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #'     This may be useful for predicting cell types using multiple reference maps; run
 #'     this function with \code{overwrite=FALSE} to combine existing labels
 #'     with new labels from a second reference map.
+#' @param ncores Number of cores for parallel processing     
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return The query object with a additional metadata columns containing predicted cell labels
 #'     and confidence scores for the predicted cell labels
@@ -1717,24 +1718,11 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                               nn.decay=nn.decay,
                               min.confidence=min.confidence,
                               labels.col=labels.col,
-                              overwrite=overwrite, ...)
+                              overwrite=overwrite,
+                              ncores=1, ...)
     }
   )
   names(pred.labels) <- names(query.list)
-  
-#  pred.labels <- lapply(
-#    X = query.list, 
-#    FUN = function(q) {
-#      classifier.singleobject(query=q, ref=ref,
-#                              filter.cells = filter.cells,
-#                              reduction=reduction,
-#                              ndim=ndim, k=k,
-#                              nn.decay=nn.decay,
-#                              min.confidence=min.confidence,
-#                              labels.col=labels.col,
-#    overwrite=overwrite, ...)
-#    }
-#  )
   
   #Add new labels to original 'query' object
   labels.col.conf <- paste0(labels.col, ".conf")

@@ -477,6 +477,7 @@ classifier.singleobject <- function(query, ref=NULL,
                                     min.confidence=0.2,
                                     labels.col="functional.cluster",
                                     overwrite=TRUE,
+                                    ncores=1,
                                     ...) {
   #UMAP emb. only needed if we want to predict labels based on UMAP neighbors
   if (reduction=="umap") {
@@ -496,7 +497,7 @@ classifier.singleobject <- function(query, ref=NULL,
   }
   
   query <- make.projection(query=query, ref=ref, filter.cells=filter.cells,
-                       fast.umap.predict = fast.umap.predict, ncores=1, ...)
+                       fast.umap.predict = fast.umap.predict, ncores=ncores, ...)
   
   query <- cellstate.predict(ref=ref, query=query,
                           reduction=reduction,

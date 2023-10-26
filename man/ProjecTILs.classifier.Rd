@@ -48,6 +48,8 @@ This may be useful for predicting cell types using multiple reference maps; run
 this function with \code{overwrite=FALSE} to combine existing labels
 with new labels from a second reference map.}
 
+\item{ncores}{Number of cores for parallel processing}
+
 \item{...}{Additional parameters to \link[ProjecTILs]{make.projection}}
 }
 \value{
