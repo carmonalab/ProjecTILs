@@ -1720,7 +1720,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                               nn.decay=nn.decay,
                               min.confidence=min.confidence,
                               labels.col=labels.col,
-                              overwrite=overwrite
+                              overwrite=overwrite,
                               ncores=1, ...)
     }
   )
