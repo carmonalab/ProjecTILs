@@ -1720,7 +1720,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
                               nn.decay=nn.decay,
                               min.confidence=min.confidence,
                               labels.col=labels.col,
-                              overwrite=overwrite,
+                              overwrite=overwrite
                               ncores=1, ...)
     }
   )
@@ -1731,11 +1731,14 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   if (input.is.list) {
     query <- lapply(seq_along(query), function(i){
       new.labs <- pred.labels[[i]]
-      query[[i]]@meta.data[,labels.col] <- NA
-      query[[i]]@meta.data[,labels.col.conf] <- NA
-      query[[i]]@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
-      query[[i]]@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
+      q <- query[[i]]
+      q@meta.data[,labels.col] <- NA
+      q@meta.data[,labels.col.conf] <- NA
+      q@meta.data[rownames(new.labs),labels.col] <- new.labs[[labels.col]]
+      q@meta.data[rownames(new.labs),labels.col.conf] <- new.labs[[labels.col.conf]]
+      q
     })
+    names(query) <- names(pred.labels)
   } else {
     pred.labels.bind <- Reduce(rbind, pred.labels)
     query@meta.data[,labels.col] <- NA
@@ -1743,7 +1746,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
     query@meta.data[rownames(pred.labels.bind),labels.col] <- pred.labels.bind[[labels.col]]
     query@meta.data[rownames(pred.labels.bind),labels.col.conf] <- pred.labels.bind[[labels.col.conf]]
   }
-  query
+  return(query)
 }
 
 
