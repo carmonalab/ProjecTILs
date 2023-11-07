@@ -8,6 +8,7 @@ find.discriminant.genes(
   ref,
   query,
   query.control = NULL,
+  ref.assay = "RNA",
   query.assay = "RNA",
   state = "largest",
   labels.col = "functional.cluster",
@@ -24,7 +25,9 @@ find.discriminant.genes(
 
 \item{query.control}{Optionally, you can compare your query with a control sample, instead of the reference}
 
-\item{query.assay}{The data slot to be used for enrichment analysis}
+\item{ref.assay}{The referece assay to be used for DE analysis}
+
+\item{query.assay}{The query assay to be used for DEG analyis, if comparing to the reference}
 
 \item{state}{Perform discriminant analysis on this cell state. Can be either:
 \itemize{

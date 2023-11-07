@@ -598,7 +598,7 @@ plot.states.radar <- function(ref, query=NULL,
       warning(sprintf("Some metadata columns were not found:\n%s", to.print))
     }
   } else {
-    refmat <- ref@assays[[ref.assay]]@data
+    refmat <- GetAssayData(ref, assay=ref.assay, slot="data")
 
     #Check gene names/feature names
     feat.use <- intersect(genes4radar, row.names(refmat))
@@ -669,7 +669,7 @@ plot.states.radar <- function(ref, query=NULL,
         if (!query.assay %in% Assays(query[[i]])) {
           stop(sprintf("Assay %s not found in query object. Please check ref.assay parameter", query.assay))
         }
-        qmat <- query[[i]]@assays[[query.assay]]@data
+        qmat <- GetAssayData(query[[i]], assay=query.assay, slot="data")
       }
       order <- match(feat.use, row.names(qmat))
       
@@ -1040,7 +1040,8 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' @param ref Seurat object with reference atlas
 #' @param query Seurat object with query data
 #' @param query.control Optionally, you can compare your query with a control sample, instead of the reference
-#' @param query.assay The data slot to be used for enrichment analysis
+#' @param ref.assay The referece assay to be used for DE analysis
+#' @param query.assay The query assay to be used for DEG analyis, if comparing to the reference
 #' @param state Perform discriminant analysis on this cell state. Can be either:
 #' \itemize{
 #'   \item{"largest" - Performs analysis on the cell state most represented in the query set(s)}
@@ -1072,7 +1073,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' @import Seurat
 #' @export find.discriminant.genes
 #' 
-find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay="RNA",
+find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="RNA", query.assay="RNA",
                                     state="largest", labels.col="functional.cluster",
                                     test="wilcox", min.cells=10, genes.use=c("variable","all"), ...)
 {  
@@ -1134,19 +1135,27 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
     DefaultAssay(query.control) <- query.assay
     s2 <- subset(query.control, cells=s2.cells)
   } else {
-    DefaultAssay(ref) <- query.assay
+    DefaultAssay(ref) <- ref.assay
     s2 <- subset(ref, cells=s2.cells)
+    if (ref.assay != query.assay) {
+      s2[[query.assay]] <- s2[[ref.assay]]
+    }
   }
   s2$Group <- "Control"
   
   s.m <- merge(s1, s2)
+  s.m <- DietSeurat(s.m, assays = query.assay)
+  
+  if (exists('JoinLayers', mode="function")) { #only from Seurat v5
+    s.m <- JoinLayers(s.m)
+  }
   Idents(s.m) <- "Group"
   
   #use all genes or only variable genes from the reference
   if (genes.use[1] == "all") {
     which.genes <- NULL
   } else if (genes.use[1] == "variable") {
-    which.genes <- intersect(ref@assays$integrated@var.features, rownames(s.m))
+    which.genes <- intersect(VariableFeatures(ref, assay="integrated"), rownames(s.m))
   } else {
     which.genes <- intersect(genes.use, rownames(s.m))
   }
@@ -1168,7 +1177,8 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' make the projection use an approximation for UMAP embedding of the query.
 #'
 #' @param ref Seurat object with reference atlas
-#' @param assay The data slot where to pull the expression data
+#' @param assay The assay storing the reference expression data (e.g. "integrated")
+#' @param assay.raw The assay storing raw expression data (e.g. "RNA")
 #' @param atlas.name An optional name for your reference
 #' @param annotation.column The metadata column with the cluster annotations for this atlas
 #' @param recalculate.umap If TRUE, run the `umap` or `uwot` algorithm to generate embeddings.
@@ -1200,6 +1210,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, query.assay=
 #' 
 make.reference <- function(ref,
                            assay=NULL,
+                           assay.raw="RNA",
                            atlas.name="custom_reference",
                            annotation.column="functional.cluster",
                            recalculate.umap=FALSE,
@@ -1219,7 +1230,7 @@ make.reference <- function(ref,
   if (is.null(assay)) {
     assay=DefaultAssay(ref)
   }
-  if (is.null(ref@assays[[assay]])) {
+  if (!assay %in% Assays(ref)) {
     stop(sprintf("Assay %s not found in reference object. Select a different assay", assay))
   }
   #make a copy of default assay
@@ -1228,11 +1239,10 @@ make.reference <- function(ref,
   }
   DefaultAssay(ref) <- "integrated"
   
-  if ("var.features" %in% slotNames(ref@assays[[assay]]) & !is.null(ref@assays[[assay]]@var.features)) {
-    varfeat <- ref@assays[[assay]]@var.features
-  } else {
+  varfeat <- VariableFeatures(ref, assay=assay)
+  if (is.null(varfeat) | length(varfeat)==0) {
     ref <- FindVariableFeatures(ref, assay = assay, nfeatures = nfeatures, verbose=FALSE)
-    varfeat <- ref@assays[[assay]]@var.features
+    varfeat <- VariableFeatures(ref, assay=assay)
   } 
   
   #Recompute PCA embeddings using prcomp
@@ -1240,10 +1250,11 @@ make.reference <- function(ref,
 
   #Recalculate UMAP, or use an already-present dimensionality reduction
   if (!recalculate.umap) {
-    if (dimred %in% names(ref@reductions)) {
+    if (dimred %in% Reductions(ref)) {
       ref.pca <- ref@misc$pca_object
       cell.order = rownames(ref.pca$x)
-      low.emb <- ref@reductions[[dimred]]@cell.embeddings[cell.order,]
+      
+      low.emb <- Embeddings(ref, reduction=dimred)[cell.order,]
       colnames(low.emb) <- c("UMAP_1","UMAP_2")
       #Save these embeddings
       ref@misc$umap_object <- list()
@@ -1324,7 +1335,7 @@ make.reference <- function(ref,
   Idents(ref) <- "functional.cluster"
   
   if (store.markers) {
-    DefaultAssay(ref) <- "RNA"
+    DefaultAssay(ref) <- assay.raw
     
     cluster.markers <- FindAllMarkers(ref, only.pos = T, min.pct = 0.1, min.diff.pct=0.1, 
                                       logfc.threshold = 0.25, max.cells.per.ident = 500,
@@ -1788,7 +1799,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 #' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
 #' @export celltype.heatmap
-celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row", 
+celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, scale="row", 
                          method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu", palette_reverse=F, palette = NULL,
                          cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, flip=FALSE,
                          cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
@@ -1829,9 +1840,11 @@ celltype.heatmap <- function(data, assay="RNA", genes, ref = NULL, scale="row",
   # Calculate mean expression by cluster
   m <- c()
   genes.removed <- c()
-  for( g in unique(genes)){
-    if(g %in% rownames(data@assays[[assay]])){
-      m[[g]] <- tapply(data@assays[[assay]][g,],data$metaSubset, mean)
+  
+  #NB: following loop can be improved
+  for (g in unique(genes)){
+    if(g %in% GetAssayData(data, assay=assay, slot=slot)) {
+      m[[g]] <- tapply(GetAssayData(data, assay=assay, slot=slot)[g,], data$metaSubset, mean)
     }
     else{
       genes.removed <- c(genes.removed, g)

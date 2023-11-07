@@ -93,17 +93,18 @@ get.species <- function(genes, table=Hs2Mm.convert.table) {
 
 
 #Internal function for mouse-human ortholog conversion
-convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.assay="RNA", slot="counts") {
+convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM",
+                              query.assay="RNA", slot="counts") {
   
-  exp.mat <- slot(obj@assays[[query.assay]], name=slot)
-  genes.select <- rownames(exp.mat) %in% table[[from]]
+  exp.mat <- GetAssayData(obj, assay=query.assay, slot=slot)
+  genes.select <- rownames(exp.mat)[rownames(exp.mat) %in% table[[from]]]
   
   if (length(genes.select) < 100) {
       message("Warning: fewer than 100 genes with orthologs were found. Check your matrix format and gene names")
   }
   
   if (length(genes.select) > 0) {
-    exp.mat <- exp.mat[rownames(exp.mat) %in% table[[from]], ]
+    exp.mat <- exp.mat[genes.select, ]
   } else {
     stop(paste0("Error: No genes found in column ", from))
   }
@@ -113,12 +114,14 @@ convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM", query.as
   
   #Update matrix gene names
   row.names(exp.mat) <- ortho.genes
-  slot(obj@assays[[query.assay]], name=slot) <- exp.mat
   
-  if (slot=="data") {  #keep same size of data matrices
-    slot(obj@assays[[query.assay]], name="counts") <- exp.mat
+  #Re-generate object
+  if (slot=="counts") {
+    this <- CreateAssayObject(counts=exp.mat)
+  } else {
+    this <- CreateAssayObject(data=exp.mat)
   }
-  
+  suppressWarnings(obj[[query.assay]] <- this)
   return(obj)
 }
 
@@ -130,14 +133,14 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
                               STACAS.anchor.coverage=1, STACAS.correction.scale=100,
                               skip.normalize=FALSE, id="query1",
                               alpha=0.5, remove.thr=0,
-                              scGate_model=NULL, ncores=ncores) {
+                              scGate_model=NULL, ncores=1) {
   
   retry.direct <- FALSE
   do.orthology <- FALSE
   
   #Reference
   DefaultAssay(ref) <- "integrated"
-  ref.var.features <- ref@assays$integrated@var.features
+  ref.var.features <- VariableFeatures(ref)
   
   #If query.assay not specified, use the default
   if (is.null(query.assay)) {
@@ -149,7 +152,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   print(paste0("Using assay ",query.assay," for ",id))
   
   if (!is.null(ref@misc$umap_object$data)) { 
-     pca.dim=dim(ref@misc$umap_object$data)[2] #use the number of PCs used to build the reference
+     pca.dim=ncol(ref@misc$umap_object$data) #use the number of PCs used to build the reference
   } else {
      pca.dim=10
   }
@@ -181,7 +184,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   #Check if slots are populated, and normalize data.
   if (skip.normalize) {
     slot <- "data"
-    exp.mat <-  slot(query@assays[[query.assay]], name=slot)
+    
+    exp.mat <- GetAssayData(query, assay=query.assay, slot=slot)
     if (dim(exp.mat)[1]==0) {
       stop("Data slot not found in your Seurat object. Please normalize the data")
     }
@@ -192,8 +196,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     }        
   } else {
     slot <- "counts"
-    exp.mat <-  slot(query@assays[[query.assay]], name=slot)
-    if (dim(exp.mat)[1]==0) {
+    exp.mat <- GetAssayData(query, assay=query.assay, slot=slot)
+    if (nrow(exp.mat)==0) {
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     }
     if (do.orthology) {
@@ -201,7 +205,6 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot=slot,
                                  from=species.query$col.id, to=species.ref$col.id)
     }
-    query@assays[[query.assay]]@data <- query@assays[[query.assay]]@counts
     query <- NormalizeData(query) 
   }
   rm(exp.mat)
@@ -211,7 +214,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   
   genes4integration <- intersect(ref.var.features, row.names(query))
   
-  if(length(genes4integration)/length(ref.var.features)<0.5){ stop("Too many genes missing. Check input object format") }
+  if(length(genes4integration)/length(ref.var.features)<0.5) {
+    stop("Too many genes missing. Check input object format") }
   #TODO implement ID mapping? e.g. from ENSEMBLID to symbol?
   
   if (length(genes4integration)/length(ref.var.features)<0.8) {
@@ -229,6 +233,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     
     print("DIRECTLY projecting query onto Reference UMAP space")
     query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj,
+                                         query.assay=query.assay,
                                          pca.query.emb = query.pca.proj,
                                          fast.umap.predict=fast.umap.predict)
     projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj,
@@ -266,14 +271,14 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         #always integrate query into reference
         tree <- matrix(c(-1,-2), nrow=1, ncol=2)
         
-        proj.integrated <- IntegrateData.STACAS(proj.anchors, k.weight = STACAS.k.weight,
+        projected <- suppressWarnings(IntegrateData.STACAS(proj.anchors, k.weight = STACAS.k.weight,
                              dims=1:pca.dim, sample.tree = tree,
                              features.to.integrate = genes4integration,
-                             verbose = FALSE)
+                             verbose = FALSE))
         
         #Subset query data from integrated space
         cells_query <- colnames(query)
-        projected <- subset(proj.integrated, cells = cells_query)
+        projected <- suppressMessages(subset(projected, cells = cells_query))
         
         projected@meta.data <- query.metadata
         
@@ -289,6 +294,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
         cat("\nProjecting corrected query onto Reference UMAP space\n")
         query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj,
                                              pca.query.emb=query.pca.proj,
+                                             query.assay="integrated",
                                              fast.umap.predict=fast.umap.predict)
         projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj, key = "UMAP_", assay = "integrated")
         
@@ -314,6 +320,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
           print("DIRECTLY projecting query onto Reference UMAP space")
           query.umap.proj <- make.umap.predict(ref.umap=ref@misc$umap_obj,
                                                pca.query.emb = query.pca.proj,
+                                               query.assay=query.assay,
                                                fast.umap.predict=fast.umap.predict)
           projected[["umap"]] <- CreateDimReducObject(embeddings = query.umap.proj,
                                                       key = "UMAP_", assay = query.assay)
@@ -330,7 +337,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
   
   if (!is.null(projected)) {
-      projected@assays[[query.assay]]@var.features <- ref.var.features
+      VariableFeatures(projected, assay=query.assay) <- ref.var.features
       cellnames <- gsub("^Q_","",colnames(projected))  #remove prefix from cell names
       projected <- RenameCells(projected, new.names=cellnames)
   }

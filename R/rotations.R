@@ -44,12 +44,15 @@ prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
     assay <- DefaultAssay(obj)
   }
   varfeat <- VariableFeatures(obj)
-  refdata <- data.frame(t(as.matrix(obj@assays[[assay]]@data[varfeat,])))
+  mat <- GetAssayData(obj, assay=assay, slot="data")[varfeat,]
+  refdata <- data.frame(t(as.matrix(mat)))
+  
   refdata <- refdata[, sort(colnames(refdata))]
   ref.pca <- prcomp(refdata, rank. = ndim, scale. = scale, center = TRUE, retx=TRUE)
   
   #Save PCA rotation object
   obj@misc$pca_object <- ref.pca
+  
   obj@reductions$pca@cell.embeddings <- ref.pca$x
   obj@reductions$pca@feature.loadings <- ref.pca$rotation
   colnames(obj@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
@@ -60,7 +63,7 @@ prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
 
 apply.pca.obj.2 <- function(query, query.assay="RNA", pca.obj) {
 
-  newdata <- data.frame(t(as.matrix(query@assays[[query.assay]]@data)))
+  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, slot="data"))))
   newdata <- newdata[ , order(names(newdata))]
 
   genes.use <-  sort(intersect(colnames(newdata), names(pca.obj$center)))
@@ -77,7 +80,8 @@ apply.pca.obj.2 <- function(query, query.assay="RNA", pca.obj) {
 
 apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
 
-  newdata <- data.frame(t(as.matrix(query@assays[[query.assay]]@data)))
+  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, slot="data"))))
+#  newdata <- data.frame(t(as.matrix(query@assays[[query.assay]]@data)))
   newdata <- newdata[ , order(names(newdata))]
 
   genes.use <-  sort(intersect(colnames(newdata), names(ica.obj$center)))
@@ -169,13 +173,14 @@ make.umap.predict.weighted.mean <- function(ref.umap, query,
 run.ica <- function(object, assay="integrated", ndim=50) {
   require(fastICA)
   set.seed(1234)
-  x <- scale(Matrix::t(object@assays[[assay]][object@assays[[assay]]@var.features,]))
+  varfeat <- VariableFeatures(object, assay=assay)
+  x <- scale(Matrix::t(object@assays[[assay]][varfeat,]))
   set.seed(1234)
   ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=FALSE, tol=1e-13, method="R")
   
-  colnames(ref.ica$X) <- ref@assays$integrated@var.features
+  colnames(ref.ica$X) <- VariableFeatures(ref, assay="integrated")
   rownames(ref.ica$X) <- colnames(ref)
-  rownames(ref.ica$K) <- ref@assays$integrated@var.features
+  rownames(ref.ica$K) <- VariableFeatures(ref, assay="integrated")
   colnames(ref.ica$A) <- colnames(ref.ica$X)
   colnames(ref.ica$S) <- paste0("ICA_", seq_len(ncol(ref.ica$S)))
   

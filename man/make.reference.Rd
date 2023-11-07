@@ -7,6 +7,7 @@
 make.reference(
   ref,
   assay = NULL,
+  assay.raw = "RNA",
   atlas.name = "custom_reference",
   annotation.column = "functional.cluster",
   recalculate.umap = FALSE,
@@ -28,7 +29,9 @@ make.reference(
 \arguments{
 \item{ref}{Seurat object with reference atlas}
 
-\item{assay}{The data slot where to pull the expression data}
+\item{assay}{The assay storing the reference expression data (e.g. "integrated")}
+
+\item{assay.raw}{The assay storing raw expression data (e.g. "RNA")}
 
 \item{atlas.name}{An optional name for your reference}
 

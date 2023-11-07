@@ -7,6 +7,7 @@
 celltype.heatmap(
   data,
   assay = "RNA",
+  slot = "data",
   genes,
   ref = NULL,
   scale = "row",
