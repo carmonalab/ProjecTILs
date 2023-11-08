@@ -172,11 +172,16 @@ run.ica <- function(object, assay="integrated", ndim=50) {
   set.seed(1234)
   ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=FALSE, tol=1e-13, method="R")
   
-  colnames(ref.ica$X) <- VariableFeatures(ref, assay="integrated")
-  rownames(ref.ica$X) <- colnames(ref)
-  rownames(ref.ica$K) <- VariableFeatures(ref, assay="integrated")
+  ids <- paste0("ICA_", seq_len(ncol(ref.ica$K)))
+  
+  rownames(ref.ica$X) <- colnames(object)
+  colnames(ref.ica$X) <- varfeat
+  rownames(ref.ica$K) <- varfeat
+  colnames(ref.ica$K) <- ids
+  rownames(ref.ica$A) <- ids
   colnames(ref.ica$A) <- colnames(ref.ica$X)
-  colnames(ref.ica$S) <- paste0("ICA_", seq_len(ncol(ref.ica$S)))
+  rownames(ref.ica$S) <- colnames(object)
+  colnames(ref.ica$S) <- ids
   
   ref.ica$center <- attr(x,"scaled:center")
   ref.ica$scale <- attr(x,"scaled:scale")

@@ -821,7 +821,7 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
   }
 
   if (reduction=="ica") {
-    if (is.null(ref@reductions[[reduction]])) {
+    if (!"ica" %in% Reductions(ref)) {
       message("Reduction ICA not found. Calculating ICA for reference object")
       ref <- run.ica(ref, ndim=ndim)
     }
@@ -1250,6 +1250,10 @@ make.reference <- function(ref,
     ref <- FindVariableFeatures(ref, assay = assay, nfeatures = nfeatures, verbose=FALSE)
     varfeat <- VariableFeatures(ref, assay=assay)
   } 
+  
+  #Remove cells with no annotation
+  notna <- colnames(ref)[!is.na(ref@meta.data[,annotation.column])]
+  ref <- subset(ref, cells=notna)
   
   #Recompute PCA embeddings using prcomp
   ref <- prcomp.seurat(ref, ndim=ndim, assay=assay)
