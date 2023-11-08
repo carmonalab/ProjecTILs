@@ -641,6 +641,8 @@ plot.states.radar <- function(ref, query=NULL,
   }  
   names(radar.colors) <- c("Reference", names(query))
   
+  notna <- !is.na(ref[[labels.col]][,1])
+  ref <- subset(ref, cells=colnames(ref)[notna])
 
   labels <- ref[[labels.col]][,1]
   states_all <- levels(factor(labels))
@@ -656,20 +658,23 @@ plot.states.radar <- function(ref, query=NULL,
     qq <- list()
     
     for (i in 1:length(query)) {
-      if (!labels.col %in% colnames(query[[i]]@meta.data)) {
+      this <- query[[i]]
+      if (!labels.col %in% colnames(this@meta.data)) {
          message1 <- sprintf("Could not find %s column in query object metadata.",labels.col)
          message2 <- "Did you run cellstate.predict() on this object to predict cell states?"
          stop(paste(message1, message2, sep="\n"))
       }
-      labels.q[[i]] <- query[[i]][[labels.col]][,1]
+      notna <- !is.na(this[[labels.col]][,1])
+      this <- subset(this, cells=colnames(this)[notna])
+      labels.q[[i]] <- this[[labels.col]][,1]
       
       if (!is.null(meta4radar)) {
-        qmat <- t(query[[i]][[]])
+        qmat <- t(this[[]])
       } else {
-        if (!query.assay %in% Assays(query[[i]])) {
+        if (!query.assay %in% Assays(this)) {
           stop(sprintf("Assay %s not found in query object. Please check ref.assay parameter", query.assay))
         }
-        qmat <- GetAssayData(query[[i]], assay=query.assay, slot="data")
+        qmat <- GetAssayData(this, assay=query.assay, slot="data")
       }
       order <- match(feat.use, row.names(qmat))
       
@@ -1146,7 +1151,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
   s.m <- merge(s1, s2)
   s.m <- DietSeurat(s.m, assays = query.assay)
   
-  if (exists('JoinLayers', mode="function")) { #only from Seurat v5
+  if (class(s.m[[query.assay]])=="Assay5") { #only for Assay5 objects
     s.m <- JoinLayers(s.m)
   }
   Idents(s.m) <- "Group"
