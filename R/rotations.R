@@ -43,7 +43,7 @@ prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
   if (is.null(assay)) {
     assay <- DefaultAssay(obj)
   }
-  varfeat <- VariableFeatures(obj)
+  varfeat <- VariableFeatures(obj, assay=assay)
   mat <- GetAssayData(obj, assay=assay, slot="data")[varfeat,]
   refdata <- data.frame(t(as.matrix(mat)))
   
@@ -53,11 +53,7 @@ prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
   #Save PCA rotation object
   obj@misc$pca_object <- ref.pca
   
-  obj@reductions$pca@cell.embeddings <- ref.pca$x
-  obj@reductions$pca@feature.loadings <- ref.pca$rotation
-  colnames(obj@reductions$pca@cell.embeddings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$x), perl=TRUE)
-  colnames(obj@reductions$pca@feature.loadings) <- gsub("PC(\\d+)", "PC_\\1", colnames(ref.pca$rotation), perl=TRUE)
-  
+  obj[["pca"]] <- CreateDimReducObject(embeddings=ref.pca$x, loadings=ref.pca$rotation, key = "PC_", assay = assay)
   return(obj)
 }
 

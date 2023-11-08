@@ -1283,8 +1283,12 @@ make.reference <- function(ref,
       
       #Save UMAP object
       ref@misc$umap_object <- ref.umap
-      ref@reductions$umap@cell.embeddings <- ref.umap$layout
+ 
+      ref[["umap"]] <- CreateDimReducObject(embeddings = ref.umap$layout,
+                                            key = "UMAP_", assay = assay)
+      
     } else if (umap.method == "uwot") {
+      
       warning("There are known issues with saving a loading uwot models. If you plan to save your reference as an .rds file, please use umap.method='umap'")
       #generate UMAP embeddings
       ref.umap <- run.umap.uwot(ref.pca, ndim=ndim, seed=seed,
@@ -1293,8 +1297,9 @@ make.reference <- function(ref,
       
       ref.umap$data <- ref.pca$x
       #Save UMAP object
-      ref@misc$umap_object <- ref.umap
-      ref@reductions$umap@cell.embeddings <- ref.umap$embedding
+      ref[["umap"]] <- CreateDimReducObject(embeddings = ref.umap$embedding,
+                                            key = "UMAP_", assay = assay)
+      
     } else {
       stop("Unsupported UMAP method.")
     }
