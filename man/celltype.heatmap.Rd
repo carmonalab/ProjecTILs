@@ -16,8 +16,7 @@ celltype.heatmap(
   palette_reverse = F,
   palette = NULL,
   cluster.col = "functional.cluster",
-  metadata = NULL,
-  order.by = NULL,
+  group.by = NULL,
   flip = FALSE,
   cluster_genes = FALSE,
   cluster_samples = FALSE,
@@ -25,6 +24,7 @@ celltype.heatmap(
   show_samplenames = FALSE,
   remove.NA.meta = TRUE,
   breaks = seq(-2, 2, by = 0.1),
+  return.matrix = FALSE,
   ...
 )
 }
@@ -47,11 +47,9 @@ celltype.heatmap(
 
 \item{palette}{A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".}
 
-\item{cluster.col}{A string indicating the column name of the functional cluster to be used}
+\item{cluster.col}{The metadata column name containing the cell type labels}
 
-\item{metadata}{A vector of metadata to be used in the heatmap}
-
-\item{order.by}{A string indicating the column name to reorder the heatmap}
+\item{group.by}{The metadata column names used as grouping variables}
 
 \item{flip}{A boolean indicating if the heatmap should be flipped, default is FALSE}
 
@@ -64,23 +62,22 @@ celltype.heatmap(
 \item{show_samplenames}{A boolean indicating whether the heatmap should display the sample names or not, default is FALSE}
 
 \item{remove.NA.meta}{A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE}
+
+\item{return.matrix}{If true, return the pseudo-bulk data matrix instead of graphical output}
 }
 \value{
 A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
 }
 \description{
-This function allows to plot a averaged expression heatmap starting from a Seurat object,
-split by possibly any metadata present in the starting Seurat object
-}
-\details{
-The function first loads the pheatmap package, sets a seed for reproducibility, and selects the first element of the "method" parameter as the clustering method to be used
-It then selects the wanted metadata from the data set, removing any missing values if the "remove.NA.meta" parameter is set to TRUE. <- 
-Next, the function filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable. It then calculates the mean expression of the selected genes by the "metaSubset" variable.
-The function then reorders the data frame if the "order.by" parameter is not null, and sets up the colors for the heatmap.
-Finally, the function creates the heatmap using the pheatmap package, with the "method", "scale", "flip", "cluster_genes", "cluster_samples", and "show_samplenames" parameters controlling various aspects of the heatmap.
+This function allows to calculate and plot pseudo-bulk gene expression by cell type and
+custom grouping variables. Data can be split in principle by any metadata present in the
+starting Seurat object (e.g. patient, tissue, study, etc.). This can be useful to evaluate
+consistency of expression profiles for different cell types across samples, studies or
+other grouping variables.
 }
 \examples{
 library(Seurat)
 ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
-celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
+celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2"),
+    ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"))
 }

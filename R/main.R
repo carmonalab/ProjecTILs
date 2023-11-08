@@ -1768,14 +1768,11 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 
 #' Plot a averaged expression heatmap from a Seurat object
 #'
-#' This function allows to plot a averaged expression heatmap starting from a Seurat object,
-#' split by possibly any metadata present in the starting Seurat object
-#'
-#' The function first loads the pheatmap package, sets a seed for reproducibility, and selects the first element of the "method" parameter as the clustering method to be used
-#' It then selects the wanted metadata from the data set, removing any missing values if the "remove.NA.meta" parameter is set to TRUE. <- 
-#' Next, the function filters the data set to only include samples that have at least "min.cells" in the "metaSubset" variable. It then calculates the mean expression of the selected genes by the "metaSubset" variable.
-#' The function then reorders the data frame if the "order.by" parameter is not null, and sets up the colors for the heatmap.
-#' Finally, the function creates the heatmap using the pheatmap package, with the "method", "scale", "flip", "cluster_genes", "cluster_samples", and "show_samplenames" parameters controlling various aspects of the heatmap.
+#' This function allows to calculate and plot pseudo-bulk gene expression by cell type and
+#' custom grouping variables. Data can be split in principle by any metadata present in the
+#' starting Seurat object (e.g. patient, tissue, study, etc.). This can be useful to evaluate
+#' consistency of expression profiles for different cell types across samples, studies or
+#' other grouping variables.
 #'
 #' @param data A Seurat object to be used for the heatmap
 #' @param assay A string indicating the assay type, default is "RNA"
@@ -1785,15 +1782,15 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @param method A string or vector of strings indicating the clustering method to be used, default is "ward.D2"
 #' @param brewer.palette A string indicating the color palette to be used, default is "RdBu"
 #' @param palette_reverse A boolean indicating if color palette should be reversed, default is FALSE
-#' @param cluster.col A string indicating the column name of the functional cluster to be used
-#' @param metadata A vector of metadata to be used in the heatmap
-#' @param order.by A string indicating the column name to reorder the heatmap
+#' @param cluster.col The metadata column name containing the cell type labels
+#' @param group.by The metadata column names used as grouping variables
 #' @param flip A boolean indicating if the heatmap should be flipped, default is FALSE
 #' @param show_samplenames A boolean indicating whether the heatmap should display the sample names or not, default is FALSE
 #' @param cluster_genes A boolean indicating if genes should be clustered, default is FALSE
 #' @param cluster_samples A boolean indicating if samples should be clustered, default is FALSE
 #' @param min.cells A value defining the minimum number of cells a sample should have to be kept, default is 10
 #' @param remove.NA.meta A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE
+#' @param return.matrix If true, return the pseudo-bulk data matrix instead of graphical output
 #' @param palette A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".
 #' @return A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
 #' @import pheatmap
@@ -1802,29 +1799,31 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @examples
 #' library(Seurat)
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
-#' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2","HAVCR2","PDCD1","XCL1","KLRB1"), ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"), order.by = "Tissue")
+#' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2"),
+#'     ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"))
 #' @export celltype.heatmap
 celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, scale="row", 
-                         method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu", palette_reverse=F, palette = NULL,
-                         cluster.col = "functional.cluster", metadata = NULL, order.by = NULL, flip=FALSE,
-                         cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
-                         show_samplenames = FALSE, remove.NA.meta = TRUE, breaks = seq(-2, 2, by = 0.1), ...
-                         ) {
+                         method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
+                         palette_reverse=F, palette = NULL,
+                         cluster.col = "functional.cluster", group.by = NULL,
+                         flip=FALSE, cluster_genes = FALSE, cluster_samples=FALSE, min.cells = 10,
+                         show_samplenames = FALSE, remove.NA.meta = TRUE,
+                         breaks = seq(-2, 2, by = 0.1), return.matrix=FALSE, ...) {
   
   set.seed(123)
   
   # Select clustering method to be used
   method = method[1]
 
-  
   # Select desired metadata
-  if (is.null(metadata)) {
-    stop("Must at least provide one metadata")
+  if (is.null(group.by)) {
+    stop("Must at least provide one metadata column")
   } else {
-    meta.sub <-
-      data@meta.data[, which(colnames(data@meta.data) %in% cluster.col), drop = F]
-    meta.sub <-
-      cbind(meta.sub, data@meta.data[, metadata, drop = F])
+    meta.cols <- c(cluster.col, group.by)
+    if (!all(meta.cols %in% colnames(data[[]]))) {
+      stop("Metadata columns not found in object. Please check cluster.col and group.by")
+    }
+    meta.sub <- data@meta.data[,meta.cols]
   }
   
   # Transform "NA" into true NAs
@@ -1843,67 +1842,50 @@ celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, 
   data <- subset(data, subset=metaSubset %in% accept)
   
   # Calculate mean expression by cluster
-  m <- c()
-  genes.removed <- c()
+  genes.use <- intersect(genes, rownames(GetAssay(data, assay=assay)))
+  genes.removed <- setdiff(genes, genes.use)
   
-  #NB: following loop can be improved
-  for (g in unique(genes)){
-    if(g %in% GetAssayData(data, assay=assay, slot=slot)) {
-      m[[g]] <- tapply(GetAssayData(data, assay=assay, slot=slot)[g,], data$metaSubset, mean)
-    }
-    else{
-      genes.removed <- c(genes.removed, g)
-    }
-  }
   if(length(genes.removed)>0){
-    cat("These genes were not found in the assay and were excluded from plotting:", genes.removed)
+    message("These genes were not found in the assay: ", paste0(genes.removed, collapse = ","))
   }
+  
+  this.mat <- GetAssayData(data, assay=assay, slot=slot)[genes.use,]
+  
+  m <- lapply(unique(genes.use), function(g) {
+    tapply(this.mat[g,], data$metaSubset, mean)
+  })
+  names(m) <- genes.use
   
   m <- as.data.frame(m)
-  
   m <- m[accept,]
   
   # Compute metadata for the annotation colors
   m.subset <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[1]])))
   m.meta <- list()
-  for (i in 1:length(metadata)){
+  for (i in 1:length(group.by)){
     m.meta[[i]] <- factor(unlist(lapply(strsplit(rownames(m),"!",perl = T),function(x) x[[i+1]])))
   }
-  names(m.meta) <-  metadata
+  names(m.meta) <-  group.by
   m.meta <- as.data.frame(m.meta)
   
   # Reorder dataframe if "ref" is defined
   m <- cbind(m, m.subset, m.meta) 
   if (!is.null(ref)) {
     m$m.subset <- factor(m$m.subset, levels = levels(ref$functional.cluster))
-    m <- m |> arrange(m.subset)
+    m <- m[order(m$m.subset), ]
     
     # Reappend good annotation order
     m.subset <-
       factor(unlist(lapply(strsplit(rownames(m), "!", perl = T), function(x)
         x[[1]])))
   }
+  m <- m[,1:length(genes.use)]
   
-  # Reorder dataframe if "order.by" is defined
-  if (!is.null(order.by)) {
-    m <- m |> arrange(m.subset, get(order.by))
-  
-    # Reappend good annotation order for metadata
-    m.meta <- list()
-    for (i in 1:length(metadata)) {
-      m.meta[[i]] <-
-        factor(unlist(lapply(strsplit(rownames(m), "!", perl = T), function(x)
-          x[[i + 1]])))
-    }
-    names(m.meta) <-  metadata
+  if(return.matrix) {
+    return(m)
   }
-  m <- m[1:(length(m) - length(metadata) - 1)]
-  
   
   # Setup color palette list
-  
-  require(RColorBrewer)
-  
   if(palette_reverse){
     color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaks))
   } else{
@@ -1915,8 +1897,8 @@ celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, 
     palette <- list()
     palette[["Subtype"]] <- colorRampPalette(brewer.pal(n=8, name="Set1"))(length(unique(unlist(m.subset))))
     names(palette[["Subtype"]]) <- c(unique(m.subset))
-    for (i in 1:length(metadata)){
-      meta <- metadata[i]
+    for (i in 1:length(group.by)){
+      meta <- group.by[i]
       palette[[meta]] <- colorRampPalette(brewer.pal(n=6, name=palettes.default[i]))(length(unique(m.meta[[meta]])))
       names(palette[[meta]]) <- levels(m.meta[[meta]])
     }
