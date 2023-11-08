@@ -856,12 +856,13 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
      message("Single query dataset was provided. Determining discriminant components of Query vs. Reference...")
   }
 
+  refemb <- Reductions(ref, slot=reduction)
   for (pc in 1:ndim) {
     d1 <- perturb_dimRed[query.cells,pc]
     if (!is.null(query.control)) {
        d2 <- control_dimRed[query.c.cells,pc]
     } else {
-       d2 <- ref@reductions[[reduction]]@cell.embeddings[ref.cells, pc]
+       d2 <- refemb@cell.embeddings[ref.cells, pc]
     }
     
     ttest <- t.test(d1, d2)
@@ -883,7 +884,7 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
   for (i in 1:print.n) {
     topPC <- rownames(df)[i]
     pc.index <- match(topPC, colnames(perturb_dimRed))
-    feats <- ref@reductions[[reduction]]@feature.loadings[,pc.index]
+    feats <- refemb@feature.loadings[,pc.index]
     topgenes <- names(head(sort(abs(feats), decreasing = T), 10))
     topgenes.sign <- feats[topgenes]
     if (df[i, "stat"]>0) {
@@ -1887,9 +1888,9 @@ celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, 
   
   # Setup color palette list
   if(palette_reverse){
-    color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaks))
+    color = colorRampPalette(brewer.pal(n = 7, name = brewer.palette))(length(breaks))
   } else{
-    color = colorRampPalette(brewer.pal(n = 7, name = brewer.palette))(length(breaks))  
+    color = colorRampPalette(rev(brewer.pal(n = 7, name = brewer.palette)))(length(breaks))
   }
   
   palettes.default <-  c("Paired","Set2","Accent","Dark2","Set1","Set3")

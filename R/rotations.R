@@ -89,10 +89,7 @@ apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
   newdata.var <- newdata[, genes.use]
   center.use <- ica.obj$center[genes.use]
   scale.use <- ica.obj$scale[genes.use]
-  #rotation.use <- ica.obj$rotation[genes.use,]
 
-  #ref.ica$X %*% ref.ica$K %*% ref.ica$W
-  #npca <- scale(newdata.var, center.use, scale.use) %*% rotation.use
   npca <- scale(newdata.var, center.use, scale.use) %*% ica.obj$K[genes.use,] %*% ica.obj$W
   colnames(npca) <- colnames(ica.obj$S)
   return(npca)
@@ -174,7 +171,8 @@ run.ica <- function(object, assay="integrated", ndim=50) {
   require(fastICA)
   set.seed(1234)
   varfeat <- VariableFeatures(object, assay=assay)
-  x <- scale(Matrix::t(object@assays[[assay]][varfeat,]))
+  
+  x <- scale(Matrix::t(GetAssayData(object, assay=assay, slot="data")[varfeat,]))
   set.seed(1234)
   ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=FALSE, tol=1e-13, method="R")
   
