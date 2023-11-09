@@ -28,7 +28,8 @@ been previously subset to cell types represented in the reference.}
 
 \item{split.by}{Grouping variable to split the query object (e.g. if the object contains multiple samples)}
 
-\item{reduction}{The dimensionality reduction used to assign cell type labels}
+\item{reduction}{The dimensionality reduction used to assign cell type labels, based on
+majority voting of nearest neighbors between reference and query.}
 
 \item{ndim}{The number of dimensions used for cell type classification}
 
