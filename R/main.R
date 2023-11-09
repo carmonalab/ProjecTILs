@@ -621,6 +621,8 @@ plot.states.radar <- function(ref, query=NULL,
   
   rr <- as.matrix(refmat[order,])
   rr <- matrix(as.numeric(rr), ncol=ncol(rr))
+  rownames(rr) <- feat.use
+  colnames(rr) <- colnames(refmat)
 
   #Set colors
   ncolors <- 1+length(query)
@@ -641,12 +643,19 @@ plot.states.radar <- function(ref, query=NULL,
   }  
   names(radar.colors) <- c("Reference", names(query))
   
-  notna <- !is.na(ref[[labels.col]][,1])
-  ref <- subset(ref, cells=colnames(ref)[notna])
-
-  labels <- ref[[labels.col]][,1]
+  #Convert NAs to unknown, if any
+  use.unknown <- FALSE
+  labels <- ref@meta.data[,labels.col]
+  is.na <- is.na(labels)
   states_all <- levels(factor(labels))
   nstates <- length(states_all)
+  
+  if (sum(is.na)>0) {
+    ref@meta.data[,labels.col] <- factor(labels, levels=c(levels(labels), "Unknown"))
+    ref@meta.data[is.na, labels.col] <- "Unknown"
+    labels <- ref@meta.data[,labels.col]
+    use.unknown <- TRUE
+  }
   
   if (!is.null(query)) {
     if (is.null(names(query))) {
@@ -664,9 +673,16 @@ plot.states.radar <- function(ref, query=NULL,
          message2 <- "Did you run cellstate.predict() on this object to predict cell states?"
          stop(paste(message1, message2, sep="\n"))
       }
-      notna <- !is.na(this[[labels.col]][,1])
-      this <- subset(this, cells=colnames(this)[notna])
-      labels.q[[i]] <- this[[labels.col]][,1]
+      
+      this.lab <- this@meta.data[,labels.col]
+      is.na <- is.na(this.lab)
+      if (sum(is.na)>0) {
+        this@meta.data[,labels.col] <- factor(this.lab, levels=c(levels(labels), "Unknown"))
+        this@meta.data[is.na, labels.col] <- "Unknown"
+        this.lab <- this@meta.data[,labels.col]
+        use.unknown <- TRUE
+      }
+      labels.q[[i]] <- this.lab
       
       if (!is.null(meta4radar)) {
         qmat <- t(this[[]])
@@ -681,6 +697,10 @@ plot.states.radar <- function(ref, query=NULL,
       qq[[i]] <- as.matrix(qmat[order,])
       qq[[i]] <- matrix(as.numeric(qq[[i]]), ncol=ncol(qq[[i]]))
     }
+  }
+  if (use.unknown) {
+    states_all <- c(states_all, "Unknown")
+    nstates <- nstates+1
   }
   
   #Get raw expression means, to normalize by gene
@@ -697,12 +717,16 @@ plot.states.radar <- function(ref, query=NULL,
   for (j in 1:length(states_all)) {
     s <- states_all[j]
     
-    this.mean <- apply(rr[, labels == s], MARGIN=1, function(x){mean(x, na.rm=T)})
-    this.mean <- this.mean/normfacs
-    
-    this.df <- data.frame(t(rbind(names(this.mean), this.mean, "Reference")))
-    colnames(this.df) <- c("Gene","Expression","Dataset")
-    this.df$Expression <- as.numeric(as.character(this.df$Expression))
+    this.df <- data.frame(Gene=character(0),Expression=numeric(0),Dataset=character(0))
+    if (sum(labels==s) > min.cells) {
+      this.mean <- apply(rr[, labels == s], MARGIN=1, function(x){mean(x, na.rm=T)})
+      this.mean <- this.mean/normfacs
+      
+      ref.df <- data.frame(t(rbind(names(this.mean), this.mean, "Reference")))
+      colnames(ref.df) <- c("Gene","Expression","Dataset")
+      ref.df$Expression <- as.numeric(as.character(ref.df$Expression))
+      this.df <- rbind(this.df, ref.df)
+    } 
     
     i <- 1
     while (i <= length(query)) {
@@ -737,7 +761,6 @@ plot.states.radar <- function(ref, query=NULL,
       theme(axis.text.x=element_blank()) +
       annotate(geom="text", x=seq(1,length(feat.use)), y=ymax-0.05*ymax, label=feat.use, size=3) +
       coord_polar()
-    
   }
   #Return plots
   if (return.as.list) {
