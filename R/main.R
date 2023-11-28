@@ -337,7 +337,9 @@ cellstate.predict <- function(ref, query,
     }
   }  
   
-  tdim <- ncol(ref@reductions[[reduction]]@cell.embeddings)
+  ref.red <- Reductions(ref, slot=reduction)
+  query.red <- Reductions(query, slot=reduction)
+  tdim <- ncol(ref.red@cell.embeddings)
   if (ndim > tdim) {
      warning(sprintf("Number of dimensions ndim=%i is larger than the dimensions in reduction %s - Using only first %i dimensions",ndim,reduction,tdim))
      ndim = tdim
@@ -345,8 +347,8 @@ cellstate.predict <- function(ref, query,
   labels <- ref[[labels.col]][,1]
   levs <- levels(labels)
   
-  ref.space <- ref@reductions[[reduction]]@cell.embeddings[,1:ndim]
-  query.space <- query@reductions[[reduction]]@cell.embeddings[,1:ndim]
+  ref.space <- ref.red@cell.embeddings[,1:ndim]
+  query.space <- query.red@cell.embeddings[,1:ndim]
   querysize <- nrow(query.space)
 
   pred.type <- rep("Unknown", dim(query.space)[1])
@@ -453,11 +455,12 @@ plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
                  repel = TRUE, pt.size=ref.size, cols=cols_use, ...) +
       ggtitle ("Reference map") + theme(aspect.ratio=1)
   } else {
+    query.red <- Reductions(query, slot="umap")
     p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col,
                  repel = TRUE, pt.size=ref.size, cols=cols_use, ...) +
-      geom_point(data.frame(query@reductions$umap@cell.embeddings), 
+      geom_point(data.frame(query.red@cell.embeddings), 
                  mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
-      geom_density_2d(data=data.frame(query@reductions$umap@cell.embeddings), 
+      geom_density_2d(data=data.frame(query.red@cell.embeddings), 
                       mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
@@ -1633,7 +1636,8 @@ compute_silhouette <- function(ref, query=NULL,
 #' @param filter.cells Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
 #'     been previously subset to cell types represented in the reference.
 #' @param split.by Grouping variable to split the query object (e.g. if the object contains multiple samples)    
-#' @param reduction The dimensionality reduction used to assign cell type labels
+#' @param reduction The dimensionality reduction used to assign cell type labels, based on
+#'     majority voting of nearest neighbors between reference and query.
 #' @param ndim The number of dimensions used for cell type classification
 #' @param k Number of neighbors for cell type classification
 #' @param labels.col The metadata field of the reference to annotate the clusters
