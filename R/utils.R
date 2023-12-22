@@ -176,7 +176,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     }
     query <- filterCells(query, species=species.query$species, gating.model=scGate_model)
   }
-  if (is.null(query || ncol(query)<2)) {
+  if (is.null(query)) {
     message(sprintf("Warning! Skipping %s - all cells were removed by cell filter", id))
     return(NULL)
   }
