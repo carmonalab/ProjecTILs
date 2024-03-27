@@ -754,16 +754,14 @@ plot.states.radar <- function(ref, query=NULL,
     this.df$Gene <- factor(this.df$Gene, levels=feat.use)
     
     pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
-      geom_point(size=2) +
-      geom_polygon(size = 0.75, alpha= 0.1) +
+      geom_bar(stat="identity", alpha=0.7, color=NA, width=1, position = position_dodge(width = 0.5)) +
+      coord_radial() +
       ylim(ymin, ymax) + ggtitle(s)  +
       scale_x_discrete() +
       scale_fill_manual(values= radar.colors) +
-      scale_colour_manual(values= radar.colors) +
       theme_light() +
       theme(axis.text.x=element_blank()) +
-      annotate(geom="text", x=seq(1,length(feat.use)), y=ymax-0.05*ymax, label=feat.use, size=3) +
-      coord_polar()
+      annotate(geom="text", x=seq(1,length(feat.use)), y=ymax-0.05*ymax, label=feat.use, size=3)
   }
   #Return plots
   if (return.as.list) {
