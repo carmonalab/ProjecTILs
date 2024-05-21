@@ -525,4 +525,18 @@ classifier.singleobject <- function(query, ref=NULL,
   return(new.labs)
 }
 
+#Set parallelization options
+set_parall <- function(ncores, progressbar=FALSE) {
+  if (ncores == 1) {
+    param <- SerialParam(progressbar = progressbar)
+  } else if (.Platform$OS.type == "windows") {
+    param <- SnowParam(workers=ncores, progressbar = progressbar)
+  } else {
+    param <- MulticoreParam(workers=ncores, progressbar = progressbar)
+  }
+  return(param)
+}
+                                    
+                                    
+
 

@@ -258,7 +258,7 @@ make.projection <- function(query, ref=NULL,
   
   #Parallelize (ncores>1)
   ncores <- min(ncores, length(query.list))
-  param <- MulticoreParam(workers=ncores, progressbar = progressbar)
+  param <- set_parall(ncores, progressbar=progressbar)
   
   #Projection over list of datasets
   projected.list <- BiocParallel::bplapply(
@@ -1723,7 +1723,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #' ref <- load.reference.map()
 #' q <- ProjecTILs.classifier(query_example_seurat, ref=ref)
 #' table(q$functional.cluster, useNA="ifany")
-#' @importFrom BiocParallel MulticoreParam bplapply
+#' @importFrom BiocParallel MulticoreParam SerialParam SnowParam bplapply
 #' @export ProjecTILs.classifier
 ProjecTILs.classifier <- function(query, ref=NULL,
                            filter.cells = TRUE,
@@ -1758,8 +1758,8 @@ ProjecTILs.classifier <- function(query, ref=NULL,
   }
   
   ncores <- min(ncores, length(query.list))
-  param <- MulticoreParam(workers=ncores)
-
+  param <- set_parall(ncores)
+  
   pred.labels <- BiocParallel::bplapply(
     X = 1:length(query.list), 
     BPPARAM =  param,
