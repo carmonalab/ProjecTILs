@@ -23,7 +23,8 @@ make.reference(
   scGate.model.mouse = NULL,
   store.markers = FALSE,
   n.markers = 10,
-  seed = 123
+  seed = 123,
+  layer1_link = NULL
 )
 }
 \arguments{
@@ -66,6 +67,8 @@ map.}
 expression analysis}
 
 \item{seed}{Random seed}
+
+\item{layer1_link}{Broad cell type contained in this reference atlas (i.e. CD4T, CL:0000624...) to link with broad cell type annotation (layer1).}
 }
 \value{
 A reference atlas compatible with ProjecTILs
@@ -74,9 +77,9 @@ A reference atlas compatible with ProjecTILs
 Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
 (e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
 the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
-'predict' functionalities of these methods for embedding of new points; skipping recalculation will 
+'predict' functionalities of these methods for embedding of new points; skipping recalculation will
 make the projection use an approximation for UMAP embedding of the query.
 }
 \examples{
-custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)  
+custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)
 }
