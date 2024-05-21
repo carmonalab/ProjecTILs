@@ -8,10 +8,16 @@ filterCells <- function(query.object, species="mouse", gating.model=NULL){
   if (is.null(gating.model)) {
     return(query.object)
   }
+  pca.dim <- 30
+  ncells <- ncol(query.object)
+  if (ncells <= pca.dim) {
+    pca.dim <- ncells - 1
+  }
 
   data(cell.cycle.obj)
   query.object <- suppressWarnings(scGate::scGate(data=query.object,
                                           model = gating.model,
+                                          pca.dim = pca.dim,
                                           verbose=FALSE,
                                           assay=DefaultAssay(query.object),
                          additional.signatures = cell.cycle.obj[[species]]))
