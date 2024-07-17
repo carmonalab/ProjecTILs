@@ -542,7 +542,110 @@ set_parall <- function(ncores, progressbar=FALSE) {
   }
   return(param)
 }
-                                    
-                                    
+
+
+# helper to load rds reference maps
+# reference should be a path to a.rds object or a URL to a .rds object, storing a Seurat object prepared using \link{make.reference}
+load.helper <- function(reference){
+  tryCatch(ref <- readRDS(reference),
+           error = function(e){
+             stop(paste("Reference object",reference,"is invalid"))
+           })
+  tryCatch(print(paste0("Loaded Custom Reference map ",ref@misc$projecTILs)),
+           error = function(e){stop("Invalid Reference object.\nConsider increasing downloading timeout running:\n `options(timeout = 1000)`\n")
+           })
+  return(ref)
+}
+
+
+# function to fetch the metadata of figshare entries
+get_figshare_metadata <- function(article_id) {
+
+  url <- paste0("https://api.figshare.com/v2/articles/",
+                article_id)
+
+  # Make the HTTP GET request
+  response <- readLines(url,
+                        warn = "F",
+                        encoding = "UTF-8")
+
+  # Parse the JSON response
+  metadata <- jsonlite::fromJSON(paste(response, collapse = ""))
+
+  # get only url and md5 data
+  df <- as.data.frame(metadata$files)
+
+  return(df)
+}
+
+# function to donwload object form a url and check integrity
+download_integrity <- function(url,
+                               destfile,
+                               hash = NULL,
+                               quiet = F){
+  r <- TRUE
+
+  tryCatch({
+    download.file(url,
+                  destfile = destfile,
+                  mode = "wb",
+                  quiet = quiet)
+  }, error = function(e){
+    r <<- FALSE
+    file.remove(destfile)
+    cat("Download failed for ", destfile,
+        "\n Consider increasing downloading timeout running: `options(timeout = 1000)`\n")
+
+
+  }
+  )
+
+  if(r && !is.null(hash)){
+    # check file integrity
+    downloaded_hash <- digest::digest(file = destfile)
+    # return if file integrity check passed
+    if(downloaded_hash == hash){
+      r <- TRUE
+    } else {
+      r <- FALSE
+    }
+  }
+
+  return(r)
+}
+
+# function to handle errors during downloading
+try.download <- function(url,
+                         destfile,
+                         hash = NULL,
+                         verbose = TRUE,
+                         # whether stop function or trown warning upon failing
+                         warn = FALSE){
+
+
+  file_integrity <- download_integrity(url = url,
+                                       destfile = destfile,
+                                       hash = hash,
+                                       quiet = !verbose)
+  if(!file_integrity){
+    message("File ", destfile, " did not pass integrity check. Redownloading file\nConsider increasing downloading timeout running:\n `options(timeout = 1000)`\n")
+    file_integrity <- download_integrity(url = url,
+                                        destfile = destfile,
+                                        hash = hash,
+                                        quiet = !verbose)
+  }
+
+  if(!file_integrity){
+    if(warn){
+      cat("File ", destfile, " did not pass integrity check!!\nConsider increasing downloading timeout running:\n `options(timeout = 1000)`\n")
+    } else {
+      stop("File ", destfile, " did not pass integrity check!!\nConsider increasing downloading timeout running:\n `options(timeout = 1000)`\n")
+    }
+  }
+
+}
+
+
+
 
 

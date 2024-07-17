@@ -28,7 +28,9 @@ Imports:
     pheatmap,
     RColorBrewer,
     purrr,
-    dplyr
+    dplyr,
+    jsonlite,
+    digest
 Suggests:
     fastICA,
     EnhancedVolcano,

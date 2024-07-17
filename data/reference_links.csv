@@ -1,0 +1,8 @@
+collection.CSI,reference.atlas,name,figshare_id
+human,CD4,sketched_CD4T_human_ref_v2.rds,26310994
+human,CD8,sketched_CD8T_human_ref_v1.rds,26310994
+human,DC,sketched_DC_human_ref_v2.rds,26310994
+human,MoMac,sketched_MoMac_human_v1.rds,26310994
+mouse,Virus_CD4T,ref_LCMV_CD4_mouse_release_v1.rds,16592693
+mouse,Virus_CD8T,ref_CD8_LCMV_mouse_v2.rds,23764572
+mouse,TILs,ref_TILAtlas_mouse_v1.rds,12478571
