@@ -245,23 +245,7 @@ make.projection <- function(query, ref=NULL,
   }
 
   if(is.null(ref)){
-    print("Loading Default Reference Atlas...")
-    refFileName <- paste0(getwd(),"/ref_TILAtlas_mouse_v1.rds")
-    refUrl <- "https://ndownloader.figshare.com/files/23136746"
-    if (file.exists(refFileName)){
-      print(refFileName)
-      tryCatch(ref <- readRDS(refFileName),
-               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
-
-    } else {
-      print(paste0(refFileName," not found; I will try to download it and proceed, wish me luck..."))
-      tryCatch(download.file(refUrl, refFileName),
-               error = function(e){ stop("Sorry, it didn't work.")})
-      tryCatch(ref <- readRDS(refFileName),
-               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
-    }
-    tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),
-              error = function(e){stop("Invalid Reference object")}   )
+    ref <- load.reference.map()
 
   }
   projected.list <- list()
