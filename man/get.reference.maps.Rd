@@ -41,11 +41,11 @@ ref.maps <- get.reference.maps()
 
 # get certain collections or reference maps
 # all human references maps
-ref.maps.human <- get.reference.maps(collection = "human)
+ref.maps.human <- get.reference.maps(collection = "human")
 
 # only some references
 ref.maps <- get.reference.maps(reference = "DC")
-ref.maps.CD4 <- get.reference.maps(reference = c("CD4", "Virus_CD4T))
+ref.maps.CD4 <- get.reference.maps(reference = c("CD4", "Virus_CD4T"))
 
 # update previously downloaded maps
 ref.maps <- get.reference.maps(update = TRUE)
