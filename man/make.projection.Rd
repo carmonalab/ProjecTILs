@@ -27,7 +27,7 @@ make.projection(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has
 been previously subset to cell types represented in the reference.}
 
 \item{query.assay}{Which assay slot to use for the query (defaults to DefaultAssay(query))}
@@ -47,7 +47,7 @@ Default is "max", which disables local anchor weighting.}
 \item{skip.normalize}{By default, log-normalize the count data.
 If you have already normalized your data, you can skip normalization.}
 
-\item{fast.umap.predict}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in 
+\item{fast.umap.predict}{Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in
 PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)}
 
 \item{ortholog_table}{Dataframe for conversion between ortholog genes
@@ -65,9 +65,9 @@ An augmented Seurat object with projected UMAP coordinates on the reference map
 }
 \description{
 This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map
-(i.e. a curated and annotated scRNA-seq dataset). 
+(i.e. a curated and annotated scRNA-seq dataset).
 To project multiple datasets, submit a list of Seurat objects with the query parameter.
-The projection consists of 3 steps: 
+The projection consists of 3 steps:
 \itemize{
  \item{pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
 data normalization, and ortholog conversion.}

@@ -23,7 +23,7 @@ Run.ProjecTILs(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has
 been previously subset to cell types represented in the reference.}
 
 \item{split.by}{Grouping variable to split the query object (e.g. if the object contains multiple samples)}
@@ -48,9 +48,9 @@ An augmented Seurat object with projected UMAP coordinates on the reference map 
 }
 \description{
 This function allows projecting ("query") single-cell RNA-seq datasets onto a reference map
-(i.e. a curated and annotated scRNA-seq dataset). 
+(i.e. a curated and annotated scRNA-seq dataset).
 To project multiple datasets, submit a list of Seurat objects with the query parameter.
-The projection consists of 3 steps: 
+The projection consists of 3 steps:
 \itemize{
  \item{pre-processing: optional steps which might include pre-filtering of cells by markers using `scGate`,
 data normalization, and ortholog conversion.}

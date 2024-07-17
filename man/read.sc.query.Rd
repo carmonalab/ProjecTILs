@@ -42,7 +42,7 @@ read.sc.query(
 A Seurat object populated with raw counts and normalized counts for single-cell expression
 }
 \description{
-Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts) 
+Load a query expression matrix to be projected onto the reference atlas. Several formats (10x, hdf5, raw and log counts)
 are supported - see \code{type} parameter for details
 }
 \examples{

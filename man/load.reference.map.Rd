@@ -17,5 +17,16 @@ By the default it downloads a reference atlas of tumour-infiltrating
 lymphocytes (TILs) from mouse.
 }
 \examples{
-load.reference.map()
+# consider increasing downloading timeout, if downloading Default reference atlas or large reference
+options(timeout = 1000)
+
+# Download and load default reference map
+ref <- load.reference.map()
+
+# download reference map
+ref.web <- load.reference.map(ref = url)
+
+# Load any reference map
+ref <- load.reference.map(ref = "path/to/ref")
+
 }
