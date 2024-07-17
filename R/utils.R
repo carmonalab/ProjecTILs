@@ -482,7 +482,8 @@ combine_confidence <- function(conf1, conf2) {
 }
 
 #Run ProjecTILs.classifier on a single object
-classifier.singleobject <- function(query, ref=NULL,
+classifier.singleobject <- function(query,
+                                    ref=NULL,
                                     filter.cells = TRUE,
                                     reduction="pca",
                                     ndim=NULL, k=5,
