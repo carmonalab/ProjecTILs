@@ -35,7 +35,8 @@ rl <- data.frame(collection.CSI = c("human",
 )
 
 
-write.csv(rl,
-          "data/reference_links.csv",
-          quote = F,
-          row.names = F)
+# utils::write.table(rl,
+#                    "data/reference_links.csv",
+#                    sep = ",",
+#                    quote = F,
+#                    row.names = F)
