@@ -34,9 +34,12 @@ rl <- data.frame(collection.CSI = c("human",
                                  )
 )
 
+inst.dir <- "inst/extdata"
+dir.create(inst.dir,
+           recursive = T)
 
-# utils::write.table(rl,
-#                    "data/reference_links.csv",
-#                    sep = ",",
-#                    quote = F,
-#                    row.names = F)
+utils::write.table(rl,
+                   file.path(inst.dir, "reference_links.csv"),
+                   sep = ",",
+                   quote = F,
+                   row.names = F)

@@ -2286,7 +2286,7 @@ get.reference.maps <- function(collection = NULL,
 list.reference.maps <- function(){
   # get list of download links
   links_path <- system.file("extdata",
-                            "data/reference_links.csv",
+                            "reference_links.csv",
                             package = "ProjecTIls")
   # return the available links to reference maps
   links <- read.csv(links_path,
