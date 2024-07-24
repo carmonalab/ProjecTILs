@@ -7,24 +7,45 @@
 #' @param ref Reference atlas as a Seurat object (by default downloads a mouse reference TIL atlas).
 #'     To use a custom reference atlas, provide a .rds object or a URL to a .rds object, storing a Seurat object
 #'     prepared using \link{make.reference}
+#'
 #' @examples
-#' load.reference.map()
+#' # consider increasing downloading timeout, if downloading Default reference atlas or large reference
+#' options(timeout = 1000)
+#'
+#' # Download and load default reference map
+#' ref <- load.reference.map()
+#'
+#' # download reference map
+#' ref.web <- load.reference.map(ref = url)
+#'
+#' # Load any reference map
+#' ref <- load.reference.map(ref = "path/to/ref")
+#'
 #' @export load.reference.map
 load.reference.map <- function(ref="referenceTIL") {
+
+  hash <- NULL
+
   if(identical(ref,"referenceTIL")){
     print("Loading Default Reference Atlas...")
+    # file path of the reference map
     refFileName <- paste0(getwd(),"/ref_TILAtlas_mouse_v1.rds")
+    # url and hash of TIL atlas (default)
     refUrl <- "https://ndownloader.figshare.com/files/41398167"
+    hash <- "679c7fe3cb1737e43cc2f84350331253"
+
     if (file.exists(refFileName)){
       print(refFileName)
-      tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
+      ref <- load.helper(refFileName)
 
     } else {
       print(paste0(refFileName," not found; downloading reference TIL map from the server..."))
-      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, download failed.")})
-      tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
+      try.download(url = refUrl,
+                   destfile = refFileName,
+                   hash = hash,
+                   warn = F)
+      ref <- load.helper(refFileName)
     }
-    tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")}   )
 
   } else {
     if (grepl("^[ftp|http]", ref, perl = T)) {
@@ -32,15 +53,18 @@ load.reference.map <- function(ref="referenceTIL") {
       refFileName <- paste0(getwd(),"/custom_reference.rds")
       print(sprintf("Trying to download custom reference from %s...", refUrl))
 
-      tryCatch(download.file(refUrl, refFileName), error = function(e){ stop("Sorry, download failed.")})
+      try.download(url = refUrl,
+                   destfile = refFileName,
+                   hash = hash,
+                   warn = F)
+
     } else if (file.exists(ref)) {
       refFileName <- ref
     } else {
       stop("Provide ref is not a valid reference or a valid URL.")
     }
     print("Loading Custom Reference Atlas...")
-    tryCatch(ref <- readRDS(refFileName), error = function(e){ stop(paste("Reference object",ref,"is invalid"))})
-    tryCatch(print(paste0("Loaded Custom Reference map ",ref@misc$projecTILs)),error = function(e){stop("Invalid Reference object")})
+    ref <- load.helper(refFileName)
   }
   return(ref)
 }
@@ -221,23 +245,7 @@ make.projection <- function(query, ref=NULL,
   }
 
   if(is.null(ref)){
-    print("Loading Default Reference Atlas...")
-    refFileName <- paste0(getwd(),"/ref_TILAtlas_mouse_v1.rds")
-    refUrl <- "https://ndownloader.figshare.com/files/23136746"
-    if (file.exists(refFileName)){
-      print(refFileName)
-      tryCatch(ref <- readRDS(refFileName),
-               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
-
-    } else {
-      print(paste0(refFileName," not found; I will try to download it and proceed, wish me luck..."))
-      tryCatch(download.file(refUrl, refFileName),
-               error = function(e){ stop("Sorry, it didn't work.")})
-      tryCatch(ref <- readRDS(refFileName),
-               error = function(e){ stop(paste("Reference object",refFileName,"is invalid"))})
-    }
-    tryCatch( print(paste0("Loaded Reference map ",ref@misc$projecTILs)),
-              error = function(e){stop("Invalid Reference object")}   )
+    ref <- load.reference.map()
 
   }
   projected.list <- list()
@@ -259,7 +267,7 @@ make.projection <- function(query, ref=NULL,
   #Parallelize (ncores>1)
   ncores <- min(ncores, length(query.list))
   param <- set_parall(ncores, progressbar=progressbar)
-  
+
   #Projection over list of datasets
   projected.list <- BiocParallel::bplapply(
     X = 1:length(query.list),
@@ -1782,7 +1790,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 
   ncores <- min(ncores, length(query.list))
   param <- set_parall(ncores)
-  
+
   pred.labels <- BiocParallel::bplapply(
     X = 1:length(query.list),
     BPPARAM =  param,
@@ -2103,4 +2111,193 @@ FindAllMarkers.bygroup <- function(object,
   names(genes) <- ids
 
   genes
+}
+
+
+
+#' Retrieve and load reference atlas
+#'
+#' Download and load reference atlases.
+#'
+#' @param collection Collection to download and load. See available collection using \link{list.reference.maps}. If NULL, all are downloaded and loaded (default)
+#' @param reference References to download and load. See available collection using \link{list.reference.maps}. If NULL, all are downloaded and loaded (default)
+#' @param update Boolean whether to delete current reference maps and download them again
+#' @param directory Directory where to download and load from reference maps. By default a directory named "ProjecTILs_references" is created in working directory.
+#' @param as.list Boolean whether to simplify list (\code{FALSE}) or, by default, keep a list of lists for each collection (\code{TRUE}).
+#' @param verbose Inform of the status of processes
+#'
+#' @examples
+#' # explore available reference maps
+#' list.reference.maps()
+#'
+#' # consider increasing downloading timeout
+#' options(timeout = 1000)
+#'
+#' # get all available reference maps
+#' ref.maps <- get.reference.maps()
+#'
+#' # get certain collections or reference maps
+#' # all human references maps
+#' ref.maps.human <- get.reference.maps(collection = "human")
+#'
+#' # only some references
+#' ref.maps <- get.reference.maps(reference = "DC")
+#' ref.maps.CD4 <- get.reference.maps(reference = c("CD4", "Virus_CD4T"))
+#'
+#' # update previously downloaded maps
+#' ref.maps <- get.reference.maps(update = TRUE)
+#'
+#' @importFrom digest digest
+#' @importFrom jsonlite fromJSON
+#' @importFrom dplyr filter pull left_join %>%
+#' @export get.reference.maps
+
+
+get.reference.maps <- function(collection = NULL,
+                               reference = NULL,
+                               update = FALSE,
+                               directory = "./ProjecTILs_references",
+                               as.list = TRUE,
+                               verbose = TRUE){
+
+  # Normalize destination/directory path
+  directory <- suppressWarnings(
+    {normalizePath(directory,
+                   winslash = "/")
+    })
+
+  if(!dir.exists(directory) && !update){
+    if(verbose){
+      message("Provided directory doesn't exists. Creating directory and downloading reference maps\n")
+    }
+    update <- TRUE
+  }
+
+  # get list of download links
+  links <- list.reference.maps()
+
+
+  # check collections
+  if(is.null(collection)){
+    if(verbose){message("Retrieving all ProjecTILs reference atlases\n")}
+  } else{
+    if(!any(tolower(collection) %in% links$collection.CSI)){
+      stop("Please provide one of the available collections to retrieve reference maps:\n\n",
+           paste(capture.output(print(links)), collapse = "\n"))
+    }
+    links <- links %>%
+      dplyr::filter(collection.CSI %in% collection)
+    if(verbose){message("Retrieving ", paste(collection, collapse = ", "),
+                        " ProjecTILs reference atlases\n")}
+  }
+
+  # check references
+  if(is.null(reference)){
+    if(verbose){message("Retrieving all ProjecTILs reference atlases\n")}
+  } else{
+    if(!any(reference %in% links$reference.atlas)){
+      stop("Please provide one of the available references.atlas to retrieve:\n\n",
+           paste(capture.output(print(links)), collapse = "\n"))
+    }
+    links <- links %>%
+      dplyr::filter(reference.atlas %in% reference)
+    if(verbose){message("Retrieving ", paste(reference, collapse = ", "),
+                        " ProjecTILs reference atlases\n")}
+  }
+
+  # filter links only for wanted to collections
+
+  # create directories for each species
+  collecs <- unique(links$collection.CSI)
+  refs <- lapply(collecs,
+                 function(d){
+                   # get figshare id
+                   article_id <- links %>%
+                     dplyr::filter(collection.CSI == d) %>%
+                     dplyr::pull(figshare_id) %>%
+                     unique()
+
+                   # create directory and subdirectory
+                   suppressWarnings({
+                     dir.create(file.path(directory, d),
+                                recursive = T)
+                   })
+
+                   ref.cols <- list()
+
+                   for (aid in article_id){
+                     # get metadata of downloading url and hash
+                     figshare_md <- get_figshare_metadata(aid)
+                     # left_join with customed list of desired maps to download
+                     md <- dplyr::left_join(links %>%
+                                              dplyr::filter(figshare_id == aid),
+                                            figshare_md,
+                                            by = "name")
+
+                     # download and check hashing
+                     for(i in 1:nrow(md)){
+                       filename <- md[i,"name"]
+                       destfile <- file.path(directory, d, filename)
+                       url <- md[i,"download_url"]
+                       hash <- md[i, "computed_md5"]
+                       obj_name <- md[i, "reference.atlas"]
+
+
+                       if(update || !file.exists(destfile)){
+                         try.download(url = url,
+                                      destfile = destfile,
+                                      hash = hash,
+                                      verbose = verbose,
+                                      warn = T)
+                       }
+                       # load files
+                       tryCatch({
+                         ref.cols[[obj_name]] <- load.helper(destfile)
+                         cat("-------\n")
+                       }, error = function(e){
+                         cat("Loading failed for", destfile,
+                             "\nPlease rerun get.reference.maps(update=T) to download again references. Also, Consider increasing downloading timeout running:\n `options(timeout = 1000)`\n")
+
+                       }
+                       )
+
+                     }
+                   }
+                   return(ref.cols)
+                 })
+
+  # return list
+  if(as.list){
+    names(refs) <- collecs
+  } else {
+    refs <- unlist(refs)
+  }
+
+
+
+  return(refs)
+}
+
+
+
+#' Available reference atlas for ProjecTILs
+#'
+#' Obtain the list of available reference atlas for ProjecTILs to then download and load them using \link{get.reference.maps}.
+#'
+#' @examples
+#' # explore available reference maps
+#' list.reference.maps()
+
+#' @export list.reference.maps
+
+
+list.reference.maps <- function(){
+  # get list of download links
+  links_path <- system.file("extdata",
+                            "reference_links.csv",
+                            package = "ProjecTILs")
+  # return the available links to reference maps
+  links <- read.csv(links_path,
+                    stringsAsFactors = FALSE)
+  return(links)
 }
