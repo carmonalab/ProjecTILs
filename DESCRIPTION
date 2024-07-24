@@ -14,7 +14,7 @@ Authors@R: c(
   person('Josep','Garnica',
     email = 'josep.garnicacaparros@unil.ch',
     role = c('aut'),
-    comment = c(ORCID = '0000-0001-9493-1321'))   
+    comment = c(ORCID = '0000-0001-9493-1321')),   
   person(given = 'Santiago', family = 'Carmona',
     email = 'santiago.carmona@unil.ch',
     role = c('aut'),
