@@ -51,7 +51,8 @@ recalculate.embeddings(
 A combined reference object of reference and projected object(s), with new low dimensional embeddings
 }
 \description{
-Given a reference object and a (list of) projected objects, recalculate low-dim embeddings accounting for the projected cells
+Given a reference object and a (list of) projected objects, recalculate low-dim 
+embeddings accounting for the projected cells
 }
 \examples{
 combined <- recalculate.embeddings(ref, projected, ndim=10)

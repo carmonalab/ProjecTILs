@@ -25,7 +25,7 @@ ProjecTILs.classifier(
 
 \item{ref}{Reference Atlas - if NULL, downloads the default TIL reference atlas}
 
-\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has 
+\item{filter.cells}{Pre-filter cells using `scGate`. Only set to FALSE if the dataset has
 been previously subset to cell types represented in the reference.}
 
 \item{split.by}{Grouping variable to split the query object (e.g. if the object contains multiple samples)}
@@ -63,7 +63,7 @@ Compared to \link{Run.ProjecTILs}, only cell labels are returned. The low-dim em
 the query object (PCA, UMAP) are not modified.
 }
 \details{
-See \link{load.reference.map} to load or download a reference atlas. 
+See \link{load.reference.map} to load or download a reference atlas.
 See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 }
 \examples{

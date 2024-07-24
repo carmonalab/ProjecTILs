@@ -1439,7 +1439,8 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, merge.dr=NULL, ...)
 
 #' Recalculate low dimensional embeddings after projection
 #'
-#' Given a reference object and a (list of) projected objects, recalculate low-dim embeddings accounting for the projected cells
+#' Given a reference object and a (list of) projected objects, recalculate low-dim 
+#' embeddings accounting for the projected cells
 #'
 #' @param ref Reference map
 #' @param projected A projected object (or list of projected objects) generated using \link{make.projection}
@@ -1540,7 +1541,14 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
   glob.freq <- table(merged$ref_or_query)["query"]/ncol(merged)
   freq <- apply(tab, 1, function(x){x/sum(x)})["query",] - glob.freq
   freq[freq<0] <- 0
-  merged$newclusters <- freq[merged$seurat_clusters]
+  
+  cl <- as.numeric(as.character(merged$seurat_clusters))
+  names(cl) <- names(merged$seurat_clusters)
+  
+  fcl <- freq[as.character(cl)]
+  names(fcl) <- names(cl)
+  
+  merged$newclusters <- fcl
 
   Idents(merged) <- "functional.cluster"
   return(merged)

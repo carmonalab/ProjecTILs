@@ -38,7 +38,7 @@ A list of marker genes for each identity class (typically clusters), with two as
 \description{
 This function expands \link[Seurat]{FindAllMarkers} to find markers that are differentially expressed across multiple
 datasets or samples. Given a Seurat object with identity classes (for example annotated clusters) and a grouping
-variable (for example a Sample ID), it calculate differentially expressed genes (DEGs) individually for each sample. 
+variable (for example a Sample ID), it calculate differentially expressed genes (DEGs) individually for each sample.
 Then it determines the fraction of samples for which the gene was found to be differentially expressed.
 }
 \details{
