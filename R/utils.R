@@ -102,7 +102,7 @@ get.species <- function(genes, table=Hs2Mm.convert.table) {
 convert.orthologs <- function(obj, table, from="Gene.HS", to="Gene.MM",
                               query.assay="RNA", slot="counts") {
 
-  exp.mat <- GetAssayData(obj, assay=query.assay, slot=slot)
+  exp.mat <- GetAssayData(obj, assay=query.assay, layer=slot)
   genes.select <- rownames(exp.mat)[rownames(exp.mat) %in% table[[from]]]
 
   if (length(genes.select) < 100) {
@@ -170,6 +170,18 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
      do.orthology <- TRUE
   }
 
+  #Check if slots are populated, and normalize data.
+  if (skip.normalize) {
+    if (!"data" %in% Layers(query)) {
+      stop("Data slot not found in your Seurat object. Please normalize the data")
+    }
+  } else {
+    if (!"counts" %in% Layers(query)) {
+      stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
+    }
+    query <- NormalizeData(query)
+  }  
+  
   if(filter.cells){
     message("Pre-filtering cells with scGate...")
     if (is.null(scGate_model)) {  #read filter model from atlas
@@ -187,34 +199,12 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     return(NULL)
   }
 
-  #Check if slots are populated, and normalize data.
-  if (skip.normalize) {
-    slot <- "data"
-
-    exp.mat <- GetAssayData(query, assay=query.assay, slot=slot)
-    if (dim(exp.mat)[1]==0) {
-      stop("Data slot not found in your Seurat object. Please normalize the data")
-    }
-    if (do.orthology) {
-      print("Transforming expression matrix into space of orthologs")
-      query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot=slot,
-                                 from=species.query$col.id, to=species.ref$col.id)
-    }
-  } else {
-    slot <- "counts"
-    exp.mat <- GetAssayData(query, assay=query.assay, slot=slot)
-    if (nrow(exp.mat)==0) {
-      stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
-    }
-    if (do.orthology) {
-      print("Transforming expression matrix into space of orthologs")
-      query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot=slot,
-                                 from=species.query$col.id, to=species.ref$col.id)
-    }
-    query <- NormalizeData(query)
-  }
-  rm(exp.mat)
-
+  if (do.orthology) {
+    print("Transforming expression matrix into space of orthologs")
+    query <- convert.orthologs(query, table=ortholog_table, query.assay=query.assay, slot="data",
+                               from=species.query$col.id, to=species.ref$col.id)
+  }  
+    
   query <- RenameCells(query, add.cell.id = "Q")
   query.metadata <- query@meta.data   #back-up metadata (and re-add it after projection)
 

@@ -609,7 +609,7 @@ plot.states.radar <- function(ref, query=NULL,
       warning(sprintf("Some metadata columns were not found:\n%s", to.print))
     }
   } else {
-    refmat <- GetAssayData(ref, assay=ref.assay, slot="data")
+    refmat <- GetAssayData(ref, assay=ref.assay, layer="data")
 
     #Check gene names/feature names
     feat.use <- intersect(genes4radar, row.names(refmat))
@@ -701,7 +701,7 @@ plot.states.radar <- function(ref, query=NULL,
         if (!query.assay %in% Assays(this)) {
           stop(sprintf("Assay %s not found in query object. Please check ref.assay parameter", query.assay))
         }
-        qmat <- GetAssayData(this, assay=query.assay, slot="data")
+        qmat <- GetAssayData(this, assay=query.assay, layer="data")
       }
       order <- match(feat.use, row.names(qmat))
 
@@ -1915,7 +1915,7 @@ celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, 
     message("These genes were not found in the assay: ", paste0(genes.removed, collapse = ","))
   }
 
-  this.mat <- GetAssayData(data, assay=assay, slot=slot)[genes.use,]
+  this.mat <- GetAssayData(data, assay=assay, layer=slot)[genes.use,]
 
   m <- lapply(unique(genes.use), function(g) {
     tapply(this.mat[g,], data$metaSubset, mean)
