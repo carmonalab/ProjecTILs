@@ -169,24 +169,24 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   if (species.ref$species != species.query$species) {
      do.orthology <- TRUE
   }
-
+  
   #Check if slots are populated, and normalize data.
   if (skip.normalize) {
-    if (!"data" %in% Layers(query)) {
+    gr <- grep("data", Layers(query))
+    if (length(gr) == 0) {
       stop("Data slot not found in your Seurat object. Please normalize the data")
+    } else if (length(gr) > 1) {
+      query <- JoinLayers(query)
     }
   } else {
-    if (!"counts" %in% Layers(query)) {
+    gr <- grep("counts", Layers(query))
+    if (length(gr) == 0) {
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
+    } else if (length(gr) > 1) {
+      query <- JoinLayers(query)
     }
     query <- NormalizeData(query)
   }  
-  
-  #Check whether there are multiple layers, and join them
-  layers <- SeuratObject::Layers(query, assay=query.assay, search = "data")
-  if (length(layers) > 1) {
-    query <- SeuratObject::JoinLayers(query)
-  }
   
   if(filter.cells){
     message("Pre-filtering cells with scGate...")
