@@ -156,7 +156,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   }
 
   print(paste0("Using assay ",query.assay," for ",id))
-
+  
   if (!is.null(ref@misc$umap_object$data)) {
      pca.dim=ncol(ref@misc$umap_object$data) #use the number of PCs used to build the reference
   } else {
@@ -181,6 +181,12 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     }
     query <- NormalizeData(query)
   }  
+  
+  #Check whether there are multiple layers, and join them
+  layers <- SeuratObject::Layers(query, assay=query.assay, search = "data")
+  if (length(layers) > 1) {
+    query <- SeuratObject::JoinLayers(query)
+  }
   
   if(filter.cells){
     message("Pre-filtering cells with scGate...")
