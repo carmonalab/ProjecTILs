@@ -48,7 +48,7 @@ load.reference.map <- function(ref="referenceTIL") {
     }
 
   } else {
-    if (grepl("^[ftp|http]", ref, perl = T)) {
+    if (grepl("^(ftp|http)", ref, perl = T)) {
       refUrl <- ref
       refFileName <- paste0(getwd(),"/custom_reference.rds")
       print(sprintf("Trying to download custom reference from %s...", refUrl))
