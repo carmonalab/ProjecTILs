@@ -154,7 +154,6 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   } else {
      DefaultAssay(query) <- query.assay
   }
-
   print(paste0("Using assay ",query.assay," for ",id))
   
   if (!is.null(ref@misc$umap_object$data)) {
@@ -187,6 +186,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     }
     query <- NormalizeData(query)
   }  
+  suppressWarnings(query[[query.assay]] <- as(query[[query.assay]], Class="Assay"))
   
   if(filter.cells){
     message("Pre-filtering cells with scGate...")

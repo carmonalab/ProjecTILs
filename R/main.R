@@ -243,11 +243,15 @@ make.projection <- function(query, ref=NULL,
   if (is.null(query)) {
     return(NULL)
   }
-
   if(is.null(ref)){
     ref <- load.reference.map()
-
   }
+  #ref assays should be in Seurat v4 format
+  assays <- Assays(ref)
+  for (a in assays) {
+    suppressWarnings(ref[[a]] <- as(ref[[a]], Class="Assay"))
+  }
+  
   projected.list <- list()
   if (is.null(ortholog_table)) {
      data(Hs2Mm.convert.table)
