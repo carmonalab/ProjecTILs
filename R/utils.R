@@ -1,4 +1,3 @@
-#Internal function to filter cells using scGate
 filterCells <- function(query.object, species="mouse", gating.model=NULL){
 
   ncells <- ncol(query.object)
@@ -171,14 +170,14 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
   
   #Check if slots are populated, and normalize data.
   if (skip.normalize) {
-    gr <- grep("data", Layers(query))
+    gr <- grep("^data", Layers(query))
     if (length(gr) == 0) {
       stop("Data slot not found in your Seurat object. Please normalize the data")
     } else if (length(gr) > 1) {
       query <- JoinLayers(query)
     }
   } else {
-    gr <- grep("counts", Layers(query))
+    gr <- grep("^counts", Layers(query))
     if (length(gr) == 0) {
       stop("Counts slot not found in your Seurat object. If you already normalized your data, re-run with option skip.normalize=TRUE")
     } else if (length(gr) > 1) {
