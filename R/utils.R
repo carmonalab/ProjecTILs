@@ -350,7 +350,7 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
 #Utility to convert Seurat objects from v5 to v3
 convert_to_v3 <- function(object, assay="RNA", layer="counts") {
   
-  if (inherits(object[[assay]], "Assay5") {
+  if (inherits(object[[assay]], "Assay5")) {
     if (layer == "data") {
       assay_v3 <- CreateAssayObject(
         data = object[[assay]]$data
