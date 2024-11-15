@@ -1714,7 +1714,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
     pass <- lapply(query, function(x) {
       !is.null(x) && ncol(x)>1
     })  
-    query <- query[unlist(query)]
+    query <- query[unlist(pass)]
     
     #Merge embeddings
     if (!is.null(split.by)) {
