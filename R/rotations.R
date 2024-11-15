@@ -38,7 +38,7 @@ run.umap.uwot <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, mi
   return(ref.umap)
 }
 
-prcomp.seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
+prcomp_seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
   
   if (is.null(assay)) {
     assay <- DefaultAssay(obj)

@@ -249,7 +249,7 @@ make.projection <- function(query, ref=NULL,
   #ref assays should be in Seurat v4 format
   assays <- Assays(ref)
   for (a in assays) {
-    suppressWarnings(ref[[a]] <- as(ref[[a]], Class="Assay"))
+      ref <- convert_to_v3(ref, assay = a, layer="data")
   }
   
   projected.list <- list()
@@ -401,7 +401,6 @@ cellstate.predict <- function(ref, query,
 
   query <- AddMetaData(query, metadata=pred$pred.state, col.name = labels.col)
   query <- AddMetaData(query, metadata=pred$confidence, col.name = paste0(labels.col,".conf"))
-  message(paste0("Creating slots ",labels.col," and ",labels.col, ".conf in query object"))
 
   return(query)
 }
@@ -1188,7 +1187,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
   s.m <- merge(s1, s2)
   s.m <- DietSeurat(s.m, assays = query.assay)
 
-  if (class(s.m[[query.assay]])=="Assay5") { #only for Assay5 objects
+  if (inherits(s.m[[query.assay]]),"Assay5")) {
     s.m <- JoinLayers(s.m)
   }
   Idents(s.m) <- "Group"
@@ -1307,7 +1306,7 @@ make.reference <- function(ref,
 
 
   #Recompute PCA embeddings using prcomp
-  ref <- prcomp.seurat(ref, ndim=ndim, assay=assay)
+  ref <- prcomp_seurat(ref, ndim=ndim, assay=assay)
 
   #Recalculate UMAP, or use an already-present dimensionality reduction
   if (!recalculate.umap) {
@@ -1428,7 +1427,7 @@ make.reference <- function(ref,
 #'
 #' @param x First object to merge
 #' @param y Second object to merge
-#' @param merge.dr Which reductions to merge. By default merges all reductions shared by the two objects.
+#' @param merge.dr How to handle merging dimensional reductions (see merge.Seurat)
 #' @param ... More parameters to \link{merge} function
 #' @return A merged Seurat object
 #' @examples
@@ -1438,14 +1437,10 @@ make.reference <- function(ref,
 #' @import Seurat
 #' @export merge.Seurat.embeddings
 
-merge.Seurat.embeddings <- function(x=NULL, y=NULL, merge.dr=NULL, ...)
+merge.Seurat.embeddings <- function(x=NULL, y=NULL, merge.dr=TRUE, ...)
 {
-  if (is.null(merge.dr)) {  #merge all shared reductions, by default
-    merge.dr <- intersect(names(x@reductions), names(y@reductions))
-  }
   #Use Seurat merge function, inheriting parameters
   m <- merge(x, y, merge.dr=merge.dr, ...)
-
   return(m)
 }
 
@@ -1508,7 +1503,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
 
   if (recalc.pca) {
     message("Recalculating PCA embeddings...")
-    merged <- prcomp.seurat(merged, assay=proj.assay, ndim=ndim)
+    merged <- prcomp_seurat(merged, assay=proj.assay, ndim=ndim)
   }
 
   ref.pca <- merged@misc$pca_object
@@ -1716,8 +1711,13 @@ Run.ProjecTILs <- function(query, ref=NULL,
                           min.confidence = min.confidence,
                           labels.col = labels.col)
     })
+    pass <- lapply(query, function(x) {
+      !is.null(x) && ncol(x)>1
+    })  
+    query <- query[unlist(query)]
+    
     #Merge embeddings
-    if (length(query)==1 || !is.null(split.by)) {
+    if (!is.null(split.by)) {
        query <- Reduce(merge.Seurat.embeddings, query)
     }
     query

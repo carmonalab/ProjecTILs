@@ -176,6 +176,8 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     } else if (length(gr) > 1) {
       query <- JoinLayers(query)
     }
+    query <- convert_to_v3(query, assay=query.assay, layer="data")
+    
   } else {
     gr <- grep("^counts", Layers(query))
     if (length(gr) == 0) {
@@ -183,9 +185,9 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
     } else if (length(gr) > 1) {
       query <- JoinLayers(query)
     }
+    query <- convert_to_v3(query, assay=query.assay, layer="counts")
     query <- NormalizeData(query)
-  }  
-  suppressWarnings(query[[query.assay]] <- as(query[[query.assay]], Class="Assay"))
+  }
   
   if(filter.cells){
     message("Pre-filtering cells with scGate...")
@@ -343,6 +345,24 @@ projection.helper <- function(query, ref=NULL, filter.cells=TRUE, query.assay=NU
       projected <- RenameCells(projected, new.names=cellnames)
   }
   return(projected)
+}
+
+#Utility to convert Seurat objects from v5 to v3
+convert_to_v3 <- function(object, assay="RNA", layer="counts") {
+  
+  if (inherits(object[[assay]], "Assay5") {
+    if (layer == "data") {
+      assay_v3 <- CreateAssayObject(
+        data = object[[assay]]$data
+      )
+    } else {
+      assay_v3 <- CreateAssayObject(
+        counts = object[[assay]]$counts
+      )
+    } 
+    object[[assay]] <- assay_v3
+  }
+  object
 }
 
 #calculate Silhouette coefficient between for cells in rows compared to set in columns with same labels
