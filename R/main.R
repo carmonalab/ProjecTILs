@@ -1718,7 +1718,7 @@ Run.ProjecTILs <- function(query, ref=NULL,
     
     #Merge embeddings
     if (!is.null(split.by)) {
-       query <- Reduce(merge.Seurat.embeddings, query)
+       query <- suppressMessages(Reduce(merge.Seurat.embeddings, query))
     }
     query
 }
