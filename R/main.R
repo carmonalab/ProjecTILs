@@ -1187,7 +1187,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
   s.m <- merge(s1, s2)
   s.m <- DietSeurat(s.m, assays = query.assay)
 
-  if (inherits(s.m[[query.assay]],"Assay5") {
+  if (inherits(s.m[[query.assay]],"Assay5")) {
     s.m <- JoinLayers(s.m)
   }
   Idents(s.m) <- "Group"
