@@ -68,6 +68,8 @@ Run.ProjecTILs(query = query_object, ref = reference_map)
 
 </p>
 
+**Note:** Cell-cell distances in UMAP spaces are highly distorted, as pointed out e.g. by [Chari and Pachter (2023)](https://doi.org/10.1371/journal.pcbi.1011288). Density visualizations in UMAP spaces should therefore be interpreted with caution.
+
 ### ProjecTILs CASE STUDIES
 
 For real-life applications on public datasets, check out our list of [ProjecTILs Case Studies](https://carmonalab.github.io/ProjecTILs_CaseStudies/)
