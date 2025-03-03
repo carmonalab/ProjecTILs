@@ -472,7 +472,7 @@ plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
       geom_point(data.frame(query.red@cell.embeddings),
                  mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
       geom_density_2d(data=data.frame(query.red@cell.embeddings),
-                      mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,size=linesize) +
+                      mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,linewidth=linesize) +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
   return(p)
@@ -1719,6 +1719,9 @@ Run.ProjecTILs <- function(query, ref=NULL,
     #Merge embeddings
     if (!is.null(split.by)) {
        query <- suppressMessages(Reduce(merge.Seurat.embeddings, query))
+    }
+    if (is.list(query) & length(query)==1) {
+      query <- query[[1]]
     }
     query
 }
