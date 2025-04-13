@@ -68,7 +68,7 @@ Run.ProjecTILs(query = query_object, ref = reference_map)
 
 </p>
 
-**Note:** ProjecTILs performs cell state quantifications in the PCA latent space. UMAP embeddings are provided for visual exploration only and should be interpreted with caution as cell-cell distances and densities in UMAP are highly distorted (see e.g. by [Chari and Pachter (2023)](https://doi.org/10.1371/journal.pcbi.1011288)
+**Note:** ProjecTILs performs cell state quantifications in the PCA latent space. UMAP embeddings are provided for visual exploration only and should be interpreted with caution as cell-cell distances and densities in UMAP are highly distorted (see e.g. [Chari and Pachter (2023)](https://doi.org/10.1371/journal.pcbi.1011288))
 
 ### ProjecTILs CASE STUDIES
 
