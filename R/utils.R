@@ -360,7 +360,7 @@ convert_to_v3 <- function(object, assay="RNA", layer="counts") {
         counts = object[[assay]]$counts
       )
     } 
-    object[[assay]] <- assay_v3
+    suppressWarnings(object[[assay]] <- assay_v3)
   }
   object
 }

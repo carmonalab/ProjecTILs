@@ -248,9 +248,11 @@ make.projection <- function(query, ref=NULL,
   }
   #ref assays should be in Seurat v4 format
   assays <- Assays(ref)
+  varfeat <- VariableFeatures(ref)
   for (a in assays) {
       ref <- convert_to_v3(ref, assay = a, layer="data")
   }
+  VariableFeatures(ref) <- varfeat
   
   projected.list <- list()
   if (is.null(ortholog_table)) {
