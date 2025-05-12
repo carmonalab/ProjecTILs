@@ -1419,6 +1419,11 @@ make.reference <- function(ref,
   }
 
   DefaultAssay(ref) <- "integrated"
+  
+  for (a in Assays(ref)) {
+    ref <- convert_to_v3(ref, assay = a, layer="data")
+  }
+  VariableFeatures(ref) <- varfeat
 
   return(ref)
 }
