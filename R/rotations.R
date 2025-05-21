@@ -1,6 +1,5 @@
 #Rotations
 run.umap.2 <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, min.dist=0.3, metric="cosine",seed=1234) {
-  library(umap)
   
   umap.config <- umap.defaults
   umap.config$n_neighbors = n.neighbors
@@ -20,8 +19,7 @@ run.umap.2 <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, min.d
 }
 
 run.umap.uwot <- function(pca.obj, ndim=NULL, n.neighbors=15, n.components=2, min.dist=0.3, metric="cosine",seed=1234) {
-  library(uwot)
-
+  
   if (is.null(ndim)) {
     ndim <- ncol(pca.obj$x)
   }
@@ -164,7 +162,7 @@ make.umap.predict.weighted.mean <- function(ref.umap, query,
 }
 
 run.ica <- function(object, assay="integrated", ndim=50) {
-  require(fastICA)
+  
   set.seed(1234)
   varfeat <- VariableFeatures(object, assay=assay)
   

@@ -82,7 +82,9 @@ See \link{load.reference.map} to load or download a reference atlas. See
 also \link{ProjecTILs.classifier} to use ProjecTILs as a cell type classifier.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 data(query_example_seurat)
 ref <- load.reference.map()
 make.projection(query_example_seurat, ref=ref)
+\dontshow{\}) # examplesIf}
 }

@@ -58,7 +58,10 @@ Otherwise use the embeddings stored in the `dimred` slot.}
 \item{color.palette}{A (named) vector of colors for the reference plotting functions.
 One color for each cell type in 'functional.cluster'}
 
-\item{scGate.model.human}{A mouse \link[scGate]{scGate} model to purify the cell types represented in the
+\item{scGate.model.human}{A human \link[scGate]{scGate} model to purify the cell types represented in the
+map. For example, if the map contains CD4 T cell subtype, specify an scGate model for CD4 T cells.}
+
+\item{scGate.model.mouse}{A mouse \link[scGate]{scGate} model to purify the cell types represented in the
 map.}
 
 \item{store.markers}{Whether to store the top differentially expressed genes in `ref@misc$gene.panel`}
@@ -76,10 +79,12 @@ A reference atlas compatible with ProjecTILs
 \description{
 Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
 (e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
-the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
+the two methods umap::umap or  uwot::umap. Recalculation allows exploting the
 'predict' functionalities of these methods for embedding of new points; skipping recalculation will
 make the projection use an approximation for UMAP embedding of the query.
 }
 \examples{
-custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+custom_reference <- ProjecTILs::make.reference(my_dataset, recalculate.umap=T)
+\dontshow{\}) # examplesIf}
 }

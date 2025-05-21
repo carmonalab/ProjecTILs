@@ -4,7 +4,21 @@
 \alias{plot.states.radar}
 \title{Show expression level of key genes}
 \usage{
-plot.states.radar(ref)
+\method{plot}{states.radar}(
+  ref,
+  query = NULL,
+  labels.col = "functional.cluster",
+  ref.assay = "RNA",
+  query.assay = "RNA",
+  genes4radar = c("Foxp3", "Cd4", "Cd8a", "Tcf7", "Ccr7", "Gzmb", "Gzmk", "Pdcd1",
+    "Havcr2", "Tox", "Mki67"),
+  meta4radar = NULL,
+  norm.factor = 1,
+  min.cells = 20,
+  cols = NULL,
+  return = FALSE,
+  return.as.list = FALSE
+)
 }
 \arguments{
 \item{ref}{Reference object}
@@ -39,6 +53,8 @@ Makes a radar plot of the expression level of a set of genes. It can be useful t
 the gene expression profile of different cell states in the reference atlas vs. a projected set.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 ref <- load.reference.map()
 plot.states.radar(ref)
+\dontshow{\}) # examplesIf}
 }

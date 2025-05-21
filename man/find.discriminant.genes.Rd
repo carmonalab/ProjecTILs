@@ -59,6 +59,7 @@ Based on `FindMarkers`. It performs differential expression analysis between a p
 a given cell type. Useful to detect whether specific cell states over/under-express genes between conditions or with respect to the reference.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # Discriminant genes between query and reference in cell type "Tex"
 markers <- find.discriminant.genes(ref, query=query.set, state="Tex")
 
@@ -68,5 +69,5 @@ markers <- find.discriminant.genes(ref, query=query.set, query.control=control.s
 # Pass results to EnhancedVolcano for visual results
 library(EnhancedVolcano)
 EnhancedVolcano(markers, lab = rownames(markers), x = 'avg_logFC', y = 'p_val')
-
+\dontshow{\}) # examplesIf}
 }

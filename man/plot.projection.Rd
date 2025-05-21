@@ -43,8 +43,10 @@ UMAP plot of reference map with projected query set in the same space
 Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 data(query_example_seurat)
 ref <- load.reference.map()
 q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
 plot.projection(ref=ref, query=q)
+\dontshow{\}) # examplesIf}
 }

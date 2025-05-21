@@ -67,8 +67,10 @@ See \link{load.reference.map} to load or download a reference atlas.
 See \link{Run.ProjecTILs} to embed the query in the same space of the reference
 }
 \examples{
+\dontrun{
 data(query_example_seurat)
 ref <- load.reference.map()
 q <- ProjecTILs.classifier(query_example_seurat, ref=ref)
 table(q$functional.cluster, useNA="ifany")
+}
 }

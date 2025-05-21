@@ -46,7 +46,10 @@ This function can be useful to find marker genes that are specific for individua
 to be so consistently across multiple samples.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+library(Seurat)
 ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 Idents(ref) <- "functional.cluster"
 FindAllMarkers.bygroup(ref, split.by = "Sample", min.cells.group=30, min.freq=0.8)
+\dontshow{\}) # examplesIf}
 }

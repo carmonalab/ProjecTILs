@@ -30,6 +30,7 @@ get.reference.maps(
 Download and load reference atlases.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # explore available reference maps
 list.reference.maps()
 
@@ -49,5 +50,5 @@ ref.maps.CD4 <- get.reference.maps(reference = c("CD4", "Virus_CD4T"))
 
 # update previously downloaded maps
 ref.maps <- get.reference.maps(update = TRUE)
-
+\dontshow{\}) # examplesIf}
 }

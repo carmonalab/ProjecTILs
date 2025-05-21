@@ -8,19 +8,18 @@
 #'     To use a custom reference atlas, provide a .rds object or a URL to a .rds object, storing a Seurat object
 #'     prepared using \link{make.reference}
 #'
-#' @examples
+#' @examplesIf interactive()
 #' # consider increasing downloading timeout, if downloading Default reference atlas or large reference
 #' options(timeout = 1000)
 #'
 #' # Download and load default reference map
 #' ref <- load.reference.map()
 #'
-#' # download reference map
+#' # download reference map from url
 #' ref.web <- load.reference.map(ref = url)
 #'
 #' # Load any reference map
 #' ref <- load.reference.map(ref = "path/to/ref")
-#'
 #' @export load.reference.map
 load.reference.map <- function(ref="referenceTIL") {
 
@@ -85,10 +84,11 @@ load.reference.map <- function(ref="referenceTIL") {
 #' @param raw.header For raw matrix format - Use headers in expression matrix
 #' @param use.readmtx Use ReadMtx function to read in 10x files with custom names
 #' @return A Seurat object populated with raw counts and normalized counts for single-cell expression
-#' @examples
+#' @examplesIf interactive()
 #' fname <- "./sample_data"
 #' querydata <- read.sc.query(fname, type="10x")
 #' @importFrom Matrix readMM
+#' @importFrom utils read.table
 #' @export read.sc.query
 
 read.sc.query <- function(filename,
@@ -152,8 +152,10 @@ read.sc.query <- function(filename,
     }
 
     #Also try to determine whether genes are on rows or columns
-    data(Hs2Mm.convert.table)
-    gnames <- c(Hs2Mm.convert.table$Gene.MM, Hs2Mm.convert.table$Gene.stable.ID.HS, Hs2Mm.convert.table$Gene.HS)
+    data("Hs2Mm.convert.table")
+    gnames <- c(Hs2Mm.convert.table[,"Gene.MM"],
+                Hs2Mm.convert.table[,"Gene.stable.ID.HS"],
+                Hs2Mm.convert.table[,"Gene.HS"])
     gr <- length(intersect(rownames(query.exp), gnames))
     gc <- length(intersect(colnames(query.exp), gnames))
     gmax <- max(gr, gc)
@@ -213,7 +215,7 @@ read.sc.query <- function(filename,
 #' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
 #' @param progressbar Whether to show a progress bar for projection process or not (requires \link{BiocParallel})
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
-#' @examples
+#' @examplesIf interactive()
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' make.projection(query_example_seurat, ref=ref)
@@ -223,6 +225,7 @@ read.sc.query <- function(filename,
 #' @importFrom scGate scGate
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
+#' @importFrom umap umap.defaults
 #' @export make.projection
 make.projection <- function(query, ref=NULL,
                             filter.cells=TRUE,
@@ -322,7 +325,7 @@ make.projection <- function(query, ref=NULL,
 #' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param labels.col The metadata field of the reference to annotate the clusters (default: functional.cluster)
 #' @return The query object submitted as parameter, with two additional metadata slots for predicted state and its confidence score
-#' @examples
+#' @examplesIf interactive()
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- make.projection(query_example_seurat, ref=ref)
@@ -423,7 +426,7 @@ cellstate.predict <- function(ref, query,
 #' @param ... Additional parameters for \code{DimPlot}, e.g. raster=T to
 #'    limit image size
 #' @return UMAP plot of reference map with projected query set in the same space
-#' @examples
+#' @examplesIf interactive()
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
@@ -491,7 +494,11 @@ plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
 #' @param metric One of `Count` or `Percent`. `Count` plots the absolute number of cells, `Percent` the fraction on the total number of cells.
 #' @param cols Custom color palette for clusters
 #' @return Barplot of predicted state composition
-#' @examples
+#' @examplesIf interactive()
+#' data(query_example_seurat)
+#' ref <- load.reference.map()
+#' q <- make.projection(query_example_seurat, ref=ref)
+#' q <- cellstate.predict(ref, query=q)
 #' plot.statepred.composition(query_example.seurat)
 #' @importFrom reshape2 melt
 #' @import ggplot2
@@ -572,8 +579,7 @@ plot.statepred.composition <- function(ref, query,
 #' @param return Return the combined plots instead of printing them to the default device (deprecated)
 #' @param return.as.list Return plots in a list, instead of combining them in a single plot
 #' @return Radar plot of gene expression of key genes by cell subtype
-#' @usage plot.states.radar(ref)
-#' @examples
+#' @examplesIf interactive()
 #' ref <- load.reference.map()
 #' plot.states.radar(ref)
 #' @import ggplot2
@@ -808,7 +814,7 @@ plot.states.radar <- function(ref, query=NULL,
 #' @param print.n The number of top dimensions to return to STDOUT
 #' @param verbose Print results to STDOUT
 #' @return A dataframe, where rows are ICA/PCA dimensions. ICA/PCAs are ranked by statistical significance when comparing their distribution between query and control (or query vs. reference map)
-#' @examples
+#' @examplesIf interactive()
 #' find.discriminant.dimensions(ref, query=query.set)
 #' find.discriminant.dimensions(ref, query=query.set, query.control=control.set)
 #' @importFrom stats t.test ks.test
@@ -967,16 +973,17 @@ find.discriminant.dimensions <- function(ref, query, query.control=NULL, query.a
 #'   \item{Any numeric metadata field associated to the cells (e.g. 'cycling.score')}
 #' }
 #' @return A three dimensional plot with UMAP_1 and UMAP_2 on the x and y axis respectively, and the specified `extra.dim` on the z-axis.
-#' @examples
+#' @examplesIf interactive()
 #' plot.discriminant.3d(ref, query=query, extra.dim="ICA_19")
 #' plot.discriminant.3d(ref, query=treated.set, query.control=control.set, extra.dim="ICA_2")
-#'
 #' @export plot.discriminant.3d
 #'
 plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RNA",
                                  labels.col="functional.cluster", extra.dim="ICA_1", query.state=NULL) {
 
-  require(plotly)
+  if (!requireNamespace("plotly", quietly = TRUE)) {
+    stop("Please install package 'plotly' to run this function.", call. = FALSE)
+  }  
   reduction=NULL
   message(paste0("Generating UMAP with 3rd dimension on ",extra.dim))
   if (grepl("^ica_\\d+", tolower(extra.dim), perl=T)) {
@@ -1102,7 +1109,7 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' }
 #' @param ... Adding parameters for `FindMarkers`
 #' @return A dataframe with a ranked list of genes as rows, and statistics as columns (e.g. log fold-change, p-values). See help for `FindMarkers` for more details.
-#' @examples
+#' @examplesIf interactive()
 #' # Discriminant genes between query and reference in cell type "Tex"
 #' markers <- find.discriminant.genes(ref, query=query.set, state="Tex")
 #'
@@ -1112,7 +1119,6 @@ plot.discriminant.3d <- function(ref, query, query.control=NULL, query.assay="RN
 #' # Pass results to EnhancedVolcano for visual results
 #' library(EnhancedVolcano)
 #' EnhancedVolcano(markers, lab = rownames(markers), x = 'avg_logFC', y = 'p_val')
-#'
 #' @import Seurat
 #' @export find.discriminant.genes
 #'
@@ -1215,7 +1221,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
 #'
 #' Converts a Seurat object to a ProjecTILs reference atlas. You can preserve your low-dimensionality embeddings
 #' (e.g. UMAP) in the reference atlas by setting `recalculate.umap=FALSE`, or recalculate the UMAP using one of
-#' the two methods (\link[umap]{umap::umap} or  \link[uwot]{uwot::umap}). Recalculation allows exploting the
+#' the two methods umap::umap or  uwot::umap. Recalculation allows exploting the
 #' 'predict' functionalities of these methods for embedding of new points; skipping recalculation will
 #' make the projection use an approximation for UMAP embedding of the query.
 #'
@@ -1237,7 +1243,7 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
 #'     One color for each cell type in 'functional.cluster'
 #' @param scGate.model.human A human \link[scGate]{scGate} model to purify the cell types represented in the
 #'     map. For example, if the map contains CD4 T cell subtype, specify an scGate model for CD4 T cells.
-#' @param scGate.model.human A mouse \link[scGate]{scGate} model to purify the cell types represented in the
+#' @param scGate.model.mouse A mouse \link[scGate]{scGate} model to purify the cell types represented in the
 #'     map.
 #' @param store.markers Whether to store the top differentially expressed genes in `ref@@misc$gene.panel`
 #' @param n.markers Store the top `n.markers` for each subtype given by differential
@@ -1245,8 +1251,8 @@ find.discriminant.genes <- function(ref, query, query.control=NULL, ref.assay="R
 #' @param seed Random seed
 #' @param layer1_link Broad cell type contained in this reference atlas (i.e. CD4T, CL:0000624...) to link with broad cell type annotation (layer1).
 #' @return A reference atlas compatible with ProjecTILs
-#' @examples
-#' custom_reference <- ProjecTILs::make.reference(myref, recalculate.umap=T)
+#' @examplesIf interactive()
+#' custom_reference <- ProjecTILs::make.reference(my_dataset, recalculate.umap=T)
 #' @importFrom stats prcomp
 #' @importFrom uwot umap
 #' @importFrom dplyr group_by top_n
@@ -1437,8 +1443,10 @@ make.reference <- function(ref,
 #' @param merge.dr How to handle merging dimensional reductions (see merge.Seurat)
 #' @param ... More parameters to \link{merge} function
 #' @return A merged Seurat object
-#' @examples
-#' seurat.merged <- merge.Seurat.embeddings(obj.1, obj.2)
+#' @examplesIf interactive()
+#' o1 <- query_example_seurat
+#' o2 <- query_example_seurat
+#' seurat.merged <- merge.Seurat.embeddings(o1, o2)
 #' #To merge multiple object stored in a list
 #' seurat.merged <- Reduce(f=merge.Seurat.embeddings, x=obj.list)
 #' @import Seurat
@@ -1470,7 +1478,7 @@ merge.Seurat.embeddings <- function(x=NULL, y=NULL, merge.dr=TRUE, ...)
 #' @param k.param Number of nearest neighbors for clustering
 #' @param seed Random seed for reproducibility
 #' @return A combined reference object of reference and projected object(s), with new low dimensional embeddings
-#' @examples
+#' @examplesIf interactive()
 #' combined <- recalculate.embeddings(ref, projected, ndim=10)
 #' @export recalculate.embeddings
 
@@ -1581,7 +1589,7 @@ recalculate.embeddings <- function(ref, projected, ref.assay="integrated", proj.
 #' @param normalize.scores Whether to normalize silhouette scores by the average cell type silhouettes of the reference
 #' @param min.cells Only report silhouette scores for cell type with at least this number of cells
 #' @return A dataframe with average silhouette coefficient for each cell type
-#' @examples
+#' @examplesIf interactive()
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
@@ -1680,7 +1688,7 @@ compute_silhouette <- function(ref, query=NULL,
 #' @param min.confidence Minimum confidence score to return cell type labels (otherwise NA)
 #' @param ... Additional parameters to \link[ProjecTILs]{make.projection}
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map and cell classifications
-#' @examples
+#' @examplesIf interactive()
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)
@@ -1764,10 +1772,12 @@ Run.ProjecTILs <- function(query, ref=NULL,
 #'     and confidence scores for the predicted cell labels
 #'     If cells were filtered prior to projection, they will be labeled as 'NA'
 #' @examples
+#' \dontrun{
 #' data(query_example_seurat)
 #' ref <- load.reference.map()
 #' q <- ProjecTILs.classifier(query_example_seurat, ref=ref)
 #' table(q$functional.cluster, useNA="ifany")
+#' }
 #' @importFrom BiocParallel MulticoreParam SerialParam SnowParam bplapply
 #' @export ProjecTILs.classifier
 ProjecTILs.classifier <- function(query, ref=NULL,
@@ -1856,6 +1866,7 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #'
 #' @param data A Seurat object to be used for the heatmap
 #' @param assay A string indicating the assay type, default is "RNA"
+#' @param slot Data slot (layer) in Seurat object
 #' @param genes A vector of genes to be used in the heatmap
 #' @param ref A ProjecTILs reference Seurat object to define the order of functional.cluster
 #' @param scale A string indicating the scale of the heatmap, default is "row"
@@ -1870,17 +1881,20 @@ ProjecTILs.classifier <- function(query, ref=NULL,
 #' @param cluster_samples A boolean indicating if samples should be clustered, default is FALSE
 #' @param min.cells A value defining the minimum number of cells a sample should have to be kept, default is 10
 #' @param remove.NA.meta A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE
+#' @param breaks Range of values for plotting (see 'breaks' parameter in pheatmap)
 #' @param return.matrix If true, return the pseudo-bulk data matrix instead of graphical output
 #' @param palette A named list containing colors vectors compatible with pheatmap. The list is named by the metadata names, default is taking these palettes to plot metadata: "Paired","Set2","Accent","Dark2","Set1","Set3".
+#' @param ... Additional parameters for 'pheatmap'
 #' @return A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
 #' @import pheatmap
 #' @importFrom tidyr drop_na
+#' @importFrom grDevices colorRampPalette
 #' @import RColorBrewer
-#' @examples
+#' @examplesIf interactive()
 #' library(Seurat)
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 #' celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2"),
-#'     ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"))
+#'    ref = ref, cluster.col = "functional.cluster", group.by = c("orig.ident", "Tissue"))
 #' @export celltype.heatmap
 celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, scale="row",
                          method=c("ward.D2","ward.D", "average"), brewer.palette="RdBu",
@@ -2043,7 +2057,8 @@ celltype.heatmap <- function(data, assay="RNA", slot="data", genes, ref = NULL, 
 #'     i) the fraction of datasets for which the marker was found to be differentially expressed; ii) the
 #'     average log-fold change for the genes across datasets
 #' @importFrom dplyr filter select
-#' @examples
+#' @examplesIf interactive()
+#' library(Seurat)
 #' ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 #' Idents(ref) <- "functional.cluster"
 #' FindAllMarkers.bygroup(ref, split.by = "Sample", min.cells.group=30, min.freq=0.8)
@@ -2140,7 +2155,7 @@ FindAllMarkers.bygroup <- function(object,
 #' @param as.list Boolean whether to simplify list (\code{FALSE}) or, by default, keep a list of lists for each collection (\code{TRUE}).
 #' @param verbose Inform of the status of processes
 #'
-#' @examples
+#' @examplesIf interactive()
 #' # explore available reference maps
 #' list.reference.maps()
 #'
@@ -2160,7 +2175,6 @@ FindAllMarkers.bygroup <- function(object,
 #'
 #' # update previously downloaded maps
 #' ref.maps <- get.reference.maps(update = TRUE)
-#'
 #' @importFrom digest digest
 #' @importFrom jsonlite fromJSON
 #' @importFrom dplyr filter pull left_join %>%

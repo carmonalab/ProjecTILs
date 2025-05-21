@@ -33,6 +33,8 @@ celltype.heatmap(
 
 \item{assay}{A string indicating the assay type, default is "RNA"}
 
+\item{slot}{Data slot (layer) in Seurat object}
+
 \item{genes}{A vector of genes to be used in the heatmap}
 
 \item{ref}{A ProjecTILs reference Seurat object to define the order of functional.cluster}
@@ -63,7 +65,11 @@ celltype.heatmap(
 
 \item{remove.NA.meta}{A boolean indicating if missing samples with missing metadata should be plotted, default is TRUE}
 
+\item{breaks}{Range of values for plotting (see 'breaks' parameter in pheatmap)}
+
 \item{return.matrix}{If true, return the pseudo-bulk data matrix instead of graphical output}
+
+\item{...}{Additional parameters for 'pheatmap'}
 }
 \value{
 A pheatmap plot, displaying averaged expression values across genes for each selected genes and samples.
@@ -76,8 +82,10 @@ consistency of expression profiles for different cell types across samples, stud
 other grouping variables.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 library(Seurat)
 ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2"),
-    ref = ref, cluster.col = "functional.cluster", metadata = c("orig.ident", "Tissue"))
+   ref = ref, cluster.col = "functional.cluster", group.by = c("orig.ident", "Tissue"))
+\dontshow{\}) # examplesIf}
 }

@@ -22,7 +22,11 @@ A merged Seurat object
 Given two Seurat objects, merge counts and data as well as dim reductions (PCA, UMAP, ICA, etc.)
 }
 \examples{
-seurat.merged <- merge.Seurat.embeddings(obj.1, obj.2)
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+o1 <- query_example_seurat
+o2 <- query_example_seurat
+seurat.merged <- merge.Seurat.embeddings(o1, o2)
 #To merge multiple object stored in a list
 seurat.merged <- Reduce(f=merge.Seurat.embeddings, x=obj.list)
+\dontshow{\}) # examplesIf}
 }

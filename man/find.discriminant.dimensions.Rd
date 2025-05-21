@@ -54,6 +54,8 @@ Searches PCA or ICA dimensions where the query set deviates the most from a cont
 be useful to suggest novel cell states that escape from the main axes of diversity of the UMAP
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 find.discriminant.dimensions(ref, query=query.set)
 find.discriminant.dimensions(ref, query=query.set, query.control=control.set)
+\dontshow{\}) # examplesIf}
 }

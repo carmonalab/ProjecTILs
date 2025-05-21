@@ -30,5 +30,11 @@ Barplot of predicted state composition
 Makes a barplot of the frequency of cell states in a query object.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+data(query_example_seurat)
+ref <- load.reference.map()
+q <- make.projection(query_example_seurat, ref=ref)
+q <- cellstate.predict(ref, query=q)
 plot.statepred.composition(query_example.seurat)
+\dontshow{\}) # examplesIf}
 }

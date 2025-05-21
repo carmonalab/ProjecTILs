@@ -17,16 +17,17 @@ By the default it downloads a reference atlas of tumour-infiltrating
 lymphocytes (TILs) from mouse.
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 # consider increasing downloading timeout, if downloading Default reference atlas or large reference
 options(timeout = 1000)
 
 # Download and load default reference map
 ref <- load.reference.map()
 
-# download reference map
+# download reference map from url
 ref.web <- load.reference.map(ref = url)
 
 # Load any reference map
 ref <- load.reference.map(ref = "path/to/ref")
-
+\dontshow{\}) # examplesIf}
 }

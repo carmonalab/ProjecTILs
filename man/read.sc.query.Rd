@@ -46,6 +46,8 @@ Load a query expression matrix to be projected onto the reference atlas. Several
 are supported - see \code{type} parameter for details
 }
 \examples{
+\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
 fname <- "./sample_data"
 querydata <- read.sc.query(fname, type="10x")
+\dontshow{\}) # examplesIf}
 }
