@@ -41,6 +41,12 @@ query.projected <- Run.ProjecTILs(query_example_seurat, ref=ref)
 ```
 
 By default, `load.reference.map()` downloads and loads a reference for mouse tumor-infiltrating T cells. Read below where to find other references or how to build your own reference map.
+Alternatively, you can get a list of available reference maps with `list.reference.maps()` and download and save collections or single reference maps:
+
+``` r
+ref.maps.human <- get.reference.maps(collection = "human")
+ref.map.CD4 <- get.reference.maps(reference = "CD4")
+```
 
 ### Data projection DEMO
 
