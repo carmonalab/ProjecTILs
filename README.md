@@ -46,8 +46,9 @@ Alternatively, you can get a list of available reference maps with `list.referen
 
 ``` r
 list.reference.maps()
-ref.maps.human <- get.reference.maps(collection = "human")
-ref.map.CD4 <- get.reference.maps(reference = "CD4")
+list_of_ref.maps <- get.reference.maps(collection = "human")
+list_of_ref.maps <- get.reference.maps(reference = "CD4")
+reference_map <- list_of_ref.maps[["human"]][["CD4"]]
 ```
 
 ### Data projection DEMO
