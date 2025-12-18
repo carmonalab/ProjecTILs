@@ -1,7 +1,7 @@
 Package: ProjecTILs
 Type: Package
 Title: Reference-based analysis of scRNA-seq data
-Version: 3.6.2
+Version: 3.7.0
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta',
     email = 'massimo.andreatta@unil.ch',
@@ -55,4 +55,5 @@ URL: https://github.com/carmonalab/ProjecTILs
 License: GPL-3 + file LICENSE
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
 RoxygenNote: 7.3.3
