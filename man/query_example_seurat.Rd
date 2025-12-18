@@ -14,6 +14,6 @@ A Seurat object
 query_example_seurat
 }
 \description{
-A small dataset of CD8 T cells, to test the ProjecTILs installation
+A small dataset of CD8 T cells, to test the ProjecTILs installation.
 }
 \keyword{datasets}

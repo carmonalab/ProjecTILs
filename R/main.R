@@ -212,8 +212,8 @@ read.sc.query <- function(filename,
 #'     (by default package object \code{Hs2Mm.convert.table})
 #' @param fast.umap.predict Fast approximation for UMAP projection. Uses coordinates of nearest neighbors in
 #'     PCA space to assign UMAP coordinates (credits to Changsheng Li for the implementation)
-#' @param ncores Number of cores for parallel execution (requires \link{BiocParallel})
-#' @param progressbar Whether to show a progress bar for projection process or not (requires \link{BiocParallel})
+#' @param ncores Number of cores for parallel execution (requires BiocParallel)
+#' @param progressbar Whether to show a progress bar for projection process or not (requires BiocParallel)
 #' @return An augmented Seurat object with projected UMAP coordinates on the reference map
 #' @examplesIf interactive()
 #' data(query_example_seurat)
@@ -222,6 +222,7 @@ read.sc.query <- function(filename,
 #' @import Seurat
 #' @import SeuratObject
 #' @importFrom STACAS FindAnchors.STACAS IntegrateData.STACAS
+#' @importFrom UCell AddModuleScore_UCell
 #' @importFrom scGate scGate
 #' @importFrom BiocParallel MulticoreParam bplapply
 #' @importFrom stats aggregate quantile sd
@@ -402,7 +403,7 @@ cellstate.predict <- function(ref, query,
   row.names(pred) <- row.names(query.space)
   colnames(pred) <- c("id","pred.state","confidence")
 
-  pred <- transform(pred, confidence=as.numeric(confidence))
+  pred$confidence <- as.numeric(pred$confidence)  
 
   query <- AddMetaData(query, metadata=pred$pred.state, col.name = labels.col)
   query <- AddMetaData(query, metadata=pred$confidence, col.name = paste0(labels.col,".conf"))

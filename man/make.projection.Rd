@@ -56,9 +56,9 @@ PCA space to assign UMAP coordinates (credits to Changsheng Li for the implement
 \item{scGate_model}{scGate model used to filter target cell type from query data
 (if NULL use the model stored in \code{ref@misc$scGate})}
 
-\item{ncores}{Number of cores for parallel execution (requires \link{BiocParallel})}
+\item{ncores}{Number of cores for parallel execution (requires BiocParallel)}
 
-\item{progressbar}{Whether to show a progress bar for projection process or not (requires \link{BiocParallel})}
+\item{progressbar}{Whether to show a progress bar for projection process or not (requires BiocParallel)}
 }
 \value{
 An augmented Seurat object with projected UMAP coordinates on the reference map

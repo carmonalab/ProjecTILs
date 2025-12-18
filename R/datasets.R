@@ -17,8 +17,8 @@
 
 #' Test dataset for ProjecTILs
 #'
-#' A small dataset of CD8 T cells, to test the ProjecTILs installation
+#' A small dataset of CD8 T cells, to test the ProjecTILs installation.
 #' 
 #' @format A Seurat object
 #' @source \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC6673650/}
-'query_example_seurat'
+"query_example_seurat"
