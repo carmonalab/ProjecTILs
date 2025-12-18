@@ -82,7 +82,7 @@ consistency of expression profiles for different cell types across samples, stud
 other grouping variables.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 library(Seurat)
 ref <- load.reference.map(ref = "https://figshare.com/ndownloader/files/38921366")
 celltype.heatmap(ref, assay = "RNA", genes = c("LEF1","SELL","GZMK","FGFBP2"),

@@ -17,7 +17,7 @@ By the default it downloads a reference atlas of tumour-infiltrating
 lymphocytes (TILs) from mouse.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # consider increasing downloading timeout, if downloading Default reference atlas or large reference
 options(timeout = 1000)
 

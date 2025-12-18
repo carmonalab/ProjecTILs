@@ -11,6 +11,7 @@
   cols = NULL,
   linesize = 1,
   pointsize = 1,
+  density_adjust = 1,
   ref.alpha = 0.3,
   ref.size = NULL,
   ...
@@ -29,6 +30,8 @@
 
 \item{pointsize}{Point size for cells in projected query}
 
+\item{density_adjust}{Adjust factor for contour line density}
+
 \item{ref.alpha}{Transparency parameter for reference cells}
 
 \item{ref.size}{Adjust point size for reference cells}
@@ -43,7 +46,7 @@ UMAP plot of reference map with projected query set in the same space
 Plots the UMAP representation of the reference map, together with the projected coordinates of a query dataset.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 data(query_example_seurat)
 ref <- load.reference.map()
 q <- Run.ProjecTILs(query_example_seurat, ref=ref, fast.umap.predict=TRUE)

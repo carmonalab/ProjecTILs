@@ -84,7 +84,7 @@ the two methods umap::umap or  uwot::umap. Recalculation allows exploting the
 make the projection use an approximation for UMAP embedding of the query.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 custom_reference <- ProjecTILs::make.reference(my_dataset, recalculate.umap=T)
 \dontshow{\}) # examplesIf}
 }

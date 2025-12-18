@@ -423,6 +423,7 @@ cellstate.predict <- function(ref, query,
 #' @param pointsize Point size for cells in projected query
 #' @param ref.alpha Transparency parameter for reference cells
 #' @param ref.size Adjust point size for reference cells
+#' @param density_adjust Adjust factor for contour line density 
 #' @param ... Additional parameters for \code{DimPlot}, e.g. raster=T to
 #'    limit image size
 #' @return UMAP plot of reference map with projected query set in the same space
@@ -438,7 +439,7 @@ cellstate.predict <- function(ref, query,
 #' @export plot.projection
 #'
 plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
-                          cols=NULL, linesize=1, pointsize=1,
+                          cols=NULL, linesize=1, pointsize=1, density_adjust=1,
                           ref.alpha=0.3, ref.size=NULL, ...) {
 
   labels <- ref[[labels.col]][,1]
@@ -475,9 +476,19 @@ plot.projection <- function(ref, query=NULL, labels.col="functional.cluster",
     p <- DimPlot(ref, reduction="umap", label = FALSE, group.by = labels.col,
                  repel = TRUE, pt.size=ref.size, cols=cols_use, ...) +
       geom_point(data.frame(query.red@cell.embeddings),
-                 mapping=aes(x=UMAP_1,y=UMAP_2),alpha=0.6, size=pointsize,shape=17, color="gray10") +
-      geom_density_2d(data=data.frame(query.red@cell.embeddings),
-                      mapping=aes(x=UMAP_1,y=UMAP_2),color="black",n=200,h=2,linewidth=linesize) +
+                 mapping=aes(x=UMAP_1,y=UMAP_2),
+                 alpha=0.6, size=pointsize,
+                 shape=17, color="gray10") +
+      geom_contour(
+        data = data.frame(query.red@cell.embeddings),
+        aes(x = UMAP_1, y = UMAP_2),
+        stat = "density_2d",
+        color = "black",
+        bins = 10,
+        adjust = 4 * density_adjust,
+        linewidth = linesize,
+        inherit.aes = FALSE
+      ) + coord_fixed(clip = "off") +
       ggtitle ("Projection of query on reference map") + theme(aspect.ratio=1)
   }
   return(p)

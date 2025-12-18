@@ -55,7 +55,7 @@ Given a reference object and a (list of) projected objects, recalculate low-dim
 embeddings accounting for the projected cells
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 combined <- recalculate.embeddings(ref, projected, ndim=10)
 \dontshow{\}) # examplesIf}
 }

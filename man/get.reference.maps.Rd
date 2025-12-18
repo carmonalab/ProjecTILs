@@ -30,7 +30,7 @@ get.reference.maps(
 Download and load reference atlases.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 # explore available reference maps
 list.reference.maps()
 

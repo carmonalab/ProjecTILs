@@ -41,7 +41,7 @@ cells in the reference map and cells in the query are calculated in a reduced sp
 query cells based on a consensus of its nearest neighbors in the reference object.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 data(query_example_seurat)
 ref <- load.reference.map()
 q <- make.projection(query_example_seurat, ref=ref)

@@ -41,7 +41,7 @@ Add an extra dimension to the reference map (it can be suggested by `find.discri
 in a query dataset compared to the reference map.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 plot.discriminant.3d(ref, query=query, extra.dim="ICA_19")
 plot.discriminant.3d(ref, query=treated.set, query.control=control.set, extra.dim="ICA_2")
 \dontshow{\}) # examplesIf}

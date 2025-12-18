@@ -53,7 +53,7 @@ Makes a radar plot of the expression level of a set of genes. It can be useful t
 the gene expression profile of different cell states in the reference atlas vs. a projected set.
 }
 \examples{
-\dontshow{if (interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
 ref <- load.reference.map()
 plot.states.radar(ref)
 \dontshow{\}) # examplesIf}
