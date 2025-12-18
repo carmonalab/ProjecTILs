@@ -1,7 +1,7 @@
 Package: ProjecTILs
 Type: Package
 Title: Reference-based analysis of scRNA-seq data
-Version: 3.6.1
+Version: 3.6.2
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta',
     email = 'massimo.andreatta@unil.ch',

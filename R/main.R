@@ -661,17 +661,17 @@ plot.states.radar <- function(ref, query=NULL,
   #Set colors
   ncolors <- 1+length(query)
   if (ncolors==1) {
-    radar.colors <- "black"
+    radar.colors <- "gray40"
   } else {
     if (is.null(cols)) {
-      radar.colors <- c("black", hue_pal()(ncolors-1))
+      radar.colors <- c("gray40", hue_pal()(ncolors-1))
     } else {
-      cols <- c("black", cols)
+      cols <- c("gray40", cols)
       if (ncolors <= length(cols)) {
         radar.colors <- cols[1:ncolors]
       } else {
         warning("Not enough colors provided. Making an automatic palette")
-        radar.colors <- c("black", hue_pal()(ncolors-1))
+        radar.colors <- c("gray40", hue_pal()(ncolors-1))
       }
     }
   }
@@ -783,16 +783,54 @@ plot.states.radar <- function(ref, query=NULL,
     levs <- unique(this.df$Dataset)
     this.df$Dataset <- factor(this.df$Dataset, levels=levs)
     this.df$Gene <- factor(this.df$Gene, levels=feat.use)
-
-    pll[[j]] <- ggplot(data=this.df,  aes(x=Gene, y=Expression, group= Dataset, colour=Dataset, fill=Dataset)) +
-      geom_bar(stat="identity", alpha=0.7, color=NA, width=1, position = position_dodge(width = 0.5)) +
-      coord_radial() +
-      ylim(ymin, ymax) + ggtitle(s)  +
-      scale_x_discrete() +
-      scale_fill_manual(values= radar.colors) +
+    
+    nfeat <- length(feat.use)
+    # Prepare radar data with numeric angles
+    radar.df <- do.call(
+      rbind,
+      lapply(split(this.df, this.df$Dataset), function(df) {
+        
+        df <- df[match(feat.use, df$Gene), ]
+        df$angle <- seq(
+          from = 0,
+          to   = 2*pi*(1 - 1/nfeat),
+          length.out = nfeat
+        )
+        # Close the loop
+        df <- rbind(
+          df,
+          df[1, ]
+        )
+        df$angle[nfeat + 1] <- 2*pi
+        return(df)
+      })
+    )
+    
+    pll[[j]] <- ggplot(
+      radar.df,
+      aes(x = angle, y = Expression, group = Dataset, colour = Dataset, fill = Dataset)
+    ) +
+      geom_ribbon(
+        aes(ymin = 0, ymax = Expression),
+        alpha = 0.25,
+        colour = NA
+      ) +
+      geom_path(linewidth = 0.8) +
+      geom_point(size = 2) +
+      coord_polar() +
+      ylim(0, ymax) +
+      ggtitle(s) +
+      scale_colour_manual(values = radar.colors) +
+      scale_fill_manual(values = radar.colors) +
+      scale_x_continuous(
+        breaks = seq(0, 2*pi*(1 - 1/nfeat), length.out = nfeat),
+        labels = feat.use
+      ) +
       theme_light() +
-      theme(axis.text.x=element_blank()) +
-      annotate(geom="text", x=seq(1,length(feat.use)), y=ymax-0.05*ymax, label=feat.use, size=3)
+      theme(
+        axis.text.x = element_text(size = 8),
+        axis.title  = element_blank()
+      )
   }
   #Return plots
   if (return.as.list) {
