@@ -4,19 +4,19 @@ Title: Reference-based analysis of scRNA-seq data
 Version: 3.7.0
 Authors@R: c(
   person(given = 'Massimo', family = 'Andreatta',
-    email = 'massimo.andreatta@unil.ch',
+    email = 'massimo.andreatta@unige.ch',
     role = c('aut','cre'),
     comment = c(ORCID = '0000-0002-8036-2647')),
   person(given = 'Paul', family = 'Gueguen',
-    email = 'paul.gueguen@unil.ch',
+    email = 'paul.gueguen@fgcz.ethz.ch',
     role = c('aut'), 
     comment = c(ORCID = '0000-0003-2930-6073')),
   person('Josep','Garnica',
-    email = 'josep.garnicacaparros@unil.ch',
+    email = 'josep.garnicacaparros@unige.ch',
     role = c('aut'),
     comment = c(ORCID = '0000-0001-9493-1321')),   
   person(given = 'Santiago', family = 'Carmona',
-    email = 'santiago.carmona@unil.ch',
+    email = 'santiago.carmona@unige.ch',
     role = c('aut'),
     comment = c(ORCID = '0000-0002-2495-0671'))
   )
