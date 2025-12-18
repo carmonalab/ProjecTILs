@@ -42,7 +42,7 @@ prcomp_seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
     assay <- DefaultAssay(obj)
   }
   varfeat <- VariableFeatures(obj, assay=assay)
-  mat <- GetAssayData(obj, assay=assay, slot="data")[varfeat,]
+  mat <- GetAssayData(obj, assay=assay, layer="data")[varfeat,]
   refdata <- data.frame(t(as.matrix(mat)))
   
   refdata <- refdata[, sort(colnames(refdata))]
@@ -57,7 +57,7 @@ prcomp_seurat <- function(obj, assay=NULL, ndim=10, scale=TRUE) {
 
 apply.pca.obj.2 <- function(query, query.assay="RNA", pca.obj) {
 
-  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, slot="data"))))
+  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, layer="data"))))
   newdata <- newdata[ , order(names(newdata))]
 
   genes.use <-  sort(intersect(colnames(newdata), names(pca.obj$center)))
@@ -74,7 +74,7 @@ apply.pca.obj.2 <- function(query, query.assay="RNA", pca.obj) {
 
 apply.ica.obj <- function(query, query.assay="RNA", ica.obj) {
 
-  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, slot="data"))))
+  newdata <- data.frame(t(as.matrix(GetAssayData(query, assay=query.assay, layer="data"))))
 #  newdata <- data.frame(t(as.matrix(query@assays[[query.assay]]@data)))
   newdata <- newdata[ , order(names(newdata))]
 
@@ -166,7 +166,7 @@ run.ica <- function(object, assay="integrated", ndim=50) {
   set.seed(1234)
   varfeat <- VariableFeatures(object, assay=assay)
   
-  x <- scale(Matrix::t(GetAssayData(object, assay=assay, slot="data")[varfeat,]))
+  x <- scale(Matrix::t(GetAssayData(object, assay=assay, layer="data")[varfeat,]))
   set.seed(1234)
   ref.ica <- fastICA(x, n.comp=ndim, row.norm=T, maxit=1000, verbose=FALSE, tol=1e-13, method="R")
   

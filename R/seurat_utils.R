@@ -267,14 +267,14 @@ FindIntegrationAnchors_local <- function(
     y = anchor.features
   )
   object.pair <- merge(x = object.1, y = object.2, merge.data = TRUE)
-  projected.embeddings.1<- t(x = GetAssayData(object = object.1, slot = "scale.data")[common.features, ]) %*%
+  projected.embeddings.1<- t(x = GetAssayData(object = object.1, layer = "scale.data")[common.features, ]) %*%
     Loadings(object = object.2[["pca"]])[common.features, ]
   object.pair[['projectedpca.1']] <- CreateDimReducObject(
     embeddings = rbind(projected.embeddings.1, Embeddings(object = object.2[["pca"]])),
     assay = DefaultAssay(object = object.1),
     key = "projectedpca1_"
   )
-  projected.embeddings.2 <- t(x = GetAssayData(object = object.2, slot = "scale.data")[common.features, ]) %*%
+  projected.embeddings.2 <- t(x = GetAssayData(object = object.2, layer = "scale.data")[common.features, ]) %*%
     Loadings(object = object.1[["pca"]])[common.features, ]
   object.pair[['projectedpca.2']] <- CreateDimReducObject(
     embeddings = rbind(projected.embeddings.2, Embeddings(object = object.1[["pca"]])),
