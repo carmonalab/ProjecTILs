@@ -68,7 +68,10 @@ Run.ProjecTILs(query = query_object, ref = reference_map)
 
 </p>
 
+
 **Note:** ProjecTILs performs cell state quantifications in the PCA latent space. UMAP embeddings are provided for visual exploration only and should be interpreted with caution as cell-cell distances and densities in UMAP are highly distorted (see e.g. [Chari and Pachter (2023)](https://doi.org/10.1371/journal.pcbi.1011288))
+
+Your ***query object*** is expected to have scRNA-seq raw counts, which will be internally log-normalized by ProjecTILs. If you prefer to use a different data normalization strategy, store the normalized data in the "data" layer of your Seurat object and run ProjecTILs functions with the `skip.normalize=TRUE` flag. 
 
 ### ProjecTILs CASE STUDIES
 
